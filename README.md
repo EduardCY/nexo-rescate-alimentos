@@ -65,6 +65,8 @@ La especificación completa del sistema y las decisiones de diseño se encuentra
   *Especificación BDD/Gherkin de los 5 comportamientos clave del núcleo trazados a los requerimientos del Módulo 1.*
 - **Plan Técnico:** [`docs/spec/plan-tecnico.md`](docs/spec/plan-tecnico.md)  
   *Arquitectura PWA Serverless, modelo de datos relacional en PostgreSQL/Supabase, sincronización offline y despliegue en Vercel.*
+- **Planificación e Implementación Sesión 8:** [`docs/plan-habilitadores-sesion8.md`](docs/plan-habilitadores-sesion8.md)  
+  *Memoria técnica de las tareas ejecutadas para los 5 habilitadores del Módulo 3.*
 - **Registro de Decisiones de Arquitectura (ADRs):** [`docs/decisiones/`](docs/decisiones/)  
   *Historial de decisiones técnicas de fondo, alternativas evaluadas y consecuencias.*
 

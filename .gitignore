@@ -33,6 +33,8 @@ Thumbs.db
 .vscode/
 .idea/
 
-# Local scratches & Course materials
+# Local scratches & Course materials / entregables del docente
 /scratch_docs/
+Contenido/
+Contenido/**
 /Contenido/

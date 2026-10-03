@@ -61,6 +61,8 @@ La especificación completa del sistema y las decisiones de diseño se encuentra
 
 - **Constitución del Proyecto:** [`docs/spec/constitucion.md`](docs/spec/constitucion.md)  
   *Roles del equipo, convenciones de trabajo, política de IA, Definición de Listo (DoR) y Definición de Terminado (DoD).*
+- **Especificación de Requisitos (SRS):** [`docs/spec/requisitos.md`](docs/spec/requisitos.md)  
+  *Catálogo consolidado de Requisitos Funcionales (RF-001 a RF-018) y No Funcionales (RNF-001 a RNF-006 - ISO/IEC 25010), trazados con comportamientos y marco legal.*
 - **Especificación de Comportamientos (MVP):** [`docs/spec/comportamientos.md`](docs/spec/comportamientos.md)  
   *Especificación BDD/Gherkin de los 5 comportamientos clave del núcleo trazados a los requerimientos del Módulo 1.*
 - **Plan Técnico:** [`docs/spec/plan-tecnico.md`](docs/spec/plan-tecnico.md)  

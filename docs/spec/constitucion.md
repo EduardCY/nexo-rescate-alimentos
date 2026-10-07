@@ -77,41 +77,54 @@ El uso de asistentes de IA para código, pruebas y documentación es un habilita
 
 ## 4. Definición de Listo (Definition of Ready - DoR)
 
-*Gobierna la entrada de una historia o tarea a la columna «Por hacer» en el tablero.*
+Una historia de usuario o tarea puede pasar a la columna **«Por hacer»** en el tablero de GitHub Projects solo si cumple la totalidad de los siguientes criterios:
 
 ### Base Obligatoria del Módulo:
-- [ ] **Escrita con actor, acción y beneficio:** Estructurada en formato ágil canónico (*Como [rol del mapa de actores], quiero [acción en el sistema], para [beneficio tangible de negocio]*).
-- [ ] **Con al menos un criterio verificable:** Formulado como compuerta de verificación en lenguaje natural o formato Gherkin (*Dado... Cuando... Entonces...*).
-- [ ] **Trazada a su requerimiento del Módulo 1:** Enlazada explícitamente a su código de origen (`RF-xxx` o `RNF-xxx`) aprobado en la especificación inicial.
-- [ ] **Cabe en una sesión de una persona:** La tarea es atómica; puede completarse de principio a fin por un desarrollador en un bloque de trabajo individual (máximo 3-4 horas).
-- [ ] **No depende de otra sin terminar:** Sus prerequisitos técnicos están completamente desplegados y disponibles.
-- [ ] **Se entiende sin volver a preguntar:** Su descripción, alcance y límites están redactados con suficiente claridad para que cualquier integrante pueda iniciar su desarrollo sin ambigüedades.
+- [ ] **Está escrita como historia de usuario:** Estructurada en formato ágil canónico (*Como [rol del mapa de actores], quiero [acción en el sistema], para [beneficio tangible de negocio]*).
+- [ ] **Tiene criterios de aceptación en Gherkin:** Cada escenario formulado como compuerta verificable con la estructura (*Dado [contexto inicial] ... cuando [evento disparador] ... entonces [resultado observable]*).
+- [ ] **Se traza a un requerimiento del Módulo 1 y a un comportamiento:** Enlazada explícitamente a su código de origen (`RF` o `RNF`) y a su respectivo comportamiento de `comportamientos.md` (`CMP`).
+- [ ] **Está estimada por el equipo:** Cuenta con estimación de esfuerzo acordada por el equipo, acotada a una sesión individual de trabajo (≤ 3 a 4 horas).
+- [ ] **Sus dependencias están identificadas y ninguna la bloquea:** No tiene prerrequisitos técnicos o de datos pendientes de construcción.
+- [ ] **Es lo bastante pequeña para terminarse dentro de un sprint:** Tarea atómica y manejable sin riesgo de desborde temporal.
 
-### Criterios Propios del Proyecto Nexo Cívico Studio:
-- [ ] **Definición de estrategia Offline-First y persistencia local (Justificado):**
+### Criterios Propios del Proyecto Nexo Cívico Studio (Justificados):
+- [ ] **Si muestra una cifra, dice de qué dato sale:**
   > **¿Por qué nuestro proyecto lo necesita?**  
-  > En las plazas de mercado de Cali (Santa Elena, Cavasa, Alameda, Caicedo), la cobertura de red celular de los comerciantes y voluntarios es intermitente o nula (RNF-002). Una historia que capture o consulte donaciones no puede entrar a construcción si no especifica claramente cómo opera en ausencia de conexión: qué datos se guardan en IndexedDB/LocalStorage y qué estructura de carga útil se despacha cuando se restablece la señal, evitando pérdida de lotes perecederos.
-- [ ] **Compuerta de Inocuidad y Validación de Cadena de Frío (Justificado):**
+  > En este proyecto aparecieron cuatro veces, de cuatro formas distintas, valores inventados que se veían como métricas reales en fases preliminares. Una cifra sin origen de datos declarado (ej. kilogramos rescatados, raciones estimadas, personas beneficiadas) no se puede probar, y lo que no se puede probar termina de forma errónea en el informe que se le entrega a un cooperante internacional (Fundación Carvajal / Fondo Internacional), arriesgando la financiación de la Fundación Mesa Común.
+- [ ] **Si guarda datos de una persona, dice cuáles, para qué y con qué autorización:**
   > **¿Por qué nuestro proyecto lo necesita?**  
-  > La Fundación Mesa Común tiene el antecedente crítico de perder más de 200 kg de tomate por asignar alimentos sin considerar la infraestructura de refrigeración de los comedores, además del temor constante de los donantes frente a demandas por intoxicación (Ley 1990 de 2019). Cualquier historia relacionada con el registro o asignación de alimentos debe incorporar obligatoriamente la casilla de exención legal digital y el flag booleano de requerimiento de refrigeración antes de considerarse lista para desarrollo.
+  > De los beneficiarios finales en comedores comunitarios no se guarda ningún dato personal sensible ni biométrico, únicamente datos agregados (cuántas raciones se sirvieron). Cumplimiento estricto del requerimiento `RNF-003` y la Ley 1581 de 2012 (Habeas Data). Decidirlo al escribir la historia es económico; descubrirlo cuando el dato ya está en producción obliga a una costosa migración de base de datos y a una conversación legal crítica con la Fundación.
+- [ ] **Dice con qué rol se prueba y en qué dispositivo (teléfono o escritorio):**
+  > **¿Por qué nuestro proyecto lo necesita?**  
+  > La plataforma Nexo Rescate Alimentos cuenta con cuatro roles que ven pantallas e interfaces distintas, y tres de ellos (donantes en plazas de mercado, voluntarios de transporte y encargados de comedores comunitarios) trabajan exclusivamente desde el teléfono celular en campo. Una historia que no lo especifique se termina probando como coordinadora en un computador de escritorio, que es justo el caso que menos se parece a la operación real en plazas de mercado como Santa Elena o Cavasa.
+- [ ] **Compuerta de Inocuidad y Validación de Cadena de Frío:**
+  > **¿Por qué nuestro proyecto lo necesita?**  
+  > La Fundación Mesa Común tiene el antecedente crítico de perder más de 200 kg de tomate por asignar alimentos perecederos sin verificar la infraestructura de refrigeración en el comedor de destino, además del temor constante de los donantes frente a demandas civiles. Toda historia vinculada a donación de alimentos debe incorporar obligatoriamente la casilla de exención legal digital bajo la Ley 1990 de 2019 y el indicador booleano de requerimiento de refrigeración (`requiereFrio`).
+- [ ] **Definición de estrategia Offline-First y tolerancia a caídas de red:**
+  > **¿Por qué nuestro proyecto lo necesita?**  
+  > En las plazas de mercado de Cali (Santa Elena, Cavasa, Alameda), la cobertura de red celular es intermitente o nula (`RNF-002`). Una historia que capture o consulte donaciones no puede entrar a construcción si no define qué datos se persisten localmente en IndexedDB y qué estructura se despacha cuando se restablece la señal celular.
 
 ---
 
 ## 5. Definición de Terminado (Definition of Done - DoD)
 
-*Gobierna la transición de una tarea desde «En revisión» hacia «Terminado» en el tablero.*
+Una historia o tarea puede transicionar desde **«En revisión»** hacia **«Terminado»** en el tablero de GitHub Projects únicamente si satisface la totalidad de esta lista de verificación:
 
 ### Base Obligatoria del Módulo:
-- [ ] **El criterio se cumple, y lo verificó otra persona:** Un par técnico o el QA Engineer ejecutó los escenarios de aceptación y validó el comportamiento esperado en entorno local o de preview.
-- [ ] **El código está en la rama acordada:** Integrado a `main` o `develop` a través de un Pull Request revisado y sin conflictos de merge.
-- [ ] **La tarea está cerrada en el tablero:** El issue/tarjeta correspondiente en GitHub Projects se vincula al commit/PR y pasa formalmente al estado «Terminado».
-- [ ] **No rompe nada de lo que ya funcionaba:** Se ejecutaron las pruebas existentes y se validó que no existen regresiones funcionales ni errores de compilación/linting (`npm run lint` y `npm run test` en verde).
-- [ ] **Si se usó IA, alguien la revisó y la explica:** El responsable del PR auditó cada fragmento sugerido por Antigravity y está plenamente capacitado para sustentar su lógica ante el docente o el equipo.
+- [ ] **Cumple todos sus criterios de aceptación:** Se verificaron uno a uno todos los escenarios Gherkin definidos en la historia.
+- [ ] **El código está revisado y aprobado por otro integrante:** Un par técnico o el QA Engineer (Felipe Charria) auditó el Pull Request y validó la lógica implementada (revisión entre pares obligatoria).
+- [ ] **Tiene pruebas automatizadas y todas pasan:** Cuenta con pruebas unitarias/integración funcionales ejecutadas con éxito (o se declara explícitamente en el issue el estado justificado de las pruebas para el incremento).
+- [ ] **Está integrada en `main` sin romper la compilación:** Código mergeado a la rama principal libre de conflictos, con linters y compilación en verde (`npm run build` y `npm run lint`).
+- [ ] **La documentación afectada está actualizada:** Cualquier cambio en contratos de API, variables de entorno o flujos de usuario se encuentra documentado en la carpeta `docs/spec/`.
+- [ ] **Si se utilizó IA, alguien la revisó y la explica:** El responsable del PR auditó cada línea generada con asistencia de IA (Antigravity) y está plenamente capacitado para defender su lógica individualmente ante el docente en el Sprint Review.
 
-### Criterios Propios del Proyecto Nexo Cívico Studio:
-- [ ] **Garantía de Cero Costo Recurrente en Capas Gratuitas ($0 USD/mes / Free Tier Guardrail) (Justificado):**
-  > **¿Por qué nuestro proyecto lo necesita?**  
-  > El cliente cuenta con un presupuesto operativo máximo de $150.000 COP/mes (RNF-005) reservado exclusivamente para combustible de carromotos y refrigerios de voluntarios. No existe presupuesto para pagar bases de datos dedicadas ni excedentes de cómputo en la nube. Ninguna tarea se considera terminada si introduce librerías pesadas, almacenamiento no purgado que amenace con rebasar los 500 MB de Supabase, o consultas N+1 sin paginar que agoten las cuotas mensuales de Vercel/Supabase.
-- [ ] **Verificación de Bloqueo Concurrente Atómico en Toma de Donaciones (Reserva Única) (Justificado):**
-  > **¿Por qué nuestro proyecto lo necesita?**  
-  > El problema central del caso de estudio —y el principal generador de fricción que colapsó la coordinación por WhatsApp— es la duplicidad de voluntarios: dos transportistas desplazándose al mismo tiempo por la misma donación. Para que una tarea del flujo de reserva/asignación se considere terminada, debe contar con una prueba verificada (a nivel de base de datos o lógica transaccional) que demuestre que cuando dos usuarios intentan tomar la misma donación de forma simultánea, el sistema asigna exclusivamente al primero y bloquea al segundo informándole que la oferta ya fue tomada.
+### Criterios Propios del Proyecto Nexo Cívico Studio (Justificados):
+- [ ] **Pasan las dos pruebas de gobierno:**
+  1. *Prueba de Cifras Reales:* Verificación estricta de que ninguna métrica de impacto, peso o beneficiario utilice datos inventados (*hardcoded* o *placeholders* sin origen en base de datos).
+  2. *Prueba de Autorización y Privacidad:* Verificación de que no se soliciten ni persistan nombres, fotos o datos biométricos de personas beneficiarias en los comedores comunitarios (Ley 1581 de 2012 / Habeas Data).
+- [ ] **Se probó entrando con el rol real y en el dispositivo real correspondiente:**
+  > Se ejecutó la verificación funcional utilizando el rol previsto en la historia (Comerciante Donante, Voluntario de Transporte, Encargado de Comedor Receptora o Coordinadora) en su dispositivo objetivo (teléfono móvil con viewport responsivo para campo o navegador de escritorio para administración).
+- [ ] **Verificación de Bloqueo Concurrente Atómico en Toma de Donaciones (Reserva Única - `CMP-03`):**
+  > Para tareas que tocan el flujo de reserva o toma de alimentos, se comprobó formalmente que dos usuarios concurrentes no pueden tomar la misma donación al mismo tiempo. El primer intento transiciona la donación a `RESERVADO` / `ASIGNADA` y el segundo intento recibe inmediatamente una respuesta de conflicto (HTTP 409) con mensaje amigable en pantalla.
+- [ ] **Garantía de Cero Costo Recurrente en Capas Gratuitas ($0.00 USD/mes / Free Tier Guardrail):**
+  > Se validó que el código no introduce servicios de pago ni consumo desmedido de cuotas de base de datos o almacenamiento en Supabase/Vercel, protegiendo el presupuesto de caja menor de $150.000 COP/mes de la Fundación (`RNF-005`).

@@ -65,6 +65,8 @@ La especificación completa del sistema y las decisiones de diseño se encuentra
   *Catálogo consolidado de Requisitos Funcionales (RF-001 a RF-018) y No Funcionales (RNF-001 a RNF-006 - ISO/IEC 25010), trazados con comportamientos y marco legal.*
 - **Especificación de Comportamientos (MVP):** [`docs/spec/comportamientos.md`](docs/spec/comportamientos.md)  
   *Especificación BDD/Gherkin de los 5 comportamientos clave del núcleo trazados a los requerimientos del Módulo 1.*
+- **Tablero y Catálogo de Issues (GitHub Projects):** [`docs/spec/tablero-github-projects.md`](docs/spec/tablero-github-projects.md)  
+  *Configuración de estados, plantilla oficial de issues y catálogo de historias y tareas atómicas para el tablero del proyecto.*
 - **Plan Técnico:** [`docs/spec/plan-tecnico.md`](docs/spec/plan-tecnico.md)  
   *Arquitectura PWA Serverless, modelo de datos relacional en PostgreSQL/Supabase, sincronización offline y despliegue en Vercel.*
 - **Planificación e Implementación Sesión 8:** [`docs/plan-habilitadores-sesion8.md`](docs/plan-habilitadores-sesion8.md)  

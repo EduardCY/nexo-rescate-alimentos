@@ -59,6 +59,8 @@ npm run test
 
 La especificación completa del sistema y las decisiones de diseño se encuentran versionadas dentro del repositorio:
 
+- **Documento Maestro Consolidado (Entrega 3A):** [`docs/spec/entrega-3a-especificacion-y-plan.md`](docs/spec/entrega-3a-especificacion-y-plan.md)  
+  *Versión canónica en Markdown del documento oficial de entrega (Portada, Constitución, 5 Comportamientos en Gherkin, Plan Técnico, Backlog de 15 Tareas Atómicas y Habilitadores).*
 - **Constitución del Proyecto:** [`docs/spec/constitucion.md`](docs/spec/constitucion.md)  
   *Roles del equipo, convenciones de trabajo, política de IA, Definición de Listo (DoR) y Definición de Terminado (DoD).*
 - **Especificación de Requisitos (SRS):** [`docs/spec/requisitos.md`](docs/spec/requisitos.md)  

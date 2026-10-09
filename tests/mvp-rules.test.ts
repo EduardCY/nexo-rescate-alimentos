@@ -2,6 +2,7 @@
  * Pruebas unitarias para las reglas de negocio críticas del MVP de Rescate de Alimentos.
  * Valida los criterios de aceptación de CMP-01, CMP-02 y CMP-03.
  */
+import { describe, test, expect } from 'vitest';
 
 describe("Reglas de Negocio del MVP - Red de Rescate de Alimentos", () => {
   test("CA-01.2: Debe rechazar el registro de donación si no se acepta la exención legal (Ley 1990/2019)", () => {

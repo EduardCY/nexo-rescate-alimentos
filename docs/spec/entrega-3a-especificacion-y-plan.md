@@ -303,39 +303,63 @@ Escenario: CA-05.3 Transparencia de métricas sin datos inventados (Prueba de Go
 El problema neurálgico del caso de estudio —que colapsó la coordinación operativa por WhatsApp— es la duplicidad de voluntarios dirigiéndose al mismo tiempo por la misma carga. El sistema erradica esta condición de carrera aplicando control de concurrencia determinístico en la capa de persistencia:
 
 ```sql
--- Procedimiento Transaccional Atómico en PostgreSQL (Supabase RPC)
+-- Procedimiento Transaccional Atómico en PostgreSQL (Supabase RPC - ADR-001)
 CREATE OR REPLACE FUNCTION tomar_donacion(
     p_donacion_id UUID,
-    p_voluntario_id UUID
+    p_voluntario_id UUID,
+    p_voluntario_nombre VARCHAR(255)
 )
 RETURNS JSONB AS $$
 DECLARE
-    v_filas_afectadas INT;
+    v_actual_estado TEXT;
+    v_hora_limite TIMESTAMPTZ;
 BEGIN
-    -- Actualización atómica condicionada al estado DISPONIBLE
-    UPDATE donaciones
-    SET estado = 'ASIGNADA',
-        voluntario_id = p_voluntario_id,
-        asignada_at = NOW()
+    -- Bloqueo pesimista de la fila seleccionada (ADR-001)
+    SELECT estado, hora_limite INTO v_actual_estado, v_hora_limite
+    FROM donaciones
     WHERE id = p_donacion_id
-      AND estado = 'DISPONIBLE';
+    FOR UPDATE;
 
-    GET DIAGNOSTICS v_filas_afectadas = ROW_COUNT;
-
-    IF v_filas_afectadas = 1 THEN
-        -- Éxito para el primer voluntario
+    IF v_actual_estado IS NULL THEN
         RETURN jsonb_build_object(
-            'exito', true,
-            'mensaje', 'Donación asignada correctamente.'
+            'exito', false,
+            'codigo', 404,
+            'mensaje', 'La donación especificada no existe.'
         );
-    ELSE
-        -- Conflicto para el segundo voluntario (código HTTP 409)
+    END IF;
+
+    IF v_hora_limite <= NOW() THEN
+        UPDATE donaciones SET estado = 'EXPIRADA' WHERE id = p_donacion_id;
+        RETURN jsonb_build_object(
+            'exito', false,
+            'codigo', 410,
+            'mensaje', 'La ventana de recogida de esta donación ha expirado.'
+        );
+    END IF;
+
+    IF v_actual_estado != 'DISPONIBLE' THEN
         RETURN jsonb_build_object(
             'exito', false,
             'codigo', 409,
             'mensaje', 'Esta donación acaba de ser reservada por otra persona. Te mostramos las ofertas disponibles más cercanas.'
         );
     END IF;
+
+    UPDATE donaciones
+    SET estado = 'ASIGNADA',
+        voluntario_id = p_voluntario_id,
+        voluntario_nombre = p_voluntario_nombre,
+        asignada_at = NOW()
+    WHERE id = p_donacion_id;
+
+    INSERT INTO trazabilidad_eventos (donacion_id, estado_anterior, estado_nuevo, usuario_id, usuario_nombre, observaciones)
+    VALUES (p_donacion_id, 'DISPONIBLE', 'ASIGNADA', p_voluntario_id, p_voluntario_nombre, 'Donación tomada con bloqueo pesimista exitoso');
+
+    RETURN jsonb_build_object(
+        'exito', true,
+        'codigo', 200,
+        'mensaje', 'Donación asignada correctamente.'
+    );
 END;
 $$ LANGUAGE plpgsql;
 ```
@@ -385,7 +409,7 @@ graph TD
 
 * **`ORGANIZACION`:** `id` (UUID PK), `nombre`, `tipo` (`DONANTE`, `RECEPTOR`, `FUNDACION`), `direccion`, `zona` (`NORTE`, `CENTRO`, `SUR`, `ORIENTE`, `LADERA`), `tiene_refrigeracion` (BOOLEAN), `capacidad_raciones_dia` (INT).
 * **`USUARIO`:** `id` (UUID PK), `nombre`, `email`, `rol` (`COORDINADOR`, `VOLUNTARIO`, `DONANTE`, `RECEPTOR`), `telefono`, `vehiculo_tipo` (`MOTO`, `CARROMOTO`, `CARRO`, `BICICLETA`, `A_PIE`), `disponible` (BOOLEAN).
-* **`DONACION`:** `id` (UUID PK), `codigo` (`DON-XXX`), `donante_id` (FK), `tipo_alimento`, `requiere_frio` (BOOLEAN), `cantidad_estimada`, `unidad_medida`, `direccion_recogida`, `hora_limite`, `estado` (`DISPONIBLE`, `ASIGNADA`, `ENTREGADA`, `EXPIRADA`, `CANCELADA`), `voluntario_id` (FK nullable), `comedor_id` (FK nullable), `exencion_aceptada` (BOOLEAN), `created_at`, `asignada_at`, `entregada_at`.
+* **`DONACION`:** `id` (UUID PK), `codigo` (`DON-XXX`), `donante_id` (FK), `tipo_alimento`, `requiere_frio` (BOOLEAN), `cantidad_estimada`, `unidad_medida`, `direccion_recogida`, `hora_limite`, `estado` (`DISPONIBLE`, `ASIGNADA`, `ENTREGADA`, `EXPIRADA`, `CANCELADA`), `voluntario_id` (FK nullable), `comedor_id` (FK nullable), `exencion_sanitaria_aceptada` (BOOLEAN), `created_at`, `asignada_at`, `entregada_at`.
 * **`TRAZABILIDAD_EVENTO`:** `id` (UUID PK), `donacion_id` (FK), `estado_anterior`, `estado_nuevo`, `usuario_id` (FK), `timestamp`, `observaciones`.
 
 ---

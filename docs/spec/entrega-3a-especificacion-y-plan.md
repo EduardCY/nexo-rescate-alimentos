@@ -22,10 +22,10 @@
 | :--- | :--- | :--- |
 | **Eduard Criollo Yule** | **Product Owner / Lead** | Visión del producto, priorización estricta del backlog en GitHub Projects, trazabilidad con requerimientos del Módulo 1 y articulación institucional con la Fundación Mesa Común. |
 | **Alejandro Rodríguez Cortés** | **Full-Stack Developer** | Arquitectura frontend PWA (Next.js / Tailwind CSS), flujos móviles de publicación y catálogo, consumo de API Serverless e integración de clientes. |
-| **Santiago Valencia Sandoval** | **Backend / Database Engineer** | Modelado relacional PostgreSQL (Supabase), diseño de transacciones atómicas con bloqueo pesimista contra colisiones concurrentes y persistencia IndexedDB. |
+| **Santiago Valencia Sandoval** | **UX Designer** | Arquitectura de información móvil (<3 pasos por flujo), pruebas heurísticas de usabilidad para entornos de plazas de mercado y accesibilidad visual WCAG 2.1. |
 | **Felipe Charria Caicedo** | **QA Engineer** | Estrategia de pruebas de aceptación BDD (Gherkin), diseño de suites de pruebas de estrés/concurrencia y verificación cruzada de DoR y DoD en Pull Requests. |
 | **Juan Camilo Peña Sandoval** | **DevOps Engineer** | Automatización del pipeline de CI/CD en GitHub Actions, despliegue continuo en Vercel y monitoreo de cuotas de capa gratuita ($0 USD/mes). |
-| **Juan Sebastián Delgado** | **UX Designer** | Arquitectura de información móvil (<3 pasos por flujo), pruebas heurísticas de usabilidad para entornos de plazas de mercado y accesibilidad visual WCAG 2.1. |
+| **Juan Sebastián Delgado** | **Backend / Database Engineer** | Modelado relacional PostgreSQL (Supabase), diseño de transacciones atómicas con bloqueo pesimista contra colisiones concurrentes y persistencia IndexedDB. |
 
 > **Regla de Cobertura entre Pares:** Cada rol cuenta con respaldo directo. Si el responsable principal se ausenta, su par técnico asume el artefacto visible sin detener el flujo de construcción del sprint.
 
@@ -432,19 +432,19 @@ Cada tarea atómica apunta a un único criterio de aceptación Gherkin y puede s
 
 | ID Tarea | Descripción Atómica (≤ 4 horas) | Criterio Asociado | Responsable | Rol | Prioridad | Est. |
 | :--- | :--- | :--- | :--- | :--- | :--- | :---: |
-| **`TASK-01`** | Configurar DDL en PostgreSQL y tipos TypeScript (Donación, Usuario, Reserva). | Transversal | Santiago Valencia | Backend | Alta (P1) | 3h |
-| **`TASK-02`** | Diseñar formulario Mobile-First de donación con selector y fecha/hora límite. | `CA-01.1` | Juan Sebastián Delgado | UX Designer | Alta (P1) | 3h |
+| **`TASK-01`** | Configurar DDL en PostgreSQL y tipos TypeScript (Donación, Usuario, Reserva). | Transversal | Juan Sebastián Delgado | Backend | Alta (P1) | 3h |
+| **`TASK-02`** | Diseñar formulario Mobile-First de donación con selector y fecha/hora límite. | `CA-01.1` | Santiago Valencia | UX Designer | Alta (P1) | 3h |
 | **`TASK-03`** | Implementar validaciones en cliente para ventana de recogida y horas pasadas. | `CA-01.2 / CA-01.3` | Alejandro Rodríguez | Full-Stack | Alta (P1) | 3h |
 | **`TASK-04`** | Integrar casilla obligatoria de exención legal Ley 1990 y flag `requiereFrio`. | `CA-01.4` | Alejandro Rodríguez | Full-Stack | Alta (P1) | 2h |
-| **`TASK-05`** | Configurar persistencia offline con IndexedDB para plazas sin señal 4G. | `CA-01.5` | Santiago Valencia | Backend | Alta (P1) | 4h |
+| **`TASK-05`** | Configurar persistencia offline con IndexedDB para plazas sin señal 4G. | `CA-01.5` | Juan Sebastián Delgado | Backend | Alta (P1) | 4h |
 | **`TASK-06`** | Construir catálogo reactivo de donaciones disponibles con filtros por sector. | `CA-02.1 / CA-02.3` | Alejandro Rodríguez | Full-Stack | Alta (P1) | 3h |
-| **`TASK-07`** | Implementar etiqueta destacada de cadena de frío y filtro para comedores sin nevera. | `CA-02.2` | Juan Sebastián Delgado | UX Designer | Alta (P1) | 2h |
-| **`TASK-08`** | Desarrollar procedimiento atómico SQL con UPDATE condicional para toma única. | `CA-03.1` | Santiago Valencia | Backend | Alta (P1) | 4h |
+| **`TASK-07`** | Implementar etiqueta destacada de cadena de frío y filtro para comedores sin nevera. | `CA-02.2` | Santiago Valencia | UX Designer | Alta (P1) | 2h |
+| **`TASK-08`** | Desarrollar procedimiento atómico SQL con UPDATE condicional para toma única. | `CA-03.1` | Juan Sebastián Delgado | Backend | Alta (P1) | 4h |
 | **`TASK-09`** | Implementar respuesta HTTP 409 y modal amigable ante colisión de toma concurrente. | `CA-03.2 / CA-03.3` | Alejandro Rodríguez | Full-Stack | Alta (P1) | 3h |
 | **`TASK-10`** | Diseñar y ejecutar suite de pruebas automatizadas de concurrencia para CMP-03. | `CA-03.2 (QA)` | Felipe Charria | QA Engineer | Alta (P1) | 4h |
 | **`TASK-11`** | Construir flujo móvil de confirmación de entrega física en comedor con receptor. | `CA-04.1 / CA-04.2` | Alejandro Rodríguez | Full-Stack | Alta (P1) | 3h |
 | **`TASK-12`** | Auditar y verificar no almacenamiento de datos personales de comensales (Ley 1581). | `CA-04.3 (Habeas Data)` | Felipe Charria | QA Engineer | Alta (P1) | 2h |
-| **`TASK-13`** | Implementar pantalla de consulta pública y línea de tiempo por código DON-XXX. | `CA-05.1 / CA-05.2` | Juan Sebastián Delgado | UX Designer | Alta (P1) | 3h |
+| **`TASK-13`** | Implementar pantalla de consulta pública y línea de tiempo por código DON-XXX. | `CA-05.1 / CA-05.2` | Santiago Valencia | UX Designer | Alta (P1) | 3h |
 | **`TASK-14`** | Construir agregador de métricas reales de kilos rescatados sin datos inventados. | `CA-05.3 (Gobierno)` | Eduard Criollo | Product Owner | Alta (P1) | 3h |
 | **`TASK-15`** | Configurar pipeline CI en GitHub Actions y monitoreo de límites Free Tier. | `RNF-005 (DevOps)` | Juan Camilo Peña | DevOps | Alta (P1) | 4h |
 

@@ -80,7 +80,7 @@ Definición de Terminado
   * **CMP:** `CMP-02`
   * **Origen:** `RF-002 · US2.1`
   * **Estimación:** `3`
-  * **Assignee:** Alejandro Rodríguez Cortés / Juan Sebastián Delgado
+  * **Assignee:** Alejandro Rodríguez Cortés / Santiago Valencia Sandoval
 
 ```markdown
 Historia (US2.1): Como voluntario de transporte u organización receptora, quiero consultar las donaciones activas filtradas por cercanía geográfica y requerimiento de refrigeración, para identificar rápidamente qué alimentos puedo rescatar según mi capacidad instalada.
@@ -116,7 +116,7 @@ Definición de Terminado
   * **CMP:** `CMP-03`
   * **Origen:** `RF-004 · US3.1`
   * **Estimación:** `4`
-  * **Assignee:** Santiago Valencia Sandoval / Felipe Charria Caicedo
+  * **Assignee:** Juan Sebastián Delgado / Felipe Charria Caicedo
 
 ```markdown
 Historia (US3.1): Como voluntario de transporte u organización receptora, quiero reservar de manera exclusiva una donación disponible, para asegurar la recogida sin que otra persona u organización se desplace simultáneamente por la misma carga.
@@ -188,7 +188,7 @@ Definición de Terminado
   * **CMP:** `CMP-05`
   * **Origen:** `RF-002 · US5.1`
   * **Estimación:** `3`
-  * **Assignee:** Eduard Criollo Yule / Santiago Valencia Sandoval
+  * **Assignee:** Eduard Criollo Yule / Juan Sebastián Delgado
 
 ```markdown
 Historia (US5.1): Como coordinadora general (Marcela Ocampo) o donante, quiero consultar en cualquier momento la línea de tiempo y el estado actual de una donación mediante su código de seguimiento, para verificar la trazabilidad completa y generar soporte auditado para los cooperantes.
@@ -220,18 +220,18 @@ Cumpliendo con la regla de oro del Módulo 3 (**cada tarea atómica apunta a un 
 
 | ID Tarea | Título Atómico | Criterio de Aceptación Asociado | Responsable Asignado | Rol en el Equipo | Estimación |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`TASK-01`** | Configurar esquemas DDL en PostgreSQL y tipos TypeScript para Donación, Usuario y Reserva | Transversal (`src/types/index.ts`) | **Santiago Valencia Sandoval** | Backend Developer | 3h |
-| **`TASK-02`** | Diseñar formulario Mobile-First de donación con selector de categoría y fecha/hora límite | `CA-01.1` (Publicación exitosa) | **Juan Sebastián Delgado** | UX / Frontend Support | 3h |
+| **`TASK-01`** | Configurar esquemas DDL en PostgreSQL y tipos TypeScript para Donación, Usuario y Reserva | Transversal (`src/types/index.ts`) | **Juan Sebastián Delgado** | Backend Developer | 3h |
+| **`TASK-02`** | Diseñar formulario Mobile-First de donación con selector de categoría y fecha/hora límite | `CA-01.1` (Publicación exitosa) | **Santiago Valencia Sandoval** | UX / Frontend Support | 3h |
 | **`TASK-03`** | Implementar validaciones en cliente para ventana de tiempo de recogida y bloqueo de horas pasadas | `CA-01.2`, `CA-01.3` (Ventana válida) | **Alejandro Rodríguez Cortés** | Full-Stack Developer | 3h |
 | **`TASK-04`** | Integrar casilla obligatoria de exención legal Ley 1990/2019 e indicador de cadena de frío | `CA-01.4` (Refrigeración y Ley 1990) | **Alejandro Rodríguez Cortés** | Full-Stack Developer | 2h |
-| **`TASK-05`** | Configurar persistencia offline con IndexedDB (Dexie.js) para publicación en plazas sin señal | `CA-01.5` (Offline-First) | **Santiago Valencia Sandoval** | Backend Developer | 4h |
+| **`TASK-05`** | Configurar persistencia offline con IndexedDB (Dexie.js) para publicación en plazas sin señal | `CA-01.5` (Offline-First) | **Juan Sebastián Delgado** | Backend Developer | 4h |
 | **`TASK-06`** | Construir catálogo reactivo de donaciones disponibles con ordenamiento y filtros por zona | `CA-02.1`, `CA-02.3` (Catálogo y zonas) | **Alejandro Rodríguez Cortés** | Full-Stack Developer | 3h |
-| **`TASK-07`** | Implementar etiqueta visual destacada de cadena de frío y filtro de exclusión para comedores sin nevera | `CA-02.2` (Cadena de frío) | **Juan Sebastián Delgado** | UX / Frontend Support | 2h |
-| **`TASK-08`** | Desarrollar procedimiento RPC / transacción atómica SQL con `SELECT ... FOR UPDATE` para toma única | `CA-03.1` (Asignación indivisible) | **Santiago Valencia Sandoval** | Backend Developer | 4h |
+| **`TASK-07`** | Implementar etiqueta visual destacada de cadena de frío y filtro de exclusión para comedores sin nevera | `CA-02.2` (Cadena de frío) | **Santiago Valencia Sandoval** | UX / Frontend Support | 2h |
+| **`TASK-08`** | Desarrollar procedimiento RPC / transacción atómica SQL con `SELECT ... FOR UPDATE` para toma única | `CA-03.1` (Asignación indivisible) | **Juan Sebastián Delgado** | Backend Developer | 4h |
 | **`TASK-09`** | Implementar respuesta HTTP 409 Conflict y modal amigable en frontend ante colisión de toma concurrente | `CA-03.2`, `CA-03.3` (Bloqueo segunda toma) | **Alejandro Rodríguez Cortés** | Full-Stack Developer | 3h |
 | **`TASK-10`** | Diseñar y ejecutar suite de pruebas automatizadas de concurrencia y estrés para `CMP-03` | `CA-03.2` (Prueba de gobierno concurrencia) | **Felipe Charria Caicedo** | QA Engineer | 4h |
 | **`TASK-11`** | Construir flujo móvil de confirmación de entrega física en comedor con registro de receptor | `CA-04.1`, `CA-04.2` (Cierre entrega) | **Alejandro Rodríguez Cortés** | Full-Stack Developer | 3h |
 | **`TASK-12`** | Auditar y verificar que no se capturen datos personales sensibles de beneficiarios (Ley 1581) | `CA-04.3` (Habeas Data) | **Felipe Charria Caicedo** | QA Engineer | 2h |
-| **`TASK-13`** | Implementar pantalla de consulta pública y línea de tiempo por código único (`DON-XXX`) | `CA-05.1`, `CA-05.2` (Trazabilidad) | **Juan Sebastián Delgado** | UX / Frontend Support | 3h |
+| **`TASK-13`** | Implementar pantalla de consulta pública y línea de tiempo por código único (`DON-XXX`) | `CA-05.1`, `CA-05.2` (Trazabilidad) | **Santiago Valencia Sandoval** | UX / Frontend Support | 3h |
 | **`TASK-14`** | Construir agregador de métricas de kilogramos rescatados garantizando cero datos inventados | `CA-05.3` (Cifras reales auditadas) | **Eduard Criollo Yule** | Product Owner / Lead | 3h |
 | **`TASK-15`** | Configurar pipeline de CI en GitHub Actions y monitoreo de cuotas de capa gratuita ($0 USD/mes) | Transversal (`RNF-005`) | **Juan Camilo Peña Sandoval** | DevOps Engineer | 4h |

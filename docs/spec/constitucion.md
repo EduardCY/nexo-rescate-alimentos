@@ -15,10 +15,10 @@ En concordancia con los acuerdos del Módulo 1 y Módulo 2, el equipo de desarro
 | :--- | :--- | :--- |
 | **Eduard Criollo Yule** | **Product Owner** | Visión del producto, priorización estricta del backlog en el tablero, trazabilidad con requerimientos del Módulo 1 y validación con el cliente. |
 | **Alejandro Rodríguez Cortés** | **Full-Stack Developer** | Arquitectura PWA, componentes frontend responsivos (Mobile-First), consumo de API serverless y lógica de cliente. |
-| **Santiago Valencia Sandoval** | **Backend Developer** | Modelado de datos en PostgreSQL (Supabase), procedimientos atómicos (RPC) para prevención de concurrencia y persistencia local (IndexedDB). |
+| **Santiago Valencia Sandoval** | **UX Designer (Soporte)** | Arquitectura de información móvil (<3 pasos por flujo), prototipado de alta fidelidad y evaluación heurística de usabilidad para usuarios en plazas de mercado. |
 | **Felipe Charria Caicedo** | **QA Engineer** | Diseño y ejecución de pruebas de aceptación (Gherkin/BDD), matrices de casos borde y verificación cruzada de criterios de aceptación en PRs. |
 | **Juan Camilo Peña Sandoval** | **DevOps Engineer** | Automatización de despliegue continuo en Vercel, monitoreo de límites de capa gratuita (Free Tier $0 USD/mes) y control de secretos de entorno. |
-| **Juan Sebastián Delgado** | **UX Designer (Soporte)** | Arquitectura de información móvil (<3 pasos por flujo), prototipado de alta fidelidad y evaluación heurística de usabilidad para usuarios en plazas de mercado. |
+| **Juan Sebastián Delgado** | **Backend Developer** | Modelado de datos en PostgreSQL (Supabase), procedimientos atómicos (RPC) para prevención de concurrencia y persistencia local (IndexedDB). |
 
 > **Regla de Cobertura:** Todos los roles cuentan con respaldo cruzado. Si el responsable principal se ausenta, el compañero del par técnico asume el artefacto visible sin detener el flujo de construcción del sprint.
 

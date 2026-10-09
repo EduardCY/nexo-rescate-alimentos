@@ -92,10 +92,10 @@ flowchart LR
 - **Asignación de Roles:**
   - *Product Owner:* Eduard Criollo Yule.
   - *Full-Stack Developer:* Alejandro Rodríguez Cortés.
-  - *Backend Developer:* Santiago Valencia Sandoval.
+  - *UX Designer (Soporte):* Santiago Valencia Sandoval.
   - *QA Engineer:* Felipe Charria Caicedo.
   - *DevOps Engineer:* Juan Camilo Peña Sandoval.
-  - *UX Designer (Soporte):* Juan Sebastián Delgado.
+  - *Backend Developer:* Juan Sebastián Delgado.
 - **Convenciones:** Ramas `feat/` y `fix/` desde `develop`, Conventional Commits (`feat`, `fix`, `docs`, `test`), y PRs con revisión obligatoria por un par distinto al autor.
 - **Definiciones DoR y DoD Ampliadas:**
   - *DoR:* 6 bases obligatorias + 1) Definición de sincronización Offline-First en IndexedDB; 2) Validación de exención sanitaria Ley 1990/2019 y cadena de frío.

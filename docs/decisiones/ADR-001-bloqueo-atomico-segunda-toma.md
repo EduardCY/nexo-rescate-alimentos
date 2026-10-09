@@ -2,7 +2,7 @@
 
 **Estado:** Aceptada  
 **Fecha:** 26 de septiembre de 2026  
-**Decisores:** Nexo Cívico Studio (Eduard Criollo, Santiago Valencia, Alejandro Rodríguez, Felipe Charria)  
+**Decisores:** Nexo Cívico Studio (Eduard Criollo, Juan Sebastián Delgado, Alejandro Rodríguez, Felipe Charria, Santiago Valencia)  
 **Satisface:** `CMP-03`, `CA-03.2`, `RF-004`, `RF-010`, `RNF-004`  
 
 ---

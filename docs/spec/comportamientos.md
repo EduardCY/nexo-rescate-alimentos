@@ -1,12 +1,12 @@
 # Especificación de Comportamientos del MVP
 
-**Proyecto:** Red de Rescate de Alimentos  
-**Organización:** Fundación Mesa Común (Cali, Colombia)  
-**Equipo:** Nexo Cívico Studio  
-**Versión:** 2.0 — Módulo 3  
-**Estado:** Aprobado / Fuente de Verdad Técnica para Tablero y Pruebas  
+**Proyecto:** Red de Rescate de Alimentos
+**Organización:** Fundación Mesa Común (Cali, Colombia)
+**Equipo:** Nexo Cívico Studio
+**Versión:** 2.0 — Módulo 3
+**Estado:** Aprobado / Fuente de Verdad Técnica para Tablero y Pruebas
 
-> [!NOTE]  
+> [!NOTE]
 > Este documento describe el comportamiento esperado del sistema en **tiempo presente**. Constituye el contrato técnico ejecutable contra el que se implementan el código, las pruebas automatizadas y los incrementos en los Sprint Reviews. Cada comportamiento mapea a una historia de usuario y a los issues del tablero de GitHub Projects.
 
 ---
@@ -75,6 +75,7 @@ Escenario: CA-01.5 Registro en entorno sin conexión móvil (Offline-First)
 * **Se prueba como:** `comercio / donante` · `teléfono`
 
 ### Definición de Terminado (DoD Específico):
+
 - [ ] Cumple todos sus criterios de aceptación (`CA-01.1` a `CA-01.5`).
 - [ ] El código está revisado y aprobado por otro integrante (Peer review / QA).
 - [ ] Tiene pruebas automatizadas y todas pasan.
@@ -120,6 +121,7 @@ Escenario: CA-02.4 Ocultamiento automático de donaciones expiradas
 * **Se prueba como:** `voluntario / comedor receptor` · `teléfono`
 
 ### Definición de Terminado (DoD Específico):
+
 - [ ] Cumple todos sus criterios de aceptación (`CA-02.1` a `CA-02.4`).
 - [ ] El código está revisado y aprobado por otro integrante (Peer review / QA).
 - [ ] Tiene pruebas automatizadas y todas pasan.
@@ -164,6 +166,7 @@ Escenario: CA-03.3 Bloqueo de toma sobre ofertas expiradas o canceladas
 * **Se prueba como:** `voluntario de transporte` · `teléfono` (con prueba de concurrencia simulada)
 
 ### Definición de Terminado (DoD Específico):
+
 - [ ] Cumple todos sus criterios de aceptación (`CA-03.1` a `CA-03.3`).
 - [ ] El código está revisado y aprobado por otro integrante (Peer review / QA).
 - [ ] **Prueba de concurrencia verificada:** Se demostró mediante test automatizado o simulación concurrente que dos peticiones simultáneas nunca asignan la donación dos veces (el segundo intento recibe HTTP 409).
@@ -206,6 +209,7 @@ Escenario: CA-04.3 Anonimización de beneficiarios finales (Cumplimiento Ley 158
 * **Se prueba como:** `voluntario / encargado de comedor` · `teléfono`
 
 ### Definición de Terminado (DoD Específico):
+
 - [ ] Cumple todos sus criterios de aceptación (`CA-04.1` a `CA-04.3`).
 - [ ] El código está revisado y aprobado por otro integrante (Peer review / QA).
 - [ ] Tiene pruebas automatizadas y todas pasan.
@@ -248,6 +252,7 @@ Escenario: CA-05.3 Transparencia de métricas sin datos inventados (Prueba de Go
 * **Se prueba como:** `coordinadora general` · `escritorio (computador)` / `donante` · `teléfono`
 
 ### Definición de Terminado (DoD Específico):
+
 - [ ] Cumple todos sus criterios de aceptación (`CA-05.1` a `CA-05.3`).
 - [ ] El código está revisado y aprobado por otro integrante (Peer review / QA).
 - [ ] Tiene pruebas automatizadas y todas pasan.

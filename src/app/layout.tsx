@@ -1,9 +1,15 @@
 import type { Metadata } from "next";
+import { Inter, JetBrains_Mono, VT323 } from "next/font/google";
 import "./globals.css";
 
+const sans = Inter({ subsets: ["latin"], variable: "--font-sans" });
+const mono = JetBrains_Mono({ subsets: ["latin"], variable: "--font-mono" });
+const vt = VT323({ subsets: ["latin"], weight: "400", variable: "--font-vt" });
+
 export const metadata: Metadata = {
-  title: "Rescate de Alimentos | Fundación Mesa Común",
-  description: "Plataforma de coordinación logística para el rescate y redistribución de excedentes de alimentos en Cali.",
+  title: "NEXO: Rescate de Alimentos v2.0 | Logística y Certificación de Impacto",
+  description:
+    "Plataforma de logística en tiempo real para redistribuir excedentes de alimentos a ONGs y certificar impacto ambiental y tributario.",
 };
 
 export default function RootLayout({
@@ -13,7 +19,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-      <body className="antialiased selection:bg-emerald-500 selection:text-white">
+      <body
+        className={`${sans.variable} ${mono.variable} ${vt.variable} antialiased selection:bg-[#000080] selection:text-white`}
+      >
         {children}
       </body>
     </html>

@@ -60,7 +60,7 @@ Criterios de aceptación
 Se prueba como: comercio · teléfono
 
 Definición de Terminado
-- [ ] Cumple todos sus criterios de aceptación
+- [x] Cumple todos sus criterios de aceptación
 - [ ] El código está revisado y aprobado por otro integrante (Felipe Charria - QA)
 - [ ] Tiene pruebas automatizadas y todas pasan: pruebas unitarias de validación de horas y formulario
 - [ ] Está integrada en main sin romper la compilación

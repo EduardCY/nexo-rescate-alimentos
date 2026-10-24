@@ -3,135 +3,136 @@
 @tailwind utilities;
 
 :root {
-  --foreground-rgb: 241, 245, 249;
-  --background-start-rgb: 11, 19, 43;
-  --background-end-rgb: 15, 23, 42;
+  --foreground-rgb: 255, 255, 255;
+  --nexo-bg: #0b0f19;
 }
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: linear-gradient(
-      to bottom,
-      rgb(var(--background-start-rgb)),
-      rgb(var(--background-end-rgb))
-    )
-    fixed;
+  background-color: var(--nexo-bg);
+  background-image:
+    radial-gradient(circle, rgba(56, 189, 248, 0.16) 1px, transparent 1.5px),
+    linear-gradient(to bottom, #0b0f19, #070a12);
+  background-size: 24px 24px, 100% 100%;
+  background-attachment: fixed;
   min-height: 100vh;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-family: var(--font-sans), system-ui, -apple-system, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
-/* =========================================================================
-   ESTILOS ANTIGRAVITY PREMIUM · GLASSMORPHISM & ACCESIBILIDAD (WCAG 2.1)
-   ========================================================================= */
+@layer components {
+  /* =========================================================================
+     ESTILOS NÚCLEO WINDOWS 98 / SCADA RETRO (IDENTIDAD VISUAL NEXO)
+     ========================================================================= */
 
-.glass-panel {
-  background-color: rgba(15, 23, 42, 0.65);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(51, 65, 85, 0.6);
-  border-radius: 1rem;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3);
+  .bevel-out {
+    background-color: #d4d0c8;
+    box-shadow: inset -1px -1px #0a0a0a, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf;
+  }
+
+  .bevel-in {
+    box-shadow: inset -1px -1px #fff, inset 1px 1px #808080, inset -2px -2px #dfdfdf, inset 2px 2px #0a0a0a;
+  }
+
+  .bevel-in-dark {
+    box-shadow: inset -1px -1px #3a4666, inset 1px 1px #000, inset -2px -2px #1c2641, inset 2px 2px #05080f;
+  }
+
+  /* Botón clásico Windows 98 adaptado para toque móvil */
+  .btn-98 {
+    @apply bevel-out text-black text-xs font-semibold px-3 py-2 sm:py-1.5 select-none cursor-pointer inline-flex items-center justify-center min-h-[36px] sm:min-h-[28px];
+  }
+  .btn-98:active:not(:disabled) {
+    box-shadow: inset -1px -1px #fff, inset 1px 1px #0a0a0a, inset -2px -2px #dfdfdf, inset 2px 2px #808080;
+    padding-top: 7px;
+    padding-bottom: 5px;
+  }
+  .btn-98:disabled { @apply opacity-50 cursor-not-allowed; }
+  .btn-98:focus-visible { outline: 1px dotted #000; outline-offset: -3px; }
+
+  /* Botón Verde Acción Principal (con toque táctil ergonómico) */
+  .btn-green {
+    background-color: #00c853;
+    color: #00130a;
+    box-shadow: inset -1px -1px #00471f, inset 1px 1px #8affb5, inset -2px -2px #008a38, inset 2px 2px #4cf08a;
+    @apply font-mono font-bold tracking-wide select-none cursor-pointer transition-[filter] hover:brightness-110 inline-flex items-center justify-center min-h-[44px] px-4 py-2;
+  }
+  .btn-green:active:not(:disabled) {
+    box-shadow: inset -1px -1px #8affb5, inset 1px 1px #00471f, inset -2px -2px #4cf08a, inset 2px 2px #008a38;
+  }
+  .btn-green:disabled { @apply opacity-40 cursor-not-allowed grayscale; }
+
+  /* Botón Azul Secundario */
+  .btn-blue {
+    background-color: #0284c7;
+    color: #fff;
+    box-shadow: inset -1px -1px #022f4a, inset 1px 1px #7dd3fc, inset -2px -2px #015a88, inset 2px 2px #38bdf8;
+    @apply font-mono font-bold tracking-wide select-none cursor-pointer transition-[filter] hover:brightness-110 inline-flex items-center justify-center min-h-[40px] px-4 py-1.5;
+  }
+
+  /* Campos de texto y selectores clásicos (optimizados para no provocar zoom automático en móviles) */
+  .retro-field {
+    @apply bevel-in bg-white text-black font-mono text-sm sm:text-xs px-2.5 py-2 sm:py-1.5 w-full outline-none min-h-[40px] sm:min-h-[32px];
+  }
+  .retro-field:focus { background-color: #fffde0; }
+
+  .retro-label {
+    @apply block text-[11px] font-bold uppercase tracking-wider text-slate-800 mb-1;
+  }
+
+  .scada-panel {
+    @apply bevel-in-dark bg-[#0d1424] text-slate-200;
+  }
+
+  .titlebar {
+    background: linear-gradient(90deg, #000080 0%, #102a71 60%, #1c4a9e 100%);
+  }
+
+  .menu-item { 
+    @apply px-3 py-1.5 sm:py-1 text-[13px] text-black cursor-pointer select-none min-h-[36px] sm:min-h-[26px] inline-flex items-center; 
+  }
+  .menu-item:hover { background: #000080; color: #fff; }
+  .menu-item[aria-current='page'] { 
+    box-shadow: inset 1px 1px #808080, inset -1px -1px #fff; 
+    background: #c3bfb5; 
+  }
+
+  /* Efectos fosforescentes de monitores terminal CRT / SCADA */
+  .text-glow-green { text-shadow: 0 0 8px rgba(0, 230, 118, 0.55); }
+  .text-glow-cyan { text-shadow: 0 0 8px rgba(0, 176, 255, 0.55); }
+  .text-glow-amber { text-shadow: 0 0 8px rgba(245, 158, 11, 0.55); }
+  .text-glow-violet { text-shadow: 0 0 8px rgba(167, 139, 250, 0.55); }
 }
 
-.glass-card {
-  background-color: rgba(30, 41, 59, 0.45);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(51, 65, 85, 0.5);
-  border-radius: 0.75rem;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+/* Efecto opcional de monitor de tubo CRT */
+.crt-on::after {
+  content: '';
+  pointer-events: none;
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.18) 0,
+    rgba(0, 0, 0, 0.18) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  mix-blend-mode: multiply;
 }
 
-.glass-card:hover {
-  border-color: rgba(52, 211, 153, 0.3);
-  transform: translateY(-1px);
-}
+@keyframes radar-spin { to { transform: rotate(360deg); } }
+@keyframes node-pulse { 0%, 100% { opacity: 0.9; r: 7; } 50% { opacity: 0.25; r: 13; } }
+@keyframes blink { 50% { opacity: 0; } }
 
-.glass-input {
-  background-color: rgba(15, 23, 42, 0.75);
-  border: 1px solid rgba(71, 85, 105, 0.7);
-  border-radius: 0.75rem;
-  color: #ffffff;
-  min-height: 48px;
-  padding: 0.625rem 1rem;
-  font-size: 0.9375rem;
-  transition: all 0.15s ease-in-out;
-}
+.radar-sweep { transform-origin: 300px 190px; animation: radar-spin 6s linear infinite; }
+.anim-off .radar-sweep, .anim-off .node-pulse { animation: none; }
+.node-pulse { animation: node-pulse 2s ease-in-out infinite; }
+.cursor-blink { animation: blink 1s steps(1) infinite; }
 
-.glass-input:focus {
-  outline: none;
-  border-color: #10b981;
-  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
-}
-
-.glass-input::placeholder {
-  color: #94a3b8;
-}
-
-.glass-button-primary {
-  min-height: 48px;
-  padding: 0.75rem 1.5rem;
-  border-radius: 0.75rem;
-  font-weight: 700;
-  font-size: 0.9375rem;
-  background: linear-gradient(135deg, #10b981 0%, #0d9488 100%);
-  color: #ffffff;
-  box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.25);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  transition: all 0.15s ease-in-out;
-  border: none;
-}
-
-.glass-button-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #34d399 0%, #14b8a6 100%);
-  box-shadow: 0 6px 20px 0 rgba(16, 185, 129, 0.35);
-  transform: translateY(-1px);
-}
-
-.glass-button-primary:active:not(:disabled) {
-  transform: scale(0.98);
-}
-
-.glass-button-primary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  box-shadow: none;
-}
-
-.glass-button-secondary {
-  min-height: 48px;
-  padding: 0.75rem 1.25rem;
-  border-radius: 0.75rem;
-  font-weight: 600;
-  font-size: 0.875rem;
-  background-color: rgba(30, 41, 59, 0.8);
-  border: 1px solid rgba(71, 85, 105, 0.8);
-  color: #cbd5e1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  cursor: pointer;
-  transition: all 0.15s ease-in-out;
-}
-
-.glass-button-secondary:hover:not(:disabled) {
-  background-color: rgba(51, 65, 85, 0.8);
-  color: #ffffff;
-  border-color: #94a3b8;
-}
-
-.glass-button-secondary:active:not(:disabled) {
-  transform: scale(0.98);
-}
-
-/* Área táctil mínima de 48px bajo WCAG 2.1 AAA para plazas de mercado */
-.touch-target {
-  min-height: 48px;
-  min-width: 48px;
+@media print {
+  body * { visibility: hidden; }
+  .print-area, .print-area * { visibility: visible; }
+  .print-area { position: absolute; inset: 0; width: 100%; }
+  body { background: #fff !important; }
 }

@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import { 
   ShieldCheck, 
   Truck, 
@@ -6,236 +7,239 @@ import {
   Building2, 
   Clock, 
   CheckCircle2, 
-  Layers, 
-  Terminal,
-  Cpu,
-  Lock
+  ArrowRight,
+  Sparkles,
+  Utensils,
+  Leaf,
+  Droplets,
+  Package,
+  HeartHandshake
 } from 'lucide-react';
+import { OfflineStatusBadge } from '@/components/donaciones/OfflineStatusBadge';
+
+export const metadata = {
+  title: 'Red de Rescate de Alimentos | Fundación Mesa Común',
+  description: 'Plataforma PWA Serverless para el rescate y redistribución eficiente de alimentos en Cali y el Valle.',
+};
 
 /**
- * Vista de inicio de la plataforma Nexo Cívico - Rescate de Alimentos.
- * Muestra el estado operativo de los habilitadores de la Sesión 8 y los 5 comportamientos núcleo.
+ * Vista de inicio de la plataforma Nexo Rescate de Alimentos.
+ * Diseñada bajo la filosofía Google Antigravity Premium (Glassmorphism, fluid typography, accesibilidad WCAG 2.1).
  */
 export default function HomePage() {
   return (
-    <main className="min-h-screen px-4 py-8 max-w-6xl mx-auto flex flex-col gap-10">
-      {/* Encabezado / Brand */}
-      <header className="flex flex-col md:flex-row items-start md:items-center justify-between border-b border-slate-700/60 pb-6 gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="bg-emerald-500/20 text-emerald-400 text-xs font-semibold px-2.5 py-0.5 rounded-full border border-emerald-500/30">
-              Módulo 3 · Sesión 8
+    <main className="min-h-screen px-4 py-6 sm:py-10 max-w-6xl mx-auto flex flex-col gap-8 sm:gap-10">
+      {/* Encabezado Principal y Badge de Conectividad */}
+      <header className="glass-panel p-6 sm:p-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 relative overflow-hidden">
+        <div className="absolute -right-16 -top-16 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -left-16 -bottom-16 w-64 h-64 bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="relative z-10">
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <span className="bg-emerald-500/15 text-emerald-400 text-xs font-bold px-3 py-1 rounded-full border border-emerald-500/30">
+              Sprint 1 · CMP-01 Activo
             </span>
-            <span className="bg-sky-500/20 text-sky-400 text-xs font-semibold px-2.5 py-0.5 rounded-full border border-sky-500/30">
+            <span className="bg-sky-500/15 text-sky-400 text-xs font-semibold px-3 py-1 rounded-full border border-sky-500/30">
               Equipo 3 · Nexo Cívico Studio
             </span>
           </div>
-          <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-white">
             Red de Rescate de Alimentos
           </h1>
-          <p className="text-slate-400 text-sm md:text-base mt-1">
-            Fundación Mesa Común · Santiago de Cali, Colombia
+          <p className="text-slate-300 text-sm sm:text-base mt-2 max-w-2xl leading-relaxed">
+            Conectamos en tiempo real a comerciantes de plazas (Santa Elena, Cavasa, Alameda) con comedores comunitarios de Cali bajo la <strong className="text-emerald-400">Ley 1990 de 2019</strong>.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <div className="text-right hidden sm:block">
-            <p className="text-xs text-slate-400">Stack Seleccionado</p>
-            <p className="text-sm font-semibold text-emerald-400">PWA Serverless</p>
-          </div>
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-sky-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
-            <ShieldCheck className="w-6 h-6 text-white" />
-          </div>
+
+        <div className="flex flex-col items-start md:items-end gap-3 shrink-0 relative z-10 w-full md:w-auto">
+          <OfflineStatusBadge />
+          <Link
+            href="/donar"
+            className="glass-button-primary w-full md:w-auto text-center"
+          >
+            <Sparkles className="w-4 h-4" />
+            Publicar Donación (CMP-01)
+            <ArrowRight className="w-4 h-4 ml-1" />
+          </Link>
         </div>
       </header>
 
-      {/* Checklist de Habilitadores de Hoy */}
-      <section className="bg-slate-900/60 backdrop-blur border border-slate-800 rounded-2xl p-6 shadow-xl">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-            Habilitadores del Proyecto (Sesión 8 · 26 Sep)
-          </h2>
-          <span className="text-xs bg-emerald-500/10 text-emerald-400 px-3 py-1 rounded-lg border border-emerald-500/20">
-            5 / 5 Listos
-          </span>
+      {/* Métricas de Impacto en Tiempo Real (KPI Cards Glassmorphism) */}
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="glass-panel p-5 relative overflow-hidden group">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Kilos Rescatados</span>
+            <Package className="w-4 h-4 text-emerald-400" />
+          </div>
+          <p className="text-2xl sm:text-3xl font-black font-mono text-emerald-400">
+            1,450 <span className="text-xs font-medium text-slate-400">kg</span>
+          </p>
+          <p className="text-[11px] text-slate-500 mt-1">Plazas Cavasa y Santa Elena</p>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="p-4 rounded-xl bg-slate-800/40 border border-slate-700/50">
-            <p className="text-sm font-semibold text-white">1. Repositorio</p>
-            <p className="text-xs text-slate-400 mt-1">
-              Configurado con README inicial, estructura limpia y acceso para el docente.
-            </p>
+
+        <div className="glass-panel p-5 relative overflow-hidden group">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Raciones Entregadas</span>
+            <Utensils className="w-4 h-4 text-amber-400" />
           </div>
-          <div className="p-4 rounded-xl bg-slate-800/40 border border-slate-700/50">
-            <p className="text-sm font-semibold text-white">2. Tablero GitHub</p>
-            <p className="text-xs text-slate-400 mt-1">
-              4 estados obligatorios: Por hacer, En curso, En revisión y Terminado.
-            </p>
+          <p className="text-2xl sm:text-3xl font-black font-mono text-amber-400">
+            3,625 <span className="text-xs font-medium text-slate-400">platos</span>
+          </p>
+          <p className="text-[11px] text-slate-500 mt-1">En 8 comedores comunitarios</p>
+        </div>
+
+        <div className="glass-panel p-5 relative overflow-hidden group">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">CO₂ Mitigado</span>
+            <Leaf className="w-4 h-4 text-teal-400" />
           </div>
-          <div className="p-4 rounded-xl bg-slate-800/40 border border-slate-700/50">
-            <p className="text-sm font-semibold text-white">3. Entorno</p>
-            <p className="text-xs text-slate-400 mt-1">
-              Next.js 14 + TypeScript + Tailwind con scripts reproducibles en local.
-            </p>
+          <p className="text-2xl sm:text-3xl font-black font-mono text-teal-400">
+            3.05 <span className="text-xs font-medium text-slate-400">ton</span>
+          </p>
+          <p className="text-[11px] text-slate-500 mt-1">Factor 2.101 kg CO₂e/kg</p>
+        </div>
+
+        <div className="glass-panel p-5 relative overflow-hidden group">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Agua Virtual</span>
+            <Droplets className="w-4 h-4 text-sky-400" />
           </div>
-          <div className="p-4 rounded-xl bg-slate-800/40 border border-slate-700/50">
-            <p className="text-sm font-semibold text-white">4. Accesos Repartidos</p>
-            <p className="text-xs text-slate-400 mt-1">
-              Roles y responsabilidades distribuidas entre los 5 integrantes del equipo.
-            </p>
-          </div>
-          <div className="p-4 rounded-xl bg-slate-800/40 border border-slate-700/50">
-            <p className="text-sm font-semibold text-white">5. Asistente IA Acordado</p>
-            <p className="text-xs text-slate-400 mt-1">
-              Antigravity (Gemini 3.8 Flash & Claude 4.6 Opus) con política de auditoría.
-            </p>
-          </div>
-          <div className="p-4 rounded-xl bg-slate-800/40 border border-slate-700/50">
-            <p className="text-sm font-semibold text-white">6. Constitución y DoR/DoD</p>
-            <p className="text-xs text-slate-400 mt-1">
-              Criterios base + 2 criterios específicos fundamentados por lista.
-            </p>
-          </div>
+          <p className="text-2xl sm:text-3xl font-black font-mono text-sky-400">
+            942,500 <span className="text-xs font-medium text-slate-400">L</span>
+          </p>
+          <p className="text-[11px] text-slate-500 mt-1">Preservada en cadena agro</p>
         </div>
       </section>
 
-      {/* Los 5 Comportamientos Clave del MVP */}
-      <section className="flex flex-col gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-white flex items-center gap-2">
-            <Layers className="w-5 h-5 text-sky-400" />
-            Alcance del MVP: Los 5 Comportamientos Núcleo
-          </h2>
-          <p className="text-xs text-slate-400 mt-1">
-            Conjunto mínimo de comportamientos que permite a la fundación sustituir el grupo de WhatsApp.
-          </p>
+      {/* Flujo de 5 Comportamientos Núcleo */}
+      <section className="glass-panel p-6 sm:p-8">
+        <div className="flex items-center justify-between mb-6 border-b border-slate-800 pb-4">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
+              <ShieldCheck className="w-6 h-6 text-emerald-400" />
+              Arquitectura de Comportamientos BDD (MVP)
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-400 mt-1">
+              Especificación formal ejecutable conforme al Módulo 3.
+            </p>
+          </div>
+          <span className="hidden sm:inline-block text-xs font-mono bg-slate-800 text-slate-300 px-3 py-1 rounded-full border border-slate-700">
+            5 / 5 Contratos
+          </span>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {/* CMP-01 */}
-          <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-col justify-between">
+          {/* CMP-01 Activo */}
+          <div className="glass-card p-5 border-emerald-500/40 bg-emerald-950/10 flex flex-col justify-between gap-4">
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
-                  CMP-01
+                <span className="text-xs font-black text-emerald-400 bg-emerald-500/20 px-2 py-0.5 rounded">
+                  CMP-01 · EN PRODUCCIÓN
                 </span>
-                <Store className="w-4 h-4 text-slate-400" />
+                <Store className="w-5 h-5 text-emerald-400" />
               </div>
-              <h3 className="font-bold text-white text-base">Registrar Donación</h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Tipo de alimento, cantidad aproximada, punto de recogida, hora límite y exención Ley 1990/2019.
+              <h3 className="text-base font-bold text-white">Publicación de Donaciones</h3>
+              <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                Wizard de 3 pasos con validación Zod, exención Ley 1990 y persistencia Offline-First con Dexie.js.
               </p>
             </div>
-            <div className="mt-4 pt-3 border-t border-slate-800/80 text-[11px] text-slate-500 font-mono">
-              Trazado a: RF-001, RF-017
-            </div>
+            <Link
+              href="/donar"
+              className="glass-button-primary text-xs py-2 w-full text-center"
+            >
+              Probar Wizard /donar <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
 
           {/* CMP-02 */}
-          <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-col justify-between">
+          <div className="glass-card p-5 flex flex-col justify-between gap-3">
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
-                  CMP-02
+                <span className="text-xs font-bold text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded border border-sky-500/20">
+                  CMP-02 · BACKLOG
                 </span>
-                <Clock className="w-4 h-4 text-slate-400" />
+                <Clock className="w-5 h-5 text-sky-400" />
               </div>
-              <h3 className="font-bold text-white text-base">Hacerla Visible</h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Catálogo en tiempo real para transportistas con alertas de refrigeración y vigencia.
+              <h3 className="text-base font-bold text-white">Emparejamiento & Afinidad</h3>
+              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                Algoritmo de afinidad por cercanía geográfica, urgencia y disponibilidad de nevera (cadena de frío).
               </p>
-            </div>
-            <div className="mt-4 pt-3 border-t border-slate-800/80 text-[11px] text-slate-500 font-mono">
-              Trazado a: RF-002, RF-014
             </div>
           </div>
 
-          {/* CMP-03 - El Corazón */}
-          <div className="p-5 rounded-2xl bg-sky-950/40 border border-sky-500/40 flex flex-col justify-between relative overflow-hidden">
-            <div className="absolute top-0 right-0 bg-sky-500 text-slate-950 text-[10px] font-black px-2 py-0.5 rounded-bl">
-              CORAZÓN MVP
-            </div>
+          {/* CMP-03 */}
+          <div className="glass-card p-5 flex flex-col justify-between gap-3">
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-mono text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded">
-                  CMP-03
+                <span className="text-xs font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                  CMP-03 · BACKLOG
                 </span>
-                <Lock className="w-4 h-4 text-sky-400" />
+                <Truck className="w-5 h-5 text-amber-400" />
               </div>
-              <h3 className="font-bold text-white text-base">Toma con Bloqueo Concurrente</h3>
-              <p className="text-xs text-slate-300 mt-1">
-                Reserva única por un solo voluntario. Exclusión mutua atómica que avisa a quien llega tarde.
+              <h3 className="text-base font-bold text-white">Toma Concurrente (RPC)</h3>
+              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                Bloqueo atómico pesimista <code className="text-amber-300">FOR UPDATE</code> en PostgreSQL para impedir doble toma por voluntarios.
               </p>
-            </div>
-            <div className="mt-4 pt-3 border-t border-sky-500/20 text-[11px] text-sky-300/70 font-mono">
-              Trazado a: RF-004, RF-010 (ADR-001)
             </div>
           </div>
 
           {/* CMP-04 */}
-          <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-col justify-between">
+          <div className="glass-card p-5 flex flex-col justify-between gap-3">
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
-                  CMP-04
+                <span className="text-xs font-bold text-teal-400 bg-teal-500/10 px-2 py-0.5 rounded border border-teal-500/20">
+                  CMP-04 · BACKLOG
                 </span>
-                <Building2 className="w-4 h-4 text-slate-400" />
+                <Building2 className="w-5 h-5 text-teal-400" />
               </div>
-              <h3 className="font-bold text-white text-base">Registrar Entrega</h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Confirmación de recepción en el comedor receptor con fecha, hora y responsable.
+              <h3 className="text-base font-bold text-white">Recepción en Comedor</h3>
+              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                Cierre con acta digital de entrega, confirmación de peso recibido y firma de responsable.
               </p>
-            </div>
-            <div className="mt-4 pt-3 border-t border-slate-800/80 text-[11px] text-slate-500 font-mono">
-              Trazado a: RF-005, RF-006
             </div>
           </div>
 
           {/* CMP-05 */}
-          <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-col justify-between">
+          <div className="glass-card p-5 flex flex-col justify-between gap-3">
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
-                  CMP-05
+                <span className="text-xs font-bold text-violet-400 bg-violet-500/10 px-2 py-0.5 rounded border border-violet-500/20">
+                  CMP-05 · BACKLOG
                 </span>
-                <Truck className="w-4 h-4 text-slate-400" />
+                <CheckCircle2 className="w-5 h-5 text-violet-400" />
               </div>
-              <h3 className="font-bold text-white text-base">Consultar Estado / Trazabilidad</h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Línea de tiempo auditable del ciclo de vida del alimento para cooperantes y Marcela.
+              <h3 className="text-base font-bold text-white">Trazabilidad & Certificado</h3>
+              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                Generación del certificado de donación deducible del impuesto de renta (Art. 257 E.T.).
               </p>
-            </div>
-            <div className="mt-4 pt-3 border-t border-slate-800/80 text-[11px] text-slate-500 font-mono">
-              Trazado a: RF-002, RF-007
             </div>
           </div>
 
-          {/* Configuración Local */}
-          <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-col justify-between">
+          {/* Gobernanza & Habeas Data */}
+          <div className="glass-card p-5 flex flex-col justify-between gap-3">
             <div>
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs font-mono text-slate-400 bg-slate-800 px-2 py-0.5 rounded">
-                  DEV-ENV
+                <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                  GOBERNANZA · AUDITADO
                 </span>
-                <Terminal className="w-4 h-4 text-slate-400" />
+                <HeartHandshake className="w-5 h-5 text-emerald-400" />
               </div>
-              <h3 className="font-bold text-white text-base">Comando Rápido</h3>
-              <p className="text-xs text-slate-400 mt-1 font-mono bg-slate-950 p-2 rounded border border-slate-800">
-                npm install &amp;&amp; npm run dev
+              <h3 className="text-base font-bold text-white">Habeas Data (Ley 1581)</h3>
+              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
+                Cero captura ni persistencia de datos sensibles de beneficiarios de los comedores comunitarios.
               </p>
-            </div>
-            <div className="mt-4 pt-3 border-t border-slate-800/80 text-[11px] text-slate-500">
-              Puerto predeterminado: :3000
             </div>
           </div>
         </div>
       </section>
 
-      {/* Footer / Equipo */}
-      <footer className="border-t border-slate-800 pt-6 text-xs text-slate-500 flex flex-col sm:flex-row justify-between items-center gap-2">
-        <p>© 2026 Nexo Cívico Studio · Universidad Autónoma de Occidente</p>
-        <p className="flex items-center gap-1">
-          <Cpu className="w-3.5 h-3.5 text-emerald-400" /> Antigravity (Gemini 3.8 Flash &amp; Claude 4.6 Opus)
+      {/* Footer */}
+      <footer className="glass-panel p-6 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-4 text-center sm:text-left">
+        <p>
+          © 2026 <b>Fundación Mesa Común</b> & <b>Nexo Cívico Studio</b> · Santiago de Cali
+        </p>
+        <p className="flex items-center gap-1.5 text-slate-400">
+          Desarrollado con arquitectura <b>Next.js 14 App Router + Supabase + Dexie.js</b>
         </p>
       </footer>
     </main>

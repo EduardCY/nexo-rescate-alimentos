@@ -18,7 +18,6 @@ import { publicarDonacion } from "@/actions/donaciones";
 import { guardarDonacionOffline } from "@/lib/db";
 import { DonacionInputSchema, type DonacionInput } from "@/lib/validations/donacion";
 import { DonacionWizard } from "@/components/donaciones/DonacionWizard";
-import Link from "next/link";
 
 const INITIAL = {
   donor: "Comercio Plaza Santa Elena",
@@ -32,7 +31,6 @@ const INITIAL = {
 
 export default function DonationForm() {
   const { addLot, setView, pushLog } = useNexo();
-  const [modoVista, setModoVista] = useState<"scada" | "wizard">("scada");
   const [f, setF] = useState(INITIAL);
   const [cargando, setCargando] = useState(false);
   const [mensajeExito, setMensajeExito] = useState<{ codigo: string; offline: boolean } | null>(null);
@@ -130,41 +128,21 @@ export default function DonationForm() {
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Barra de conmutación de modo de interfaz (Terminal SCADA vs Wizard Móvil 3 Pasos) */}
-      <div className="bevel-out bg-[#d4d0c8] p-2 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex flex-wrap items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => setModoVista("scada")}
-            className={`btn-98 font-mono text-xs min-h-[36px] ${
-              modoVista === "scada" ? "!bg-[#000080] !text-white font-bold" : ""
-            }`}
-          >
-            [1] Modo Terminal SCADA (Con Cálculo de Impacto)
-          </button>
-          <button
-            type="button"
-            onClick={() => setModoVista("wizard")}
-            className={`btn-98 font-mono text-xs min-h-[36px] ${
-              modoVista === "wizard" ? "!bg-[#000080] !text-white font-bold" : ""
-            }`}
-          >
-            [2] Wizard Móvil en 3 Pasos (&lt;45s · RNF-001)
-          </button>
-        </div>
-        <Link
-          href="/donar"
-          className="btn-98 font-mono text-xs min-h-[36px] text-[#000080] font-bold"
-        >
-          ↗ Abrir Pantalla Móvil Dedicada (/donar)
-        </Link>
+      {/* Vista Móvil: Wizard táctil en 3 pasos (< 45s · RNF-001) */}
+      <div className="block lg:hidden">
+        <DonacionWizard
+          onCompleted={(codigo, isOffline) => {
+            pushLog(
+              isOffline ? "warn" : "ok",
+              `Lote ${codigo} registrado (${isOffline ? "guardado local en Dexie" : "publicado en Supabase"}).`
+            );
+          }}
+        />
       </div>
 
-      {modoVista === "wizard" ? (
-        <DonacionWizard />
-      ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {/* Columna Izquierda: Formulario Clásico Windows 98 */}
+      {/* Vista Escritorio: Formulario SCADA completo con Live Preview y Cálculo de Impacto */}
+      <div className="hidden lg:grid lg:grid-cols-2 gap-4">
+        {/* Columna Izquierda: Formulario Clásico Windows 98 */}
       <form onSubmit={publish} className="bevel-out p-3 sm:p-4 flex flex-col justify-between" aria-label="Formulario de donación rápida">
         <div>
           <h2 className="mb-3 bg-[#000080] px-2 py-1 font-mono text-xs font-bold tracking-wide text-white flex items-center justify-between">
@@ -402,7 +380,6 @@ export default function DonationForm() {
         </section>
       </div>
     </div>
-      )}
-    </div>
-  );
+  </div>
+);
 }

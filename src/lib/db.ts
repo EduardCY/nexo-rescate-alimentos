@@ -12,6 +12,7 @@ export type SyncStatus = 'PENDIENTE' | 'SINCRONIZADO' | 'ERROR';
  */
 export interface DonacionOffline {
   id?: number;
+  localId?: number;
   codigoTemporal?: string;
   codigoServidor?: string;
   tipoAlimento: string;
@@ -22,6 +23,7 @@ export interface DonacionOffline {
   requiereFrio: boolean;
   exencionSanitariaAceptada: boolean;
   estado: SyncStatus;
+  syncStatus?: SyncStatus;
   createdAt?: string;
   donanteId?: string;
   donanteNombre?: string;
@@ -29,18 +31,20 @@ export interface DonacionOffline {
 
 /**
  * Base de datos IndexedDB local motorizada por Dexie.js para la arquitectura Offline-First de la PWA.
- * 
+ *
  * ¿Por qué?: En plazas de abastecimiento mayorista y minorista de Cali y el Valle, los comerciantes
  * enfrentan sótanos y áreas de baja cobertura 4G/5G. La base local permite registrar donaciones de inmediato
  * garantizando la exención sanitaria (Ley 1990 de 2019) y sincronizar en background al recuperar señal.
  */
 export class RescateAlimentosDB extends Dexie {
   donaciones!: Table<DonacionOffline, number>;
+  donaciones_locales!: Table<DonacionOffline, number>;
 
   constructor() {
     super('NexoRescateAlimentosDB');
     this.version(1).stores({
-      donaciones: '++id, codigoTemporal, estado, tipoAlimento, horaLimite, createdAt',
+      donaciones: '++id, codigoTemporal, estado, syncStatus, tipoAlimento, horaLimite, createdAt',
+      donaciones_locales: '++localId, codigoTemporal, syncStatus, estado, createdAt',
     });
   }
 }
@@ -52,13 +56,14 @@ export const RescateDatabase = RescateAlimentosDB;
 /**
  * Guarda una donación en el almacenamiento local IndexedDB con estado 'PENDIENTE'
  * cuando no hay conexión a internet disponible (RNF-002).
- * 
+ *
  * @param donacion Datos de la donación a almacenar localmente.
  * @returns El identificador numérico autoincremental asignado en IndexedDB.
  */
 export async function guardarDonacionOffline(
-  donacion: Omit<DonacionOffline, 'id' | 'estado' | 'createdAt' | 'codigoTemporal'> & {
+  donacion: Omit<DonacionOffline, 'id' | 'localId' | 'estado' | 'syncStatus' | 'createdAt' | 'codigoTemporal'> & {
     estado?: SyncStatus;
+    syncStatus?: SyncStatus;
     codigoTemporal?: string;
     createdAt?: string;
   }
@@ -68,6 +73,7 @@ export async function guardarDonacionOffline(
     ...donacion,
     codigoTemporal: donacion.codigoTemporal || `OFFLINE-${timestamp}`,
     estado: 'PENDIENTE',
+    syncStatus: 'PENDIENTE',
     createdAt: donacion.createdAt || new Date(timestamp).toISOString(),
   };
 
@@ -76,10 +82,10 @@ export async function guardarDonacionOffline(
 
 /**
  * Recupera todas las donaciones almacenadas localmente cuyo estado de sincronización es 'PENDIENTE'.
- * 
+ *
  * ¿Por qué?: Utilizado por los workers o la lógica de reconexión para despachar en cola FIFO
  * todas las donaciones pendientes hacia el servidor una vez se detecta conectividad online.
- * 
+ *
  * @returns Lista de donaciones pendientes de sincronización.
  */
 export async function obtenerDonacionesPendientes(): Promise<DonacionOffline[]> {
@@ -89,7 +95,7 @@ export async function obtenerDonacionesPendientes(): Promise<DonacionOffline[]> 
 /**
  * Actualiza el estado de una donación local a 'SINCRONIZADO' y asocia el código definitivo
  * retornado por la base de datos remota de Supabase.
- * 
+ *
  * @param localId Identificador numérico local del registro en IndexedDB.
  * @param codigoServidor Código de negocio generado en el servidor (ej. 'DON-101').
  */
@@ -99,6 +105,7 @@ export async function marcarDonacionSincronizada(
 ): Promise<void> {
   await db.donaciones.update(localId, {
     estado: 'SINCRONIZADO',
+    syncStatus: 'SINCRONIZADO',
     codigoServidor,
   });
 }

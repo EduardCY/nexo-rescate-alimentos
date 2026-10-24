@@ -3,7 +3,7 @@ import { DonacionInputSchema } from '@/lib/validations/donacion';
 import { publicarDonacion } from '@/actions/donaciones';
 import * as supabaseServer from '@/lib/supabase/server';
 
-describe('CMP-01 · Validación de Negocio y Publicación de Donaciones (RF-001, RF-017)', () => {
+describe('CMP-01 Â· ValidaciÃ³n de Negocio y PublicaciÃ³n de Donaciones (RF-001, RF-017)', () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
@@ -11,10 +11,10 @@ describe('CMP-01 · Validación de Negocio y Publicación de Donaciones (RF-001, RF
   const fechaFutura = new Date(Date.now() + 1000 * 60 * 60 * 3).toISOString(); // 3 horas en el futuro
   const fechaPasada = new Date(Date.now() - 1000 * 60 * 30).toISOString(); // 30 mins en el pasado
 
-  describe('Criterio CA-01.1: Publicación exitosa con datos completos y exención legal', () => {
+  describe('Criterio CA-01.1: PublicaciÃ³n exitosa con datos completos y exenciÃ³n legal', () => {
     test('Debe validar exitosamente un payload con todos los campos requeridos', () => {
       const payload = {
-        tipoAlimento: 'Panadería y Lácteos',
+        tipoAlimento: 'PanaderÃ­a y LÃ¡cteos',
         cantidadEstimada: 15.5,
         unidadMedida: 'kg' as const,
         direccionRecogida: 'Calle 10 # 15-20, Cali',
@@ -26,7 +26,7 @@ describe('CMP-01 · Validación de Negocio y Publicación de Donaciones (RF-001, RF
       const resultado = DonacionInputSchema.safeParse(payload);
       expect(resultado.success).toBe(true);
       if (resultado.success) {
-        expect(resultado.data.tipoAlimento).toBe('Panadería y Lácteos');
+        expect(resultado.data.tipoAlimento).toBe('PanaderÃ­a y LÃ¡cteos');
         expect(resultado.data.cantidadEstimada).toBe(15.5);
         expect(resultado.data.unidadMedida).toBe('kg');
         expect(resultado.data.exencionSanitariaAceptada).toBe(true);
@@ -51,13 +51,13 @@ describe('CMP-01 · Validación de Negocio y Publicación de Donaciones (RF-001, RF
     });
   });
 
-  describe('Criterio CA-01.2: Validación de ventana temporal futura', () => {
-    test('Debe rechazar la publicación si la hora límite es anterior a la actual', () => {
+  describe('Criterio CA-01.2: ValidaciÃ³n de ventana temporal futura', () => {
+    test('Debe rechazar la publicaciÃ³n si la hora lÃ­mite es anterior a la actual', () => {
       const payload = {
         tipoAlimento: 'Verduras frescas',
         cantidadEstimada: 20,
         unidadMedida: 'kg' as const,
-        direccionRecogida: 'Galería Alameda Local 12',
+        direccionRecogida: 'GalerÃ­a Alameda Local 12',
         horaLimite: fechaPasada,
         exencionSanitariaAceptada: true as const,
       };
@@ -72,12 +72,12 @@ describe('CMP-01 · Validación de Negocio y Publicación de Donaciones (RF-001, RF
       }
     });
 
-    test('Debe rechazar la publicación si la hora límite no es una fecha válida', () => {
+    test('Debe rechazar la publicaciÃ³n si la hora lÃ­mite no es una fecha vÃ¡lida', () => {
       const payload = {
         tipoAlimento: 'Verduras frescas',
         cantidadEstimada: 20,
         unidadMedida: 'kg' as const,
-        direccionRecogida: 'Galería Alameda Local 12',
+        direccionRecogida: 'GalerÃ­a Alameda Local 12',
         horaLimite: 'fecha-invalida',
         exencionSanitariaAceptada: true as const,
       };
@@ -88,7 +88,7 @@ describe('CMP-01 · Validación de Negocio y Publicación de Donaciones (RF-001, RF
   });
 
   describe('Criterio CA-01.3: Compuerta legal obligatoria (Ley 1990 de 2019)', () => {
-    test('Debe rechazar la donación si exencionSanitariaAceptada es false', () => {
+    test('Debe rechazar la donaciÃ³n si exencionSanitariaAceptada es false', () => {
       const payload = {
         tipoAlimento: 'Arroz y Granos',
         cantidadEstimada: 10,
@@ -108,7 +108,7 @@ describe('CMP-01 · Validación de Negocio y Publicación de Donaciones (RF-001, RF
       }
     });
 
-    test('Debe rechazar la donación si exencionSanitariaAceptada es omitida (undefined)', () => {
+    test('Debe rechazar la donaciÃ³n si exencionSanitariaAceptada es omitida (undefined)', () => {
       const payload = {
         tipoAlimento: 'Arroz y Granos',
         cantidadEstimada: 10,
@@ -201,7 +201,7 @@ describe('CMP-01 · Validación de Negocio y Publicación de Donaciones (RF-001, RF
   });
 
   describe('Server Action: publicarDonacion', () => {
-    test('Debe rechazar el llamado y no tocar la base de datos si el payload es inválido', async () => {
+    test('Debe rechazar el llamado y no tocar la base de datos si el payload es invÃ¡lido', async () => {
       const mockInsert = vi.fn();
       vi.spyOn(supabaseServer, 'createClient').mockReturnValue({
         from: () => ({ insert: mockInsert }),
@@ -224,7 +224,7 @@ describe('CMP-01 · Validación de Negocio y Publicación de Donaciones (RF-001, RF
       expect(mockInsert).not.toHaveBeenCalled();
     });
 
-    test('Debe insertar en Supabase mapeando campos snake_case y retornar código generado', async () => {
+    test('Debe insertar en Supabase mapeando campos snake_case y retornar cÃ³digo generado', async () => {
       const singleMock = vi.fn().mockResolvedValue({
         data: { codigo: 'DON-105' },
         error: null,
@@ -238,10 +238,10 @@ describe('CMP-01 · Validación de Negocio y Publicación de Donaciones (RF-001, RF
       } as any);
 
       const res = await publicarDonacion({
-        tipoAlimento: 'Plátano Maduro',
+        tipoAlimento: 'PlÃ¡tano Maduro',
         cantidadEstimada: 40,
         unidadMedida: 'kg',
-        direccionRecogida: 'Bodega Cavasa Módulo 3',
+        direccionRecogida: 'Bodega Cavasa MÃ³dulo 3',
         horaLimite: fechaFutura,
         requiereFrio: false,
         exencionSanitariaAceptada: true,
@@ -255,10 +255,10 @@ describe('CMP-01 · Validación de Negocio y Publicación de Donaciones (RF-001, RF
       expect(fromMock).toHaveBeenCalledWith('donaciones');
       expect(insertMock).toHaveBeenCalledWith([
         expect.objectContaining({
-          tipo_alimento: 'Plátano Maduro',
+          tipo_alimento: 'PlÃ¡tano Maduro',
           cantidad_estimada: 40,
           unidad_medida: 'kg',
-          direccion_recogida: 'Bodega Cavasa Módulo 3',
+          direccion_recogida: 'Bodega Cavasa MÃ³dulo 3',
           requiere_frio: false,
           exencion_sanitaria_aceptada: true,
           estado: 'DISPONIBLE',
@@ -269,7 +269,7 @@ describe('CMP-01 · Validación de Negocio y Publicación de Donaciones (RF-001, RF
     test('Debe retornar error amigable si Supabase falla en el insert', async () => {
       const singleMock = vi.fn().mockResolvedValue({
         data: null,
-        error: { message: 'Conexión rechazada por base de datos' },
+        error: { message: 'ConexiÃ³n rechazada por base de datos' },
       });
       const selectMock = vi.fn().mockReturnValue({ single: singleMock });
       const insertMock = vi.fn().mockReturnValue({ select: selectMock });
@@ -283,7 +283,7 @@ describe('CMP-01 · Validación de Negocio y Publicación de Donaciones (RF-001, RF
         tipoAlimento: 'Tomate Chonto',
         cantidadEstimada: 80,
         unidadMedida: 'canastillas',
-        direccionRecogida: 'Galería Santa Elena Puesto 10',
+        direccionRecogida: 'GalerÃ­a Santa Elena Puesto 10',
         horaLimite: fechaFutura,
         requiereFrio: false,
         exencionSanitariaAceptada: true,
@@ -291,7 +291,7 @@ describe('CMP-01 · Validación de Negocio y Publicación de Donaciones (RF-001, RF
 
       expect(res.exito).toBe(false);
       if (!res.exito) {
-        expect(res.error).toContain('Conexión rechazada');
+        expect(res.error).toContain('ConexiÃ³n rechazada');
       }
     });
   });

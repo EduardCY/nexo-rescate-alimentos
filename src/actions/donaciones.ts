@@ -3,33 +3,36 @@
 import { DonacionInputSchema, type DonacionInput } from '@/lib/validations/donacion';
 import { createClient } from '@/lib/supabase/server';
 
-export type PublicarDonacionResultado = 
+export type PublicarDonacionResultado =
   | { exito: true; codigo: string }
   | { exito: false; error: string };
 
 /**
- * Publica una oferta de donaci髇 de alimentos en la plataforma (CMP-01).
- * 
+ * Publica una oferta de donaci贸n de alimentos en la plataforma (CMP-01).
+ *
  * Trazabilidad de negocio:
- * - RF-001: Registro de donaci髇 con tipo de alimento, cantidad estimada, direcci髇 y hora l韒ite.
- * - RF-017: Aceptaci髇 obligatoria de la exenci髇 de responsabilidad sanitaria (Ley 1990 de 2019).
- * - RNF-001: Operaci髇 liviana pensada para dispositivos m髒iles (Mobile-First).
- * - RNF-004: Persistencia 韓tegra y trazable en la tabla relacional donaciones.
- * 
- * Criterios de Aceptaci髇 satisfechos:
- * - CA-01.1: Registro exitoso con estado DISPONIBLE y c骴igo 鷑ico.
- * - CA-01.2: Rechazo si la hora l韒ite no es futura.
- * - CA-01.3: Rechazo si no se acepta la exenci髇 sanitaria legal.
- * - CA-01.4: Asignaci髇 de la bandera de requerimiento de refrigeraci髇 (equiere_frio).
- * 
- * @param input Datos del formulario de donaci髇 tipados seg鷑 DonacionInputSchema.
- * @returns Promesa con el resultado de la publicaci髇 { exito: true, codigo } o { exito: false, error }.
+ * - RF-001: Registro de donaci贸n con tipo de alimento, cantidad estimada, direcci贸n y hora l铆mite.
+ * - RF-017: Aceptaci贸n obligatoria de la exenci贸n de responsabilidad sanitaria (Ley 1990 de 2019).
+ * - RNF-001: Operaci贸n liviana pensada para dispositivos m贸viles (Mobile-First).
+ * - RNF-004: Persistencia 铆ntegra y trazable en la tabla relacional donaciones.
+ *
+ * Criterios de Aceptaci贸n satisfechos:
+ * - CA-01.1: Registro exitoso con estado DISPONIBLE y c贸digo 煤nico.
+ * - CA-01.2: Rechazo si la hora l铆mite no es futura.
+ * - CA-01.3: Rechazo si no se acepta la exenci贸n sanitaria legal.
+ * - CA-01.4: Asignaci贸n de la bandera de requerimiento de refrigeraci贸n (requiere_frio).
+ *
+ * @param input Datos del formulario de donaci贸n tipados seg煤n DonacionInputSchema.
+ * @returns Promesa con el resultado de la publicaci贸n { exito: true, codigo } o { exito: false, error }.
  */
 export async function publicarDonacion(input: DonacionInput): Promise<PublicarDonacionResultado> {
   const parseResult = DonacionInputSchema.safeParse(input);
 
   if (!parseResult.success) {
-    const issues = parseResult.error.issues || (parseResult.error as unknown as { errors?: Array<{ message: string }> }).errors || [];
+    const issues =
+      parseResult.error.issues ||
+      (parseResult.error as unknown as { errors?: Array<{ message: string }> }).errors ||
+      [];
     const errorMensaje = issues.map((e) => e.message).join('. ') || parseResult.error.message;
     return {
       exito: false,
@@ -62,7 +65,7 @@ export async function publicarDonacion(input: DonacionInput): Promise<PublicarDo
   if (error) {
     return {
       exito: false,
-      error: error.message || 'Error al registrar la donaci髇 en la base de datos',
+      error: error.message || 'Error al registrar la donaci贸n en la base de datos',
     };
   }
 

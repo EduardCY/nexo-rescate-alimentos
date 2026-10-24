@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /**
- * Funci髇 auxiliar para parsear y normalizar la hora l韒ite tanto en formato
+ * Funci贸n auxiliar para parsear y normalizar la hora l铆mite tanto en formato
  * de hora local simple (HH:mm, ej. 16:00) como en formato ISO completo (YYYY-MM-DDTHH:mm:ssZ).
  */
 function parseHoraLimite(val: string): Date | null {
@@ -18,17 +18,17 @@ function parseHoraLimite(val: string): Date | null {
 }
 
 /**
- * Esquema de validaci髇 estricta para la publicaci髇 de una donaci髇 de alimentos (CMP-01).
+ * Esquema de validaci贸n estricta para la publicaci贸n de una donaci贸n de alimentos (CMP-01).
  * Satisface los contratos de prueba unitaria y de gobierno (Habeas Data Ley 1581) de QA.
- * 
+ *
  * Trazabilidad de negocio:
- * - RF-001: Captura de tipo de alimento, cantidad estimada, unidad, direcci髇 y hora l韒ite.
- * - RF-017: Compuerta legal mandatoria de exenci髇 de responsabilidad (Ley 1990 de 2019).
+ * - RF-001: Captura de tipo de alimento, cantidad estimada, unidad, direcci贸n y hora l铆mite.
+ * - RF-017: Compuerta legal mandatoria de exenci贸n de responsabilidad (Ley 1990 de 2019).
  * - RNF-003: Cero captura de datos sensibles o personales de beneficiarios finales.
- * - CA-01.1: Registro exitoso con todos los campos v醠idos y exenci髇 aceptada.
- * - CA-01.2: Falla si la hora l韒ite es anterior o igual a la actual.
- * - CA-01.3: Falla si no se acepta la exenci髇 sanitaria.
- * - CA-01.4: Asignaci髇 y control de la etiqueta de refrigeraci髇.
+ * - CA-01.1: Registro exitoso con todos los campos v谩lidos y exenci贸n aceptada.
+ * - CA-01.2: Falla si la hora l铆mite es anterior o igual a la actual.
+ * - CA-01.3: Falla si no se acepta la exenci贸n sanitaria.
+ * - CA-01.4: Asignaci贸n y control de la etiqueta de refrigeraci贸n.
  */
 export const donacionSchema = z.object({
   tipoAlimento: z
@@ -40,7 +40,7 @@ export const donacionSchema = z.object({
   unidadMedida: z.enum(['kg', 'canastillas', 'bultos', 'unidades']),
   direccionRecogida: z
     .string()
-    .min(5, 'La direcci髇 de recogida debe tener al menos 5 caracteres'),
+    .min(5, 'La direcci贸n de recogida debe tener al menos 5 caracteres'),
   horaLimite: z
     .string()
     .refine(
@@ -49,13 +49,13 @@ export const donacionSchema = z.object({
         return parsed !== null && parsed.getTime() > Date.now();
       },
       {
-        message: 'La hora l韒ite de recogida debe ser una fecha y hora futura v醠ida (posterior a la actual)',
+        message: 'La hora l铆mite de recogida debe ser una fecha y hora futura v谩lida (posterior a la actual)',
       }
     ),
   requiereFrio: z.boolean().default(false),
   exencionSanitariaAceptada: z.literal(
     true,
-    'Debes aceptar la exenci髇 de responsabilidad sanitaria (Ley 1990 de 2019) para continuar'
+    'Debes aceptar la exenci贸n de responsabilidad sanitaria (Ley 1990 de 2019) para continuar'
   ),
   donanteId: z.string().optional(),
   donanteNombre: z.string().optional(),

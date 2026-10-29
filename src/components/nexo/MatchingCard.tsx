@@ -2,6 +2,8 @@
 
 import React from "react";
 import type { Lot, MatchScore } from "@/lib/nexo/impact";
+import { requiresCold } from "@/lib/nexo/impact";
+import ColdChainBadge from "@/components/donaciones/ColdChainBadge";
 
 function Bar({ label, value }: { label: string; value: number }) {
   return (
@@ -34,6 +36,11 @@ export default function MatchingCard({ lot, match, validated, onValidate }: Prop
         <>
           <div className="bg-white p-2 text-black bevel-in">
             <p className="font-mono text-[11px] text-slate-600">{lot.id} · {lot.product} · {lot.kg} kg · vence en {lot.hoursLeft}h</p>
+            {requiresCold(lot.coldChain) && (
+              <div className="my-1.5">
+                <ColdChainBadge requiereFrio={true} mostrarAdvertencia={true} size="sm" />
+              </div>
+            )}
             <p className="text-center font-mono text-lg font-bold">⇣</p>
             <p className="text-sm font-bold">{match.ngo.name}</p>
             <p className="font-mono text-[11px] text-slate-600">

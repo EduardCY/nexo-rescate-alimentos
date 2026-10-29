@@ -5,7 +5,8 @@ import { QRCodeSVG } from "qrcode.react";
 import { useNexo } from "./NexoContext";
 import MatchingCard from "./MatchingCard";
 import TerminalLog from "./TerminalLog";
-import { bestMatch, scoreMatch, type NgoUrgency } from "@/lib/nexo/impact";
+import ColdChainBadge from "@/components/donaciones/ColdChainBadge";
+import { bestMatch, scoreMatch, requiresCold, type NgoUrgency } from "@/lib/nexo/impact";
 
 const URG: Record<NgoUrgency, string> = {
   Alta: "bg-nexo-alert text-white",
@@ -61,6 +62,11 @@ export default function MatchingView() {
               <option key={l.id} value={l.id}>{l.id} · {l.product} · {l.kg} kg · {l.hoursLeft}h</option>
             ))}
           </select>
+          {lot && requiresCold(lot.coldChain) && (
+            <div className="mt-2.5">
+              <ColdChainBadge requiereFrio={true} mostrarAdvertencia={true} size="sm" />
+            </div>
+          )}
           <p className="mt-2 font-mono text-[11px] leading-snug text-slate-400">
             Criterios: ① proximidad geográfica + horas de vencimiento ② afinidad alimentaria ③ urgencia de la ONG. Se descartan receptores sin cadena de frío o que no lleguen antes del vencimiento.
           </p>

@@ -19,10 +19,10 @@ En un entorno digital con múltiples voluntarios con señal intermitente en Cali
 
 Implementar un mecanismo de **bloqueo pesimista transaccional a nivel de motor de base de datos** utilizando una función RPC en PostgreSQL (`SELECT ... FOR UPDATE`), expuesta mediante Supabase / Serverless Actions:
 
-1. Cuando un voluntario solicita tomar una donación, la petición invoca la función RPC `tomar_donacion(donacion_id, voluntario_id)`.
+1. Cuando un voluntario solicita tomar una donación, la petición invoca la función RPC `tomar_donacion(p_donacion_id, p_voluntario_id, p_voluntario_nombre)` (enmendado en TASK-08: la firma final lleva 3 parámetros y la función se ejecuta como `SECURITY DEFINER`, porque el RLS de `donaciones` no permite `UPDATE` directo al cliente).
 2. La base de datos bloquea la fila de la donación específica durante la transacción.
 3. Si el estado actual es `DISPONIBLE`, se cambia inmediatamente a `ASIGNADA`, se asocia el `voluntario_id` y se confirma la operación con código de éxito `200`.
-4. Si la donación ya cambió de estado (o fue tomada por la transacción previa en cola), la transacción retorna de inmediato un estado de fallo controlado `409 Conflict` con el mensaje explícito: *"Esta donación ya fue tomada por otro voluntario"*.
+4. Si la donación ya cambió de estado (o fue tomada por la transacción previa en cola), la transacción retorna de inmediato un estado de fallo controlado `409 Conflict` con el mensaje de `CA-03.2` (*"Esta donación acaba de ser reservada por otra persona..."*). El estado se evalúa **antes** que la hora límite. Si la oferta está `EXPIRADA`, `CANCELADA` o su hora límite venció, retorna `410` con el mensaje de `CA-03.3` (*"La oferta seleccionada ya no se encuentra vigente para recogida."*). Otros códigos controlados: `400` (parámetros nulos), `403` (el usuario es `DONANTE`) y `404` (donación o voluntario inexistentes).
 
 ---
 

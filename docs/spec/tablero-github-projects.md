@@ -442,7 +442,7 @@ Como UX Designer, debo asegurar que las ofertas con `requiereFrio = true` exhiba
 #### Issue TASK-08: Procedimiento RPC de Bloqueo Pesimista (Núcleo Concurrente)
 * **Título:** `[TASK-08] Desarrollar procedimiento RPC / transacción atómica SQL con SELECT FOR UPDATE para toma única`
 * **Campos del Tablero:**
-  * **Status:** `Terminado` (Implementado en migración SQL `supabase/migrations/20261009000000_init_schema.sql` y aprobado en ADR-001)
+  * **Status:** `Terminado` (Implementado en `supabase/migrations/20261009000000_init_schema.sql`, endurecido en `supabase/migrations/20261028000000_task08_tomar_donacion_endurecida.sql` y verificado con `tests/db/tomar-donacion.test.ts`; ADR-001)
   * **CMP:** `CMP-03`
   * **Origen:** `RF-004`, `RF-010`, `RNF-004`, `ADR-001`
   * **Estimación:** `4`
@@ -456,10 +456,14 @@ Como Backend Engineer, debo asegurar que bajo ninguna circunstancia dos voluntar
 ### Entregables
 - Función RPC PostgreSQL `tomar_donacion(p_donacion_id, p_voluntario_id, p_voluntario_nombre)` en Supabase.
 - Verificación de estado `DISPONIBLE` bajo cerrojo de fila.
-- Retorno de código de conflicto HTTP 409 si la donación ya fue tomada por otro voluntario.
+- Retorno de código de conflicto HTTP 409 si la donación ya fue tomada por otro voluntario, y 410 si la oferta no está vigente (`CA-03.3`).
+- Registro automático en `trazabilidad_eventos` de cada transición de estado, en la misma transacción.
+- Ejecución como `SECURITY DEFINER` para operar bajo RLS con la anon key.
+- Prueba de concurrencia contra PostgreSQL real (`tests/db/tomar-donacion.test.ts`).
 
 ### Criterio de Aceptación BDD
 - `CA-03.1`: Asignación exitosa e indivisible al primer solicitante.
+- `CA-03.2` y `CA-03.3`: cubiertos por la misma función (409 / 410).
 ```
 
 ---

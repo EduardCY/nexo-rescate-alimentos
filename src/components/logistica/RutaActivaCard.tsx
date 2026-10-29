@@ -11,9 +11,8 @@ import {
   MapPin,
   Scale,
   Compass,
-  AlertTriangle,
 } from 'lucide-react';
-import ColdChainBadge from '@/components/donaciones/ColdChainBadge';
+import { ColdChainBadge } from '@/components/donaciones/ColdChainBadge';
 
 export interface MisionActiva {
   id: string;
@@ -23,8 +22,8 @@ export interface MisionActiva {
   unidadMedida: string;
   donanteNombre: string;
   direccionRecogida: string;
-  indicacionesPuesto: string;
-  telefonoDonante: string;
+  indicacionesPuesto?: string;
+  telefonoDonante?: string;
   requiereFrio: boolean;
   horaLimite: string;
   comedorNombre?: string;
@@ -36,13 +35,29 @@ interface RutaActivaCardProps {
   className?: string;
 }
 
-export default function RutaActivaCard({
+/**
+ * Tarjeta móvil de ruta activa para el voluntario asignado en campo (TASK-18 / CA-03.1).
+ * Revela dirección exacta de recogida, contacto del comerciante donante y enlace directo
+ * al acta de confirmación de entrega en comedor (`/entregas/[id]`).
+ */
+export function RutaActivaCard({
   mision,
   className = '',
 }: RutaActivaCardProps) {
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-    mision.direccionRecogida
+    `${mision.direccionRecogida}, Cali, Colombia`
   )}`;
+
+  const horaFormateada = (() => {
+    const d = new Date(mision.horaLimite);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleTimeString('es-CO', {
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    }
+    return mision.horaLimite;
+  })();
 
   return (
     <article
@@ -65,7 +80,7 @@ export default function RutaActivaCard({
         <div className="flex flex-col items-end gap-1">
           <span className="text-xs font-mono font-bold text-amber-300 bg-amber-950/80 border border-amber-500/50 px-2.5 py-1 rounded-md flex items-center gap-1.5">
             <Clock className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>Retirar antes de {mision.horaLimite}</span>
+            <span>Retirar antes de {horaFormateada}</span>
           </span>
         </div>
       </header>
@@ -108,15 +123,25 @@ export default function RutaActivaCard({
         </div>
 
         <div className="flex items-start gap-2 text-sm text-slate-200">
-          <MapPin className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" aria-hidden="true" />
-          <span className="font-medium leading-snug">{mision.direccionRecogida}</span>
+          <MapPin
+            className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"
+            aria-hidden="true"
+          />
+          <span className="font-medium leading-snug">
+            {mision.direccionRecogida}
+          </span>
         </div>
 
         {mision.indicacionesPuesto && (
           <div className="flex items-start gap-2 text-xs text-amber-200 bg-amber-950/40 border border-amber-500/30 rounded-lg p-2.5">
-            <Compass className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" aria-hidden="true" />
+            <Compass
+              className="w-4 h-4 text-amber-400 shrink-0 mt-0.5"
+              aria-hidden="true"
+            />
             <div className="leading-snug">
-              <span className="font-bold block">Ubicación exacta del puesto:</span>
+              <span className="font-bold block">
+                Ubicación exacta del puesto:
+              </span>
               <span>{mision.indicacionesPuesto}</span>
             </div>
           </div>
@@ -128,7 +153,9 @@ export default function RutaActivaCard({
           <span className="text-[10px] font-mono uppercase tracking-wider text-sky-400 font-bold block">
             Destino: Comedor Comunitario
           </span>
-          <p className="font-bold text-white text-sm mt-0.5">{mision.comedorNombre}</p>
+          <p className="font-bold text-white text-sm mt-0.5">
+            {mision.comedorNombre}
+          </p>
           {mision.comedorDireccion && (
             <p className="text-slate-400 mt-0.5">{mision.comedorDireccion}</p>
           )}
@@ -153,30 +180,45 @@ export default function RutaActivaCard({
             <span>Abrir en Google Maps</span>
           </a>
 
-          <a
-            href={`tel:${mision.telefonoDonante}`}
-            className="min-h-[48px] px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 active:bg-slate-800/80
-              text-emerald-300 border border-emerald-500/40 font-bold text-sm flex items-center justify-center gap-2
-              transition-colors select-none text-center
-              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
-          >
-            <Phone className="w-5 h-5 shrink-0 text-emerald-400" aria-hidden="true" />
-            <span>Llamar al Comerciante</span>
-          </a>
+          {mision.telefonoDonante ? (
+            <a
+              href={`tel:${mision.telefonoDonante}`}
+              className="min-h-[48px] px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 active:bg-slate-800/80
+                text-emerald-300 border border-emerald-500/40 font-bold text-sm flex items-center justify-center gap-2
+                transition-colors select-none text-center
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+            >
+              <Phone
+                className="w-5 h-5 shrink-0 text-emerald-400"
+                aria-hidden="true"
+              />
+              <span>Llamar al Comerciante</span>
+            </a>
+          ) : (
+            <span className="min-h-[48px] px-4 py-3 rounded-xl bg-slate-950 text-slate-400 border border-slate-800 font-mono text-xs flex items-center justify-center gap-2 text-center">
+              <Phone className="w-4 h-4 shrink-0 text-slate-500" aria-hidden="true" />
+              <span>Contacto en puesto de recogida</span>
+            </span>
+          )}
         </div>
 
         <Link
-          href={`/entrega/${mision.id}`}
+          href={`/entregas/${mision.id}`}
           className="min-h-[52px] w-full px-4 py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600
             text-slate-950 font-black text-sm sm:text-base font-mono uppercase tracking-wider
             flex items-center justify-center gap-2.5 shadow-lg shadow-emerald-500/20
             transition-all select-none text-center mt-1
             focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
         >
-          <CheckCircle2 className="w-5 h-5 text-slate-950 shrink-0" aria-hidden="true" />
+          <CheckCircle2
+            className="w-5 h-5 text-slate-950 shrink-0"
+            aria-hidden="true"
+          />
           <span>Confirmar Entrega en Comedor</span>
         </Link>
       </nav>
     </article>
   );
 }
+
+export default RutaActivaCard;

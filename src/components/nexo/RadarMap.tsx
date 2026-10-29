@@ -82,11 +82,10 @@ export default function RadarMap() {
           <p className="absolute inset-x-0 bottom-3 text-center font-mono text-[11px] text-slate-400">SIN NODOS ACTIVOS</p>
         )}
 
-        <div className="absolute right-2 top-2 flex flex-col gap-1">
-          <button className="btn-98 font-mono" onClick={() => setZoom((z) => Math.min(2.5, +(z + 0.25).toFixed(2)))}>[+] Zoom</button>
-          <button className="btn-98 font-mono" onClick={() => setZoom((z) => Math.max(0.6, +(z - 0.25).toFixed(2)))}>[-] Zoom</button>
-          <button className="btn-98 font-mono" onClick={centerFleet}>[o] Centrar Flota</button>
-          <button className="btn-98 font-mono" onClick={() => { setZoom(1); setCenter({ cx: W / 2, cy: H / 2 }); }}>Reiniciar</button>
+        <div className="absolute right-2 top-2 flex flex-col gap-1.5">
+          <button className="btn-98 font-mono min-h-[32px] px-2.5" onClick={() => setZoom((z) => Math.min(2.5, +(z + 0.25).toFixed(2)))}>[+] Zoom</button>
+          <button className="btn-98 font-mono min-h-[32px] px-2.5" onClick={() => setZoom((z) => Math.max(0.6, +(z - 0.25).toFixed(2)))}>[-] Zoom</button>
+          <button className="btn-98 font-mono min-h-[32px] px-2.5" onClick={centerFleet}>[o] Centrar</button>
         </div>
       </div>
       <ul className="flex flex-wrap gap-x-4 gap-y-1 border-t border-slate-700 px-3 py-1.5 font-mono text-[10px] text-slate-300">

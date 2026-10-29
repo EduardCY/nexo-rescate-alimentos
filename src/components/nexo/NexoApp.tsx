@@ -10,18 +10,18 @@ import MatchingView from "./MatchingView";
 import ImpactView from "./ImpactView";
 
 const MENU: MenuEntry[] = [
-  { id: "archivo", label: "Archivo", view: "dashboard" },
-  { id: "donaciones", label: "Donaciones Activas", view: "donation" },
-  { id: "rutas", label: "Rutas & Despacho", view: "matching" },
-  { id: "fundaciones", label: "Fundaciones Receptoras", view: "matching", focusNgos: true },
-  { id: "certificados", label: "Certificados Ambientales", view: "impact" },
+  { id: "archivo", label: "Dashboard", view: "dashboard" },
+  { id: "donaciones", label: "Donar Alimentos", view: "donation" },
+  { id: "rutas", label: "Rutas y Asignación", view: "matching" },
+  { id: "fundaciones", label: "Comedores y Fundaciones", view: "matching", focusNgos: true },
+  { id: "certificados", label: "Certificados de Impacto", view: "impact" },
   { id: "config", label: "Configuración" },
 ];
 
 const TITLES: Record<ViewId, string> = {
-  dashboard: "DASHBOARD MASTER",
+  dashboard: "DASHBOARD MASTER — LOGÍSTICA & RESCATE",
   donation: "ALTA DE LOTE EXCEDENTE",
-  matching: "PORTAL DE FUNDACIONES Y ASIGNACIÓN",
+  matching: "PORTAL DE ASIGNACIÓN A COMEDORES",
   impact: "IMPACTO AMBIENTAL Y DEDUCCIÓN TRIBUTARIA",
 };
 
@@ -31,8 +31,8 @@ function ConfigDialog({ onClose }: { onClose: () => void }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" role="dialog" aria-modal="true" aria-label="Configuración">
       <div className="bevel-out w-full max-w-sm p-[3px]">
         <div className="titlebar flex items-center justify-between px-2 py-[3px] font-mono text-[13px] font-bold text-white">
-          <span>Configuración</span>
-          <button className="btn-98 !px-0 !py-0 h-[18px] w-[20px]" onClick={onClose} aria-label="Cerrar">X</button>
+          <span>Configuración del Sistema</span>
+          <button className="btn-98 !px-0 !py-0 h-[20px] w-[22px] flex items-center justify-center" onClick={onClose} aria-label="Cerrar">X</button>
         </div>
         <div className="flex flex-col gap-3 p-4 text-sm text-black">
           <label className="flex cursor-pointer items-center gap-2">
@@ -43,7 +43,9 @@ function ConfigDialog({ onClose }: { onClose: () => void }) {
             <input type="checkbox" className="h-4 w-4 accent-[#000080]" checked={settings.radarAnim} onChange={(e) => setSettings({ ...settings, radarAnim: e.target.checked })} />
             Animaciones del radar logístico
           </label>
-          <div className="flex justify-end"><button className="btn-98 px-6" onClick={onClose}>Aceptar</button></div>
+          <div className="flex justify-end pt-2">
+            <button className="btn-98 px-6 py-1.5" onClick={onClose}>Aceptar</button>
+          </div>
         </div>
       </div>
     </div>
@@ -67,10 +69,10 @@ function Shell() {
   return (
     <div className={`${settings.crt ? "crt-on" : ""} ${settings.radarAnim ? "" : "anim-off"}`}>
       <WindowFrame
-        title={`NEXO: RESCATE DE ALIMENTOS v2.0 [${TITLES[view]}]`}
+        title={`NEXO: RESCATE DE ALIMENTOS [${TITLES[view]}]`}
         menu={<MenuBar items={MENU} activeId={activeId} onSelect={select} />}
-        statusLeft={`Listo · ${lots.filter((l) => l.status === "available").length} lotes disponibles · Nodo Cali/Tuluá`}
-        statusRight="NEXO v2.0"
+        statusLeft={`Listo • ${lots.filter((l) => l.status === "available").length} lotes disponibles • Plazas de Cali`}
+        statusRight="NEXO v2.0 (Win98 Edition)"
       >
         {view === "dashboard" && <DashboardView />}
         {view === "donation" && <DonationForm />}
@@ -82,9 +84,9 @@ function Shell() {
   );
 }
 
-export default function NexoApp() {
+export default function NexoApp({ initialView = "dashboard" }: { initialView?: ViewId }) {
   return (
-    <NexoProvider>
+    <NexoProvider initialView={initialView}>
       <Shell />
     </NexoProvider>
   );

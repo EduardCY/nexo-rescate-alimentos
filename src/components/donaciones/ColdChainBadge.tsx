@@ -8,7 +8,11 @@ interface ColdChainBadgeProps {
   size?: 'sm' | 'md' | 'lg';
 }
 
-export default function ColdChainBadge({
+/**
+ * Insignia de alerta visual para lotes perecederos que exigen cadena de frío (CA-02.2 / TASK-07).
+ * Advierte en terreno cuando un alimento solo es apto para comedores con refrigeración operativa.
+ */
+export function ColdChainBadge({
   requiereFrio,
   mostrarAdvertencia = false,
   className = '',
@@ -44,7 +48,7 @@ export default function ColdChainBadge({
           aria-hidden="true"
         />
         <span className="tracking-wide uppercase font-mono">
-          Requiere Refrigeración
+          Requiere Refrigeración (4°C - 8°C)
         </span>
       </span>
 
@@ -62,3 +66,5 @@ export default function ColdChainBadge({
     </div>
   );
 }
+
+export default ColdChainBadge;

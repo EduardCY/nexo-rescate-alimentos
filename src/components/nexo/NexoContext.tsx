@@ -50,8 +50,14 @@ const hhmmss = (d: Date) => `${two(d.getHours())}:${two(d.getMinutes())}:${two(d
 
 const EMPTY_TOTALS: Totals = { kg: 0, rations: 0, waterL: 0, valueCop: 0, efficiency: null };
 
-export function NexoProvider({ children }: { children: React.ReactNode }) {
-  const [view, setView] = useState<ViewId>("dashboard");
+export function NexoProvider({ 
+  children, 
+  initialView = "dashboard" 
+}: { 
+  children: React.ReactNode; 
+  initialView?: ViewId; 
+}) {
+  const [view, setView] = useState<ViewId>(initialView);
   const [focusNgos, setFocusNgos] = useState(false);
   const [lots, setLots] = useState<Lot[]>([]);
   const [ngos, setNgos] = useState<Ngo[]>([]);

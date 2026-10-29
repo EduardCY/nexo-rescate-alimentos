@@ -1,0 +1,50 @@
+name: CI - Validación y compilación
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+  pull_request:
+    branches:
+      - main
+      - develop
+
+# Solo se necesita leer el repositorio para validar el código.
+permissions:
+  contents: read
+
+jobs:
+  validate-and-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Recuperar el código que se debe validar.
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      # Usar Node.js 20 y aprovechar la caché de npm.
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # Instalar las dependencias exactamente según package-lock.json.
+      - name: Instalar dependencias
+        run: npm ci
+
+      # Compuerta 1: calidad del código.
+      - name: Validar lint
+        run: npm run lint
+
+      # Compuerta 2: comportamiento y pruebas automatizadas.
+      - name: Ejecutar pruebas automatizadas
+        run: npm run test
+
+      # Compuerta 3: compilación de producción sin credenciales reales.
+      - name: Compilar aplicación de producción
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://dummy.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-key

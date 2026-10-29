@@ -1,4 +1,4 @@
-﻿import { describe, test, expect } from 'vitest';
+import { describe, test, expect } from 'vitest';
 import { tomarDonacion, obtenerDonacionesDisponibles } from '../../src/actions/donaciones';
 
 describe('CMP-03: Toma Atómica, Reserva Única y Concurrencia HTTP 409 (TASK-09)', () => {

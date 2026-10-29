@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useEffect } from 'react';
 import { AlertTriangle, MapPin, Clock, ArrowRight, X } from 'lucide-react';

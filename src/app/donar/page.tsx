@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { Terminal, ArrowLeft } from 'lucide-react';
 import { DonacionWizard } from '@/components/donaciones/DonacionWizard';

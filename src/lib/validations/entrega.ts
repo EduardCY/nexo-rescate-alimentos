@@ -1,4 +1,4 @@
-﻿import { z } from 'zod';
+import { z } from 'zod';
 
 export const estadoFisicoEnum = z.enum(['EXCELENTE', 'BUENO', 'REGULAR']);
 export type EstadoFisicoAlimento = z.infer<typeof estadoFisicoEnum>;

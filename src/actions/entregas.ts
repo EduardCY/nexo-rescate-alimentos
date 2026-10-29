@@ -1,6 +1,6 @@
-﻿'use server';
+'use server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createClient, esSupabaseConfigurado } from '@/lib/supabase/server';
 import { EntregaInputSchema, type EntregaInput } from '@/lib/validations/entrega';
 import type { Donacion, ZonaCali } from '@/types';
 import { inferirZonaCali } from '@/lib/utils/donaciones-helper';
@@ -95,40 +95,42 @@ if (!globalThis.__NEXO_TRAZABILIDAD_EVENTOS) {
  * Obtiene la donación por su identificador para la pantalla de confirmación de entrega.
  */
 export async function obtenerDonacionParaEntrega(donacionId: string): Promise<Donacion | null> {
-  try {
-    const supabase = createClient();
-    const { data, error } = await supabase
-      .from('donaciones')
-      .select('*')
-      .eq('id', donacionId)
-      .single();
+  if (esSupabaseConfigurado()) {
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('donaciones')
+        .select('*')
+        .eq('id', donacionId)
+        .single();
 
-    if (!error && data) {
-      return {
-        id: data.id,
-        codigo: data.codigo,
-        donanteId: data.donante_id,
-        donanteNombre: data.donante_nombre || 'Comercio Donante',
-        tipoAlimento: data.tipo_alimento,
-        requiereFrio: !!data.requiere_frio,
-        cantidadEstimada: Number(data.cantidad_estimada),
-        unidadMedida: data.unidad_medida,
-        direccionRecogida: data.direccion_recogida,
-        zona: (data.zona as ZonaCali) || inferirZonaCali(data.direccion_recogida),
-        horaLimite: data.hora_limite,
-        estado: data.estado,
-        exencionSanitariaAceptada: !!data.exencion_sanitaria_aceptada,
-        createdAt: data.created_at,
-        voluntarioId: data.voluntario_id,
-        voluntarioNombre: data.voluntario_nombre,
-        comedorId: data.comedor_id,
-        comedorNombre: data.comedor_nombre,
-        asignadaAt: data.asignada_at,
-        entregadaAt: data.entregada_at,
-      };
+      if (!error && data) {
+        return {
+          id: data.id,
+          codigo: data.codigo,
+          donanteId: data.donante_id,
+          donanteNombre: data.donante_nombre || 'Comercio Donante',
+          tipoAlimento: data.tipo_alimento,
+          requiereFrio: !!data.requiere_frio,
+          cantidadEstimada: Number(data.cantidad_estimada),
+          unidadMedida: data.unidad_medida,
+          direccionRecogida: data.direccion_recogida,
+          zona: (data.zona as ZonaCali) || inferirZonaCali(data.direccion_recogida),
+          horaLimite: data.hora_limite,
+          estado: data.estado,
+          exencionSanitariaAceptada: !!data.exencion_sanitaria_aceptada,
+          createdAt: data.created_at,
+          voluntarioId: data.voluntario_id,
+          voluntarioNombre: data.voluntario_nombre,
+          comedorId: data.comedor_id,
+          comedorNombre: data.comedor_nombre,
+          asignadaAt: data.asignada_at,
+          entregadaAt: data.entregada_at,
+        };
+      }
+    } catch {
+      // Fallback seguro a memoria
     }
-  } catch {
-    // Fallback seguro a memoria
   }
 
   const vol = globalThis.__NEXO_DONACIONES_VOLATILES?.get(donacionId);
@@ -174,7 +176,8 @@ export async function confirmarEntrega(rawInput: EntregaInput): Promise<Confirma
     return {
       exito: false,
       codigo: 400,
-      mensaje: 'Bloqueo (CA-04.2): No se puede entregar una donación que se encuentra en estado DISPONIBLE y no ha sido tomada previamente por un voluntario.',
+      mensaje:
+        'Bloqueo (CA-04.2): No se puede entregar una donación que se encuentra en estado DISPONIBLE y no ha sido tomada previamente por un voluntario.',
     };
   }
 
@@ -205,7 +208,8 @@ export async function confirmarEntrega(rawInput: EntregaInput): Promise<Confirma
     return {
       exito: false,
       codigo: 403,
-      mensaje: 'DoD: Solo el voluntario que reservó y tiene asignada la donación puede registrar la entrega en el comedor.',
+      mensaje:
+        'DoD: Solo el voluntario que reservó y tiene asignada la donación puede registrar la entrega en el comedor.',
     };
   }
 
@@ -214,52 +218,54 @@ export async function confirmarEntrega(rawInput: EntregaInput): Promise<Confirma
   }`;
 
   // 7. CA-04.1: Persistencia en Supabase si está disponible
-  try {
-    const supabase = createClient();
+  if (esSupabaseConfigurado()) {
+    try {
+      const supabase = createClient();
 
-    // Actualización de donación a ENTREGADA con marca temporal UTC
-    const { data: actualizada, error: updateError } = await supabase
-      .from('donaciones')
-      .update({
-        estado: 'ENTREGADA',
-        entregada_at: ahoraUtcIso,
-      })
-      .eq('id', input.donacionId)
-      .eq('estado', 'ASIGNADA')
-      .select()
-      .single();
+      // Actualización de donación a ENTREGADA con marca temporal UTC
+      const { data: actualizada, error: updateError } = await supabase
+        .from('donaciones')
+        .update({
+          estado: 'ENTREGADA',
+          entregada_at: ahoraUtcIso,
+        })
+        .eq('id', input.donacionId)
+        .eq('estado', 'ASIGNADA')
+        .select()
+        .single();
 
-    if (!updateError && actualizada) {
-      // Registro inmutable en trazabilidad_eventos
-      await supabase.from('trazabilidad_eventos').insert([
-        {
-          donacion_id: input.donacionId,
-          estado_anterior: 'ASIGNADA',
-          estado_nuevo: 'ENTREGADA',
-          usuario_id: input.voluntarioId || donacion.voluntarioId || null,
-          usuario_nombre: input.voluntarioNombre || donacion.voluntarioNombre || 'Voluntario',
-          timestamp: ahoraUtcIso,
-          observaciones: textoObservaciones,
-        },
-      ]);
+      if (!updateError && actualizada) {
+        // Registro inmutable en trazabilidad_eventos
+        await supabase.from('trazabilidad_eventos').insert([
+          {
+            donacion_id: input.donacionId,
+            estado_anterior: 'ASIGNADA',
+            estado_nuevo: 'ENTREGADA',
+            usuario_id: input.voluntarioId || donacion.voluntarioId || null,
+            usuario_nombre: input.voluntarioNombre || donacion.voluntarioNombre || 'Voluntario',
+            timestamp: ahoraUtcIso,
+            observaciones: textoObservaciones,
+          },
+        ]);
 
-      const donacionEntregada: Donacion = {
-        ...donacion,
-        estado: 'ENTREGADA',
-        entregadaAt: ahoraUtcIso,
-      };
+        const donacionEntregada: Donacion = {
+          ...donacion,
+          estado: 'ENTREGADA',
+          entregadaAt: ahoraUtcIso,
+        };
 
-      return {
-        exito: true,
-        codigo: 200,
-        mensaje: 'Entrega en comedor registrada formalmente con éxito',
-        donacion: donacionEntregada,
-        entregadaAt: ahoraUtcIso,
-        receptorNombre: input.nombreReceptor.trim(),
-      };
+        return {
+          exito: true,
+          codigo: 200,
+          mensaje: 'Entrega en comedor registrada formalmente con éxito',
+          donacion: donacionEntregada,
+          entregadaAt: ahoraUtcIso,
+          receptorNombre: input.nombreReceptor.trim(),
+        };
+      }
+    } catch {
+      // Fallback a almacenamiento en memoria
     }
-  } catch {
-    // Fallback a almacenamiento en memoria
   }
 
   // 8. Fallback en memoria (para pruebas y modo offline)

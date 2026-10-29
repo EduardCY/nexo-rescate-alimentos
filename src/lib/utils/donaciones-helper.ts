@@ -1,4 +1,4 @@
-﻿import type { ZonaCali } from '@/types';
+import type { ZonaCali } from '@/types';
 
 /**
  * Normaliza cualquier formato de hora límite (HH:mm local o ISO completo)

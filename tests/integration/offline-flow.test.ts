@@ -1,10 +1,7 @@
-﻿import 'fake-indexeddb/auto'; // debe ir antes de importar la base de datos
+// @vitest-environment jsdom
+import 'fake-indexeddb/auto'; // debe ir antes de importar la base de datos
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import { db } from '../../src/lib/db';
-
-if (typeof (globalThis as any).navigator === 'undefined') {
-  (globalThis as any).navigator = { onLine: true };
-}
 
 describe('CA-01.5 – guardado offline', () => {
   beforeEach(async () => {

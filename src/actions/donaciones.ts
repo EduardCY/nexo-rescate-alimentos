@@ -1,7 +1,7 @@
-﻿'use server';
+'use server';
 
 import { DonacionInputSchema, type DonacionInput } from '@/lib/validations/donacion';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, esSupabaseConfigurado } from '@/lib/supabase/server';
 import type { Donacion, ZonaCali } from '@/types';
 import { normalizarFechaHoraLimite, inferirZonaCali } from '@/lib/utils/donaciones-helper';
 
@@ -174,47 +174,49 @@ export async function publicarDonacion(input: DonacionInput): Promise<PublicarDo
  * Obtiene el catálogo reactivo de donaciones disponibles (CA-02.1, CA-02.3, CA-02.4).
  */
 export async function obtenerDonacionesDisponibles(zona?: ZonaCali | 'TODAS'): Promise<Donacion[]> {
-  try {
-    const supabase = createClient();
-    const ahoraIso = new Date().toISOString();
+  if (esSupabaseConfigurado()) {
+    try {
+      const supabase = createClient();
+      const ahoraIso = new Date().toISOString();
 
-    let query = supabase
-      .from('donaciones')
-      .select('*')
-      .eq('estado', 'DISPONIBLE')
-      .gt('hora_limite', ahoraIso)
-      .order('hora_limite', { ascending: true });
+      let query = supabase
+        .from('donaciones')
+        .select('*')
+        .eq('estado', 'DISPONIBLE')
+        .gt('hora_limite', ahoraIso)
+        .order('hora_limite', { ascending: true });
 
-    if (zona && zona !== 'TODAS') {
-      query = query.eq('zona', zona);
+      if (zona && zona !== 'TODAS') {
+        query = query.eq('zona', zona);
+      }
+
+      const { data, error } = await query;
+
+      if (!error && data && data.length > 0) {
+        return data.map((d) => ({
+          id: d.id,
+          codigo: d.codigo,
+          donanteId: d.donante_id,
+          donanteNombre: d.donante_nombre || 'Comercio Donante',
+          tipoAlimento: d.tipo_alimento,
+          requiereFrio: !!d.requiere_frio,
+          cantidadEstimada: Number(d.cantidad_estimada),
+          unidadMedida: d.unidad_medida,
+          direccionRecogida: d.direccion_recogida,
+          zona: (d.zona as ZonaCali) || inferirZonaCali(d.direccion_recogida),
+          horaLimite: d.hora_limite,
+          estado: d.estado,
+          exencionSanitariaAceptada: !!d.exencion_sanitaria_aceptada,
+          createdAt: d.created_at,
+          voluntarioId: d.voluntario_id,
+          voluntarioNombre: d.voluntario_nombre,
+          comedorId: d.comedor_id,
+          comedorNombre: d.comedor_nombre,
+        }));
+      }
+    } catch {
+      // Fallback a memoria si Supabase no está conectado
     }
-
-    const { data, error } = await query;
-
-    if (!error && data && data.length > 0) {
-      return data.map((d) => ({
-        id: d.id,
-        codigo: d.codigo,
-        donanteId: d.donante_id,
-        donanteNombre: d.donante_nombre || 'Comercio Donante',
-        tipoAlimento: d.tipo_alimento,
-        requiereFrio: !!d.requiere_frio,
-        cantidadEstimada: Number(d.cantidad_estimada),
-        unidadMedida: d.unidad_medida,
-        direccionRecogida: d.direccion_recogida,
-        zona: (d.zona as ZonaCali) || inferirZonaCali(d.direccion_recogida),
-        horaLimite: d.hora_limite,
-        estado: d.estado,
-        exencionSanitariaAceptada: !!d.exencion_sanitaria_aceptada,
-        createdAt: d.created_at,
-        voluntarioId: d.voluntario_id,
-        voluntarioNombre: d.voluntario_nombre,
-        comedorId: d.comedor_id,
-        comedorNombre: d.comedor_nombre,
-      }));
-    }
-  } catch {
-    // Fallback a memoria si Supabase no está conectado
   }
 
   const ahora = Date.now();
@@ -232,6 +234,7 @@ export async function obtenerDonacionesDisponibles(zona?: ZonaCali | 'TODAS'): P
 /**
  * Server Action para tomar/reservar una donación con control atómico de concurrencia (TASK-09 / CMP-03).
  * Satisface CA-03.2 (colisión HTTP 409 con mensaje empático) y CA-03.3 (bloqueo sobre expiradas/canceladas).
+ * Conecta directamente con la función RPC `tomar_donacion` (TASK-08 / PR #24).
  */
 export async function tomarDonacion(
   donacionId: string,
@@ -241,120 +244,148 @@ export async function tomarDonacion(
   const ahoraIso = new Date().toISOString();
   const ahoraMs = Date.now();
 
-  try {
-    const supabase = createClient();
+  if (esSupabaseConfigurado()) {
+    try {
+      const supabase = createClient();
 
-    // 1. Intentar procedimiento atómico si existe en PostgreSQL
-    const { data: rpcData, error: rpcError } = await supabase.rpc('tomar_donacion', {
-      p_donacion_id: donacionId,
-      p_voluntario_id: voluntarioId,
-      p_voluntario_nombre: voluntarioNombre,
-    });
+      // 1. Invocar procedimiento atómico `tomar_donacion` en PostgreSQL (TASK-08)
+      const { data: rpcData, error: rpcError } = await supabase.rpc('tomar_donacion', {
+        p_donacion_id: donacionId,
+        p_voluntario_id: voluntarioId,
+        p_voluntario_nombre: voluntarioNombre,
+      });
 
-    if (!rpcError && rpcData) {
-      if (rpcData.codigo === 200) {
+      if (!rpcError && rpcData) {
+        if (rpcData.codigo === 200) {
+          const donacionMapeada: Donacion = rpcData.donacion || {
+            id: rpcData.donacion_id || donacionId,
+            codigo: rpcData.donacion_codigo || 'DON-000',
+            donanteId: 'donante-rpc',
+            donanteNombre: rpcData.donante_nombre || 'Comercio Donante',
+            tipoAlimento: 'Alimento reservado',
+            requiereFrio: false,
+            cantidadEstimada: 1,
+            unidadMedida: 'kg',
+            direccionRecogida: rpcData.direccion_recogida || '',
+            zona: inferirZonaCali(rpcData.direccion_recogida || ''),
+            horaLimite: ahoraIso,
+            estado: 'ASIGNADA',
+            exencionSanitariaAceptada: true,
+            createdAt: ahoraIso,
+            voluntarioId: rpcData.voluntario_id || voluntarioId,
+            voluntarioNombre: rpcData.voluntario_nombre || voluntarioNombre,
+            asignadaAt: rpcData.asignada_at || ahoraIso,
+          };
+
+          return {
+            exito: true,
+            codigo: 200,
+            mensaje: rpcData.mensaje || 'Donación reservada exitosamente',
+            donacion: donacionMapeada,
+          };
+        }
+        if (rpcData.codigo === 409) {
+          return {
+            exito: false,
+            codigo: 409,
+            mensaje:
+              'Esta donación acaba de ser reservada por otra persona. Te mostramos las ofertas disponibles más cercanas.',
+            donacionId,
+          };
+        }
+        if (rpcData.codigo === 410 || rpcData.codigo === 404) {
+          return {
+            exito: false,
+            codigo: 410,
+            mensaje: 'Esta oferta ha expirado y ya no se encuentra disponible para recogida.',
+            donacionId,
+          };
+        }
+      }
+
+      // 2. Consulta con compuerta atómica WHERE estado = 'DISPONIBLE' AND hora_limite > NOW()
+      const { data: donacionActual } = await supabase
+        .from('donaciones')
+        .select('*')
+        .eq('id', donacionId)
+        .single();
+
+      if (donacionActual) {
+        if (
+          new Date(donacionActual.hora_limite).getTime() <= ahoraMs ||
+          donacionActual.estado === 'EXPIRADA'
+        ) {
+          return {
+            exito: false,
+            codigo: 410,
+            mensaje: 'Esta oferta ha expirado y ya no se encuentra disponible para recogida.',
+            donacionId,
+          };
+        }
+
+        if (donacionActual.estado !== 'DISPONIBLE') {
+          return {
+            exito: false,
+            codigo: 409,
+            mensaje:
+              'Esta donación acaba de ser reservada por otra persona. Te mostramos las ofertas disponibles más cercanas.',
+            donacionId,
+          };
+        }
+
+        // Actualización atómica con condición de estado
+        const { data: actualizada, error: updateError } = await supabase
+          .from('donaciones')
+          .update({
+            estado: 'ASIGNADA',
+            voluntario_id: voluntarioId,
+            voluntario_nombre: voluntarioNombre,
+            asignada_at: ahoraIso,
+          })
+          .eq('id', donacionId)
+          .eq('estado', 'DISPONIBLE')
+          .gt('hora_limite', ahoraIso)
+          .select()
+          .single();
+
+        if (updateError || !actualizada) {
+          return {
+            exito: false,
+            codigo: 409,
+            mensaje:
+              'Esta donación acaba de ser reservada por otra persona. Te mostramos las ofertas disponibles más cercanas.',
+            donacionId,
+          };
+        }
+
         return {
           exito: true,
           codigo: 200,
           mensaje: 'Donación reservada exitosamente',
-          donacion: rpcData.donacion,
+          donacion: {
+            id: actualizada.id,
+            codigo: actualizada.codigo,
+            donanteId: actualizada.donante_id,
+            donanteNombre: actualizada.donante_nombre,
+            tipoAlimento: actualizada.tipo_alimento,
+            requiereFrio: !!actualizada.requiere_frio,
+            cantidadEstimada: Number(actualizada.cantidad_estimada),
+            unidadMedida: actualizada.unidad_medida,
+            direccionRecogida: actualizada.direccion_recogida,
+            zona: (actualizada.zona as ZonaCali) || inferirZonaCali(actualizada.direccion_recogida),
+            horaLimite: actualizada.hora_limite,
+            estado: 'ASIGNADA',
+            exencionSanitariaAceptada: !!actualizada.exencion_sanitaria_aceptada,
+            createdAt: actualizada.created_at,
+            voluntarioId,
+            voluntarioNombre,
+            asignadaAt: ahoraIso,
+          },
         };
       }
-      if (rpcData.codigo === 409) {
-        return {
-          exito: false,
-          codigo: 409,
-          mensaje: 'Esta donación acaba de ser reservada por otra persona. Te mostramos las ofertas disponibles más cercanas.',
-          donacionId,
-        };
-      }
-      if (rpcData.codigo === 410) {
-        return {
-          exito: false,
-          codigo: 410,
-          mensaje: 'Esta oferta ha expirado y ya no se encuentra disponible para recogida.',
-          donacionId,
-        };
-      }
+    } catch {
+      // Manejo de fallback para desarrollo/offline
     }
-
-    // 2. Consulta con compuerta atómica WHERE estado = 'DISPONIBLE' AND hora_limite > NOW()
-    const { data: donacionActual } = await supabase
-      .from('donaciones')
-      .select('*')
-      .eq('id', donacionId)
-      .single();
-
-    if (donacionActual) {
-      if (new Date(donacionActual.hora_limite).getTime() <= ahoraMs || donacionActual.estado === 'EXPIRADA') {
-        return {
-          exito: false,
-          codigo: 410,
-          mensaje: 'Esta oferta ha expirado y ya no se encuentra disponible para recogida.',
-          donacionId,
-        };
-      }
-
-      if (donacionActual.estado !== 'DISPONIBLE') {
-        return {
-          exito: false,
-          codigo: 409,
-          mensaje: 'Esta donación acaba de ser reservada por otra persona. Te mostramos las ofertas disponibles más cercanas.',
-          donacionId,
-        };
-      }
-
-      // Actualización atómica con condición de estado
-      const { data: actualizada, error: updateError } = await supabase
-        .from('donaciones')
-        .update({
-          estado: 'ASIGNADA',
-          voluntario_id: voluntarioId,
-          voluntario_nombre: voluntarioNombre,
-          asignada_at: ahoraIso,
-        })
-        .eq('id', donacionId)
-        .eq('estado', 'DISPONIBLE')
-        .gt('hora_limite', ahoraIso)
-        .select()
-        .single();
-
-      if (updateError || !actualizada) {
-        return {
-          exito: false,
-          codigo: 409,
-          mensaje: 'Esta donación acaba de ser reservada por otra persona. Te mostramos las ofertas disponibles más cercanas.',
-          donacionId,
-        };
-      }
-
-      return {
-        exito: true,
-        codigo: 200,
-        mensaje: 'Donación reservada exitosamente',
-        donacion: {
-          id: actualizada.id,
-          codigo: actualizada.codigo,
-          donanteId: actualizada.donante_id,
-          donanteNombre: actualizada.donante_nombre,
-          tipoAlimento: actualizada.tipo_alimento,
-          requiereFrio: !!actualizada.requiere_frio,
-          cantidadEstimada: Number(actualizada.cantidad_estimada),
-          unidadMedida: actualizada.unidad_medida,
-          direccionRecogida: actualizada.direccion_recogida,
-          zona: (actualizada.zona as ZonaCali) || inferirZonaCali(actualizada.direccion_recogida),
-          horaLimite: actualizada.hora_limite,
-          estado: 'ASIGNADA',
-          exencionSanitariaAceptada: !!actualizada.exencion_sanitaria_aceptada,
-          createdAt: actualizada.created_at,
-          voluntarioId,
-          voluntarioNombre,
-          asignadaAt: ahoraIso,
-        },
-      };
-    }
-  } catch {
-    // Manejo de fallback para desarrollo/offline
   }
 
   // Fallback atómico en memoria para pruebas de concurrencia y modo offline
@@ -381,7 +412,8 @@ export async function tomarDonacion(
     return {
       exito: false,
       codigo: 409,
-      mensaje: 'Esta donación acaba de ser reservada por otra persona. Te mostramos las ofertas disponibles más cercanas.',
+      mensaje:
+        'Esta donación acaba de ser reservada por otra persona. Te mostramos las ofertas disponibles más cercanas.',
       donacionId,
     };
   }

@@ -9,6 +9,111 @@ export type PublicarDonacionResultado =
   | { exito: true; codigo: string }
   | { exito: false; error: string };
 
+export type TomarDonacionResultado =
+  | { exito: true; codigo: 200; mensaje: string; donacion: Donacion }
+  | { exito: false; codigo: 409; mensaje: string; donacionId: string }
+  | { exito: false; codigo: 410; mensaje: string; donacionId: string }
+  | { exito: false; codigo: 500; mensaje: string; donacionId: string };
+
+/** Estado en memoria para desarrollo local, pruebas y fallback offline de concurrencia */
+const DONACIONES_ESTADO_VOLATIL: Map<string, Donacion> = new Map([
+  [
+    'seed-01',
+    {
+      id: 'seed-01',
+      codigo: 'DON-201',
+      donanteId: 'd-1',
+      donanteNombre: 'Puesto 45 Doña Rosa - Santa Elena',
+      tipoAlimento: 'Tomate Chonto y Plátano Maduro',
+      requiereFrio: false,
+      cantidadEstimada: 45,
+      unidadMedida: 'kg',
+      direccionRecogida: 'Galería Santa Elena - Sector Muelle 2',
+      zona: 'CENTRO',
+      horaLimite: new Date(Date.now() + 90 * 60 * 1000).toISOString(),
+      estado: 'DISPONIBLE',
+      exencionSanitariaAceptada: true,
+      createdAt: new Date().toISOString(),
+    },
+  ],
+  [
+    'seed-02',
+    {
+      id: 'seed-02',
+      codigo: 'DON-202',
+      donanteId: 'd-2',
+      donanteNombre: 'Lácteos del Valle - Alameda',
+      tipoAlimento: 'Queso Campesino y Yogur Artesanal',
+      requiereFrio: true,
+      cantidadEstimada: 25,
+      unidadMedida: 'kg',
+      direccionRecogida: 'Plaza Alameda - Pasillo Central Local 18',
+      zona: 'SUR',
+      horaLimite: new Date(Date.now() + 180 * 60 * 1000).toISOString(),
+      estado: 'DISPONIBLE',
+      exencionSanitariaAceptada: true,
+      createdAt: new Date().toISOString(),
+    },
+  ],
+  [
+    'seed-03',
+    {
+      id: 'seed-03',
+      codigo: 'DON-203',
+      donanteId: 'd-3',
+      donanteNombre: 'Mayorista de Víveres Cavasa',
+      tipoAlimento: 'Canastillas de Naranja Valencia y Guayaba',
+      requiereFrio: false,
+      cantidadEstimada: 120,
+      unidadMedida: 'kg',
+      direccionRecogida: 'Cavasa - Bloque 4 Bodega 12',
+      zona: 'ORIENTE',
+      horaLimite: new Date(Date.now() + 300 * 60 * 1000).toISOString(),
+      estado: 'DISPONIBLE',
+      exencionSanitariaAceptada: true,
+      createdAt: new Date().toISOString(),
+    },
+  ],
+  [
+    'seed-04',
+    {
+      id: 'seed-04',
+      codigo: 'DON-204',
+      donanteId: 'd-4',
+      donanteNombre: 'Panadería La Sultana',
+      tipoAlimento: 'Pan Rollo y Roscas Caseras',
+      requiereFrio: false,
+      cantidadEstimada: 30,
+      unidadMedida: 'kg',
+      direccionRecogida: 'Avenida 6N # 24N-15',
+      zona: 'NORTE',
+      horaLimite: new Date(Date.now() + 75 * 60 * 1000).toISOString(),
+      estado: 'DISPONIBLE',
+      exencionSanitariaAceptada: true,
+      createdAt: new Date().toISOString(),
+    },
+  ],
+  [
+    'seed-05',
+    {
+      id: 'seed-05',
+      codigo: 'DON-205',
+      donanteId: 'd-5',
+      donanteNombre: 'Frutas y Verduras Siloé',
+      tipoAlimento: 'Yuca y Papaya Fresca',
+      requiereFrio: false,
+      cantidadEstimada: 50,
+      unidadMedida: 'kg',
+      direccionRecogida: 'Carrera 52 con Calle 1 Oeste',
+      zona: 'LADERA',
+      horaLimite: new Date(Date.now() + 240 * 60 * 1000).toISOString(),
+      estado: 'DISPONIBLE',
+      exencionSanitariaAceptada: true,
+      createdAt: new Date().toISOString(),
+    },
+  ],
+]);
+
 /**
  * Publica una oferta de donación de alimentos en la plataforma.
  */
@@ -65,93 +170,8 @@ export async function publicarDonacion(input: DonacionInput): Promise<PublicarDo
   };
 }
 
-/** Donaciones semilla para el catálogo en Cali cuando Supabase está en modo desarrollo/sin semillas */
-const DONACIONES_SEMILLA_CALI: Donacion[] = [
-  {
-    id: 'seed-01',
-    codigo: 'DON-201',
-    donanteId: 'd-1',
-    donanteNombre: 'Puesto 45 Doña Rosa - Santa Elena',
-    tipoAlimento: 'Tomate Chonto y Plátano Maduro',
-    requiereFrio: false,
-    cantidadEstimada: 45,
-    unidadMedida: 'kg',
-    direccionRecogida: 'Galería Santa Elena - Sector Muelle 2',
-    zona: 'CENTRO',
-    horaLimite: new Date(Date.now() + 90 * 60 * 1000).toISOString(), // 1.5 horas (urgente)
-    estado: 'DISPONIBLE',
-    exencionSanitariaAceptada: true,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'seed-02',
-    codigo: 'DON-202',
-    donanteId: 'd-2',
-    donanteNombre: 'Lácteos del Valle - Alameda',
-    tipoAlimento: 'Queso Campesino y Yogur Artesanal',
-    requiereFrio: true,
-    cantidadEstimada: 25,
-    unidadMedida: 'kg',
-    direccionRecogida: 'Plaza Alameda - Pasillo Central Local 18',
-    zona: 'SUR',
-    horaLimite: new Date(Date.now() + 180 * 60 * 1000).toISOString(), // 3 horas
-    estado: 'DISPONIBLE',
-    exencionSanitariaAceptada: true,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'seed-03',
-    codigo: 'DON-203',
-    donanteId: 'd-3',
-    donanteNombre: 'Mayorista de Víveres Cavasa',
-    tipoAlimento: 'Canastillas de Naranja Valencia y Guayaba',
-    requiereFrio: false,
-    cantidadEstimada: 120,
-    unidadMedida: 'kg',
-    direccionRecogida: 'Cavasa - Bloque 4 Bodega 12',
-    zona: 'ORIENTE',
-    horaLimite: new Date(Date.now() + 300 * 60 * 1000).toISOString(), // 5 horas
-    estado: 'DISPONIBLE',
-    exencionSanitariaAceptada: true,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'seed-04',
-    codigo: 'DON-204',
-    donanteId: 'd-4',
-    donanteNombre: 'Panadería La Sultana',
-    tipoAlimento: 'Pan Rollo y Roscas Caseras',
-    requiereFrio: false,
-    cantidadEstimada: 30,
-    unidadMedida: 'kg',
-    direccionRecogida: 'Avenida 6N # 24N-15',
-    zona: 'NORTE',
-    horaLimite: new Date(Date.now() + 75 * 60 * 1000).toISOString(), // 1 hora y 15 min (muy urgente)
-    estado: 'DISPONIBLE',
-    exencionSanitariaAceptada: true,
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 'seed-05',
-    codigo: 'DON-205',
-    donanteId: 'd-5',
-    donanteNombre: 'Frutas y Verduras Siloé',
-    tipoAlimento: 'Yuca y Papaya Fresca',
-    requiereFrio: false,
-    cantidadEstimada: 50,
-    unidadMedida: 'kg',
-    direccionRecogida: 'Carrera 52 con Calle 1 Oeste',
-    zona: 'LADERA',
-    horaLimite: new Date(Date.now() + 240 * 60 * 1000).toISOString(), // 4 horas
-    estado: 'DISPONIBLE',
-    exencionSanitariaAceptada: true,
-    createdAt: new Date().toISOString(),
-  },
-];
-
 /**
  * Obtiene el catálogo reactivo de donaciones disponibles (CA-02.1, CA-02.3, CA-02.4).
- * Filtra solo estado DISPONIBLE y horaLimite > ahora.
  */
 export async function obtenerDonacionesDisponibles(zona?: ZonaCali | 'TODAS'): Promise<Donacion[]> {
   try {
@@ -194,15 +214,189 @@ export async function obtenerDonacionesDisponibles(zona?: ZonaCali | 'TODAS'): P
       }));
     }
   } catch {
-    // Fallback si Supabase no está conectado
+    // Fallback a memoria si Supabase no está conectado
   }
 
-  // Fallback con filtro en memoria garantizando CA-02.1 y CA-02.4
   const ahora = Date.now();
-  return DONACIONES_SEMILLA_CALI.filter((d) => {
-    const esDisponible = d.estado === 'DISPONIBLE';
-    const esVigente = new Date(d.horaLimite).getTime() > ahora;
-    const coincideZona = !zona || zona === 'TODAS' || d.zona === zona;
-    return esDisponible && esVigente && coincideZona;
-  }).sort((a, b) => new Date(a.horaLimite).getTime() - new Date(b.horaLimite).getTime());
+  const lista: Donacion[] = Array.from(DONACIONES_ESTADO_VOLATIL.values());
+  return lista
+    .filter((d) => {
+      const esDisponible = d.estado === 'DISPONIBLE';
+      const esVigente = new Date(d.horaLimite).getTime() > ahora;
+      const coincideZona = !zona || zona === 'TODAS' || d.zona === zona;
+      return esDisponible && esVigente && coincideZona;
+    })
+    .sort((a, b) => new Date(a.horaLimite).getTime() - new Date(b.horaLimite).getTime());
+}
+
+/**
+ * Server Action para tomar/reservar una donación con control atómico de concurrencia (TASK-09 / CMP-03).
+ * Satisface CA-03.2 (colisión HTTP 409 con mensaje empático) y CA-03.3 (bloqueo sobre expiradas/canceladas).
+ */
+export async function tomarDonacion(
+  donacionId: string,
+  voluntarioId = 'vol-001',
+  voluntarioNombre = 'Voluntario Mesa Común'
+): Promise<TomarDonacionResultado> {
+  const ahoraIso = new Date().toISOString();
+  const ahoraMs = Date.now();
+
+  try {
+    const supabase = createClient();
+
+    // 1. Intentar procedimiento atómico si existe en PostgreSQL
+    const { data: rpcData, error: rpcError } = await supabase.rpc('tomar_donacion', {
+      p_donacion_id: donacionId,
+      p_voluntario_id: voluntarioId,
+      p_voluntario_nombre: voluntarioNombre,
+    });
+
+    if (!rpcError && rpcData) {
+      if (rpcData.codigo === 200) {
+        return {
+          exito: true,
+          codigo: 200,
+          mensaje: 'Donación reservada exitosamente',
+          donacion: rpcData.donacion,
+        };
+      }
+      if (rpcData.codigo === 409) {
+        return {
+          exito: false,
+          codigo: 409,
+          mensaje: 'Esta donación acaba de ser reservada por otra persona. Te mostramos las ofertas disponibles más cercanas.',
+          donacionId,
+        };
+      }
+      if (rpcData.codigo === 410) {
+        return {
+          exito: false,
+          codigo: 410,
+          mensaje: 'Esta oferta ha expirado y ya no se encuentra disponible para recogida.',
+          donacionId,
+        };
+      }
+    }
+
+    // 2. Consulta con compuerta atómica WHERE estado = 'DISPONIBLE' AND hora_limite > NOW()
+    const { data: donacionActual } = await supabase
+      .from('donaciones')
+      .select('*')
+      .eq('id', donacionId)
+      .single();
+
+    if (donacionActual) {
+      if (new Date(donacionActual.hora_limite).getTime() <= ahoraMs || donacionActual.estado === 'EXPIRADA') {
+        return {
+          exito: false,
+          codigo: 410,
+          mensaje: 'Esta oferta ha expirado y ya no se encuentra disponible para recogida.',
+          donacionId,
+        };
+      }
+
+      if (donacionActual.estado !== 'DISPONIBLE') {
+        return {
+          exito: false,
+          codigo: 409,
+          mensaje: 'Esta donación acaba de ser reservada por otra persona. Te mostramos las ofertas disponibles más cercanas.',
+          donacionId,
+        };
+      }
+
+      // Actualización atómica con condición de estado
+      const { data: actualizada, error: updateError } = await supabase
+        .from('donaciones')
+        .update({
+          estado: 'ASIGNADA',
+          voluntario_id: voluntarioId,
+          voluntario_nombre: voluntarioNombre,
+          asignada_at: ahoraIso,
+        })
+        .eq('id', donacionId)
+        .eq('estado', 'DISPONIBLE')
+        .gt('hora_limite', ahoraIso)
+        .select()
+        .single();
+
+      if (updateError || !actualizada) {
+        return {
+          exito: false,
+          codigo: 409,
+          mensaje: 'Esta donación acaba de ser reservada por otra persona. Te mostramos las ofertas disponibles más cercanas.',
+          donacionId,
+        };
+      }
+
+      return {
+        exito: true,
+        codigo: 200,
+        mensaje: 'Donación reservada exitosamente',
+        donacion: {
+          id: actualizada.id,
+          codigo: actualizada.codigo,
+          donanteId: actualizada.donante_id,
+          donanteNombre: actualizada.donante_nombre,
+          tipoAlimento: actualizada.tipo_alimento,
+          requiereFrio: !!actualizada.requiere_frio,
+          cantidadEstimada: Number(actualizada.cantidad_estimada),
+          unidadMedida: actualizada.unidad_medida,
+          direccionRecogida: actualizada.direccion_recogida,
+          zona: (actualizada.zona as ZonaCali) || inferirZonaCali(actualizada.direccion_recogida),
+          horaLimite: actualizada.hora_limite,
+          estado: 'ASIGNADA',
+          exencionSanitariaAceptada: !!actualizada.exencion_sanitaria_aceptada,
+          createdAt: actualizada.created_at,
+          voluntarioId,
+          voluntarioNombre,
+          asignadaAt: ahoraIso,
+        },
+      };
+    }
+  } catch {
+    // Manejo de fallback para desarrollo/offline
+  }
+
+  // Fallback atómico en memoria para pruebas de concurrencia y modo offline
+  const item = DONACIONES_ESTADO_VOLATIL.get(donacionId);
+  if (!item) {
+    return {
+      exito: false,
+      codigo: 410,
+      mensaje: 'Esta oferta ha expirado y ya no se encuentra disponible para recogida.',
+      donacionId,
+    };
+  }
+
+  if (new Date(item.horaLimite).getTime() <= ahoraMs || item.estado === 'EXPIRADA') {
+    return {
+      exito: false,
+      codigo: 410,
+      mensaje: 'Esta oferta ha expirado y ya no se encuentra disponible para recogida.',
+      donacionId,
+    };
+  }
+
+  if (item.estado !== 'DISPONIBLE') {
+    return {
+      exito: false,
+      codigo: 409,
+      mensaje: 'Esta donación acaba de ser reservada por otra persona. Te mostramos las ofertas disponibles más cercanas.',
+      donacionId,
+    };
+  }
+
+  // Toma atómica exitosa
+  item.estado = 'ASIGNADA';
+  item.voluntarioId = voluntarioId;
+  item.voluntarioNombre = voluntarioNombre;
+  item.asignadaAt = ahoraIso;
+  DONACIONES_ESTADO_VOLATIL.set(donacionId, item);
+
+  return {
+    exito: true,
+    codigo: 200,
+    mensaje: 'Donación reservada exitosamente',
+    donacion: { ...item },
+  };
 }

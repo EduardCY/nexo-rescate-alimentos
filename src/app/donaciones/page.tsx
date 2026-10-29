@@ -2,10 +2,11 @@
 
 import React, { useState, useEffect, useMemo, useTransition } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, RefreshCw, Filter, AlertCircle } from 'lucide-react';
+import { ArrowLeft, RefreshCw, Filter, AlertCircle, CheckCircle2 } from 'lucide-react';
 import type { Donacion, ZonaCali } from '@/types';
-import { obtenerDonacionesDisponibles } from '@/actions/donaciones';
+import { obtenerDonacionesDisponibles, tomarDonacion } from '@/actions/donaciones';
 import { DonacionCard } from '@/components/donaciones/DonacionCard';
+import { ConflictoTomaModal } from '@/components/donaciones/ConflictoTomaModal';
 
 const ZONAS_CALI: Array<{ id: ZonaCali | 'TODAS'; label: string }> = [
   { id: 'TODAS', label: 'Todas las Zonas' },
@@ -17,24 +18,27 @@ const ZONAS_CALI: Array<{ id: ZonaCali | 'TODAS'; label: string }> = [
 ];
 
 /**
- * Catálogo reactivo de donaciones disponibles (TASK-06 / CMP-02).
- * Satisface los criterios CA-02.1 (solo disponibles vigentes) y CA-02.3 (filtro por las 5 zonas de Cali).
+ * Catálogo reactivo de donaciones disponibles (CMP-02 / TASK-06) con
+ * manejo de colisión de toma concurrente HTTP 409 y modal amigable (CMP-03 / TASK-09).
  */
 export default function CatalogoDonacionesPage() {
   const [donaciones, setDonaciones] = useState<Donacion[]>([]);
   const [cargando, setCargando] = useState(true);
+  const [tomandoId, setTomandoId] = useState<string | null>(null);
   const [zonaSeleccionada, setZonaSeleccionada] = useState<ZonaCali | 'TODAS'>('TODAS');
   const [tiempoFiltroMs, setTiempoFiltroMs] = useState<number | null>(null);
+  const [modalColisionAbierto, setModalColisionAbierto] = useState(false);
+  const [mensajeExito, setMensajeExito] = useState<{ codigo: string; producto: string } | null>(null);
   const [, startTransition] = useTransition();
 
-  // Carga inicial de ofertas
+  // Carga de ofertas activas
   const cargarOfertas = async () => {
     setCargando(true);
     try {
       const data = await obtenerDonacionesDisponibles('TODAS');
       setDonaciones(data);
     } catch {
-      // Fallback seguro en memoria
+      // Fallback seguro
     } finally {
       setCargando(false);
     }
@@ -67,9 +71,41 @@ export default function CatalogoDonacionesPage() {
       .sort((a, b) => new Date(a.horaLimite).getTime() - new Date(b.horaLimite).getTime());
   }, [donaciones, zonaSeleccionada]);
 
-  // Manejador cuando una oferta expira en vivo (CA-02.4)
+  // Manejador cuando una oferta expira en vivo (CA-02.4 / CA-03.3)
   const handleOfertaExpirada = (id: string) => {
     setDonaciones((prev) => prev.filter((d) => d.id !== id));
+  };
+
+  // Acción de reserva con captura de colisión concurrente HTTP 409 (TASK-09)
+  const handleTomarDonacion = async (id: string) => {
+    if (tomandoId) return;
+    setTomandoId(id);
+    setMensajeExito(null);
+
+    try {
+      const res = await tomarDonacion(id);
+
+      if (res.exito && res.codigo === 200) {
+        // Reserva exitosa: retirar de la vista activa y mostrar confirmación
+        setDonaciones((prev) => prev.filter((d) => d.id !== id));
+        setMensajeExito({
+          codigo: res.donacion.codigo,
+          producto: `${res.donacion.tipoAlimento} (${res.donacion.cantidadEstimada} ${res.donacion.unidadMedida})`,
+        });
+      } else if (res.codigo === 409) {
+        // Colisión concurrente (CA-03.2):
+        // Remoción automática de la oferta tomada de la vista del voluntario que llegó segundo (<500 ms)
+        setDonaciones((prev) => prev.filter((d) => d.id !== id));
+        setModalColisionAbierto(true);
+      } else if (res.codigo === 410) {
+        // Oferta expirada o cancelada (CA-03.3): remover de la vista
+        setDonaciones((prev) => prev.filter((d) => d.id !== id));
+      }
+    } catch {
+      // Manejo seguro
+    } finally {
+      setTomandoId(null);
+    }
   };
 
   return (
@@ -101,6 +137,28 @@ export default function CatalogoDonacionesPage() {
             </Link>
           </div>
         </header>
+
+        {/* Notificación de Reserva Exitosa */}
+        {mensajeExito && (
+          <div className="m-2 bevel-in bg-[#f0fdf4] border border-green-700 p-3 flex items-center justify-between gap-3 text-green-950 font-mono text-xs">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-green-700 shrink-0" />
+              <div>
+                <p className="font-bold">¡Reserva confirmada con éxito!</p>
+                <p className="text-[11px] text-green-800">
+                  Código: <b className="bg-white px-1.5 py-0.5 bevel-in">{mensajeExito.codigo}</b> • Lote: {mensajeExito.producto}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setMensajeExito(null)}
+              className="btn-98 !py-1 !px-2 text-[11px]"
+            >
+              Aceptar
+            </button>
+          </div>
+        )}
 
         {/* Barra de información y estado */}
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#808080] bg-[#e0ded8] px-3 py-2 font-mono text-xs">
@@ -190,7 +248,9 @@ export default function CatalogoDonacionesPage() {
                 <DonacionCard
                   key={donacion.id}
                   donacion={donacion}
+                  onTomar={handleTomarDonacion}
                   onExpirada={handleOfertaExpirada}
+                  tomando={tomandoId === donacion.id}
                 />
               ))}
             </div>
@@ -207,6 +267,14 @@ export default function CatalogoDonacionesPage() {
           </div>
         </footer>
       </div>
+
+      {/* Modal Reactivo ante Colisión de Toma Concurrente (TASK-09 / CA-03.2) */}
+      <ConflictoTomaModal
+        abierto={modalColisionAbierto}
+        onCerrar={() => setModalColisionAbierto(false)}
+        donacionesCercanas={donacionesFiltradas}
+        onSeleccionarDonacion={handleTomarDonacion}
+      />
     </main>
   );
 }

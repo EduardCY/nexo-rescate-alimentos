@@ -28,7 +28,7 @@ export default function CatalogoDonacionesPage() {
   const [zonaSeleccionada, setZonaSeleccionada] = useState<ZonaCali | 'TODAS'>('TODAS');
   const [tiempoFiltroMs, setTiempoFiltroMs] = useState<number | null>(null);
   const [modalColisionAbierto, setModalColisionAbierto] = useState(false);
-  const [mensajeExito, setMensajeExito] = useState<{ codigo: string; producto: string } | null>(null);
+  const [mensajeExito, setMensajeExito] = useState<{ id: string; codigo: string; producto: string } | null>(null);
   const [, startTransition] = useTransition();
 
   // Carga de ofertas activas
@@ -89,6 +89,7 @@ export default function CatalogoDonacionesPage() {
         // Reserva exitosa: retirar de la vista activa y mostrar confirmación
         setDonaciones((prev) => prev.filter((d) => d.id !== id));
         setMensajeExito({
+          id: res.donacion.id,
           codigo: res.donacion.codigo,
           producto: `${res.donacion.tipoAlimento} (${res.donacion.cantidadEstimada} ${res.donacion.unidadMedida})`,
         });
@@ -140,7 +141,7 @@ export default function CatalogoDonacionesPage() {
 
         {/* Notificación de Reserva Exitosa */}
         {mensajeExito && (
-          <div className="m-2 bevel-in bg-[#f0fdf4] border border-green-700 p-3 flex items-center justify-between gap-3 text-green-950 font-mono text-xs">
+          <div className="m-2 bevel-in bg-[#f0fdf4] border border-green-700 p-3 flex flex-wrap items-center justify-between gap-3 text-green-950 font-mono text-xs">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-green-700 shrink-0" />
               <div>
@@ -150,13 +151,21 @@ export default function CatalogoDonacionesPage() {
                 </p>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => setMensajeExito(null)}
-              className="btn-98 !py-1 !px-2 text-[11px]"
-            >
-              Aceptar
-            </button>
+            <div className="flex items-center gap-2">
+              <Link
+                href={`/entregas/${mensajeExito.id}`}
+                className="btn-green !py-1 !px-2.5 text-[11px] font-bold"
+              >
+                Registrar Entrega en Comedor &gt;
+              </Link>
+              <button
+                type="button"
+                onClick={() => setMensajeExito(null)}
+                className="btn-98 !py-1 !px-2 text-[11px]"
+              >
+                Aceptar
+              </button>
+            </div>
           </div>
         )}
 

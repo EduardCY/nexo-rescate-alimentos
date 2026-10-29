@@ -1,11 +1,14 @@
-// @vitest-environment jsdom
-import 'fake-indexeddb/auto'; // debe ir antes de importar la base de datos
+﻿import 'fake-indexeddb/auto'; // debe ir antes de importar la base de datos
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
-import { db } from '../../src/lib/db'; // AJUSTA: nombre del export cuando exista db.ts
+import { db } from '../../src/lib/db';
+
+if (typeof (globalThis as any).navigator === 'undefined') {
+  (globalThis as any).navigator = { onLine: true };
+}
 
 describe('CA-01.5 – guardado offline', () => {
   beforeEach(async () => {
-    await db.donaciones.clear(); // AJUSTA: nombre real de la tabla
+    await db.donaciones.clear();
     vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
   });
 
@@ -16,8 +19,6 @@ describe('CA-01.5 – guardado offline', () => {
   test('sin red, la donación se guarda en Dexie con estado PENDIENTE', async () => {
     expect(navigator.onLine).toBe(false);
 
-    // AJUSTA: si existe una función de guardado (por ejemplo guardarDonacion),
-    // llámala aquí en lugar de db.donaciones.add para probar el flujo real.
     const id = await db.donaciones.add({
       tipoAlimento: 'Pan y frutas',
       cantidadEstimada: 5,

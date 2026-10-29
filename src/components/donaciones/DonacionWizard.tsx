@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import {
@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { DonacionInputSchema, type DonacionInput } from '@/lib/validations/donacion';
 import { publicarDonacion } from '@/actions/donaciones';
+import { normalizarFechaHoraLimite } from '@/lib/utils/donaciones-helper';
 import { guardarDonacionOffline } from '@/lib/db';
 import { calcImpact, fmt, fmtCop, urgencyOf, type CategoryId } from '@/lib/nexo/impact';
 import LotCard from '@/components/nexo/LotCard';
@@ -36,8 +37,8 @@ const CATEGORIAS_RAPIDAS: {
 ];
 
 /**
- * Wizard Mobile-First en 3 pasos para el registro rápido de donaciones (CMP-01 / TASK-02).
- * Conserva la identidad visual retro Windows 98 / SCADA con controles táctiles >= 48px (RNF-001).
+ * Wizard Mobile-First en 3 pasos para el registro rápido de donaciones.
+ * Conserva la identidad visual retro Windows 98 / SCADA con controles táctiles amigables.
  */
 export function DonacionWizard({ onCompleted }: { onCompleted?: (codigo: string, isOffline: boolean) => void }) {
   const [paso, setPaso] = useState<1 | 2 | 3>(1);
@@ -64,7 +65,7 @@ export function DonacionWizard({ onCompleted }: { onCompleted?: (codigo: string,
   // Estado Paso 3: Exención Sanitaria Ley 1990/2019
   const [exencionAceptada, setExencionAceptada] = useState(false);
 
-  // Validación reactiva de hora futura (CA-01.2)
+  // Validación reactiva de hora futura
   const validarHoraFutura = (val: string): boolean => {
     const match = val.match(/^([01]\d|2[0-3]):([0-5]\d)$/);
     if (!match) return false;
@@ -97,12 +98,14 @@ export function DonacionWizard({ onCompleted }: { onCompleted?: (codigo: string,
     setErrorMsg(null);
 
     try {
+      const horaIsoSegura = normalizarFechaHoraLimite(horaLimite);
+
       const payload: DonacionInput = {
         tipoAlimento: tipoAlimento.trim(),
         cantidadEstimada: cantidadNum,
         unidadMedida,
         direccionRecogida: direccionRecogida.trim(),
-        horaLimite,
+        horaLimite: horaIsoSegura,
         requiereFrio,
         exencionSanitariaAceptada: true,
         donanteNombre: donanteNombre.trim() || 'Comercio Donante',
@@ -134,7 +137,7 @@ export function DonacionWizard({ onCompleted }: { onCompleted?: (codigo: string,
           onCompleted?.(codigoTemp, true);
         }
       } else {
-        // Guardado local inmediato en IndexedDB (CA-01.5 / RNF-002)
+        // Guardado local inmediato en IndexedDB
         const localId = await guardarDonacionOffline(validacion.data);
         const codigoTemp = `OFFLINE-DON-${localId}`;
         setConfirmacion({ codigo: codigoTemp, offline: true });
@@ -158,7 +161,7 @@ export function DonacionWizard({ onCompleted }: { onCompleted?: (codigo: string,
     return (
       <div className="bevel-out p-4 text-black font-mono max-w-xl mx-auto">
         <div className="titlebar px-2.5 py-1.5 text-white font-bold text-xs flex items-center justify-between mb-4">
-          <span>▣ CONFIRMACIÓN DE REGISTRO (CMP-01)</span>
+          <span>CONFIRMACIÓN DE REGISTRO</span>
           <span>[OK]</span>
         </div>
 
@@ -179,7 +182,7 @@ export function DonacionWizard({ onCompleted }: { onCompleted?: (codigo: string,
 
           <p className="text-[11px] text-slate-700 leading-relaxed">
             {confirmacion.offline
-              ? 'El lote quedó almacenado de forma segura en la base local IndexedDB (Dexie.js) y se sincronizará automáticamente al recuperar señal en la plaza.'
+              ? 'El lote quedó almacenado de forma segura en la base local IndexedDB y se sincronizará automáticamente al recuperar señal en la plaza.'
               : 'Los comedores comunitarios y voluntarios cercanos ya pueden visualizar y tomar esta donación.'}
           </p>
         </div>
@@ -200,8 +203,8 @@ export function DonacionWizard({ onCompleted }: { onCompleted?: (codigo: string,
       {/* Panel Izquierdo: Wizard en 3 Pasos con estética Windows 98 */}
       <div className="lg:col-span-7 bevel-out p-3 sm:p-4 text-black">
         <div className="titlebar px-2.5 py-1.5 text-white font-mono text-xs font-bold flex items-center justify-between mb-3">
-          <span>▣ WIZARD DE DONACIÓN RÁPIDA · PASO {paso} DE 3</span>
-          <span className="bg-white/20 px-1.5 py-0.5 text-[10px]">RNF-001 (&lt;45s)</span>
+          <span>PUBLICAR DONACIÓN — PASO {paso} DE 3</span>
+          <span className="bg-white/20 px-1.5 py-0.5 text-[10px]">Registro exprés (&lt;45s)</span>
         </div>
 
         {/* Indicador de Pasos Estilo Pestañas Windows 98 */}
@@ -324,7 +327,7 @@ export function DonacionWizard({ onCompleted }: { onCompleted?: (codigo: string,
                 </div>
               </div>
 
-              {/* Switch Visual Destacado para Requiere Refrigeración (Azul con icono de nieve) */}
+              {/* Switch Visual Destacado para Requiere Refrigeración */}
               <div className="bevel-in bg-[#e8f4fd] p-3 border border-sky-700">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5">
@@ -333,7 +336,7 @@ export function DonacionWizard({ onCompleted }: { onCompleted?: (codigo: string,
                     </div>
                     <div>
                       <p className="font-mono text-xs font-extrabold text-[#000080]">
-                        ¿REQUIERE REFRIGERACIÓN? (CA-01.4)
+                        ¿REQUIERE REFRIGERACIÓN?
                       </p>
                       <p className="font-mono text-[11px] text-slate-700">
                         Activar para lácteos, carnes o alimentos que exigen cadena de frío (4°C - 8°C).
@@ -349,7 +352,7 @@ export function DonacionWizard({ onCompleted }: { onCompleted?: (codigo: string,
                       requiereFrio ? 'btn-blue' : 'btn-98'
                     }`}
                   >
-                    {requiereFrio ? '❄ SÍ (FRÍO)' : 'NO (AMB.)'}
+                    {requiereFrio ? '✓ SÍ (FRÍO)' : 'NO (AMB.)'}
                   </button>
                 </div>
               </div>
@@ -436,7 +439,7 @@ export function DonacionWizard({ onCompleted }: { onCompleted?: (codigo: string,
                   <div className="mt-2 bevel-in bg-[#fff4cc] border border-amber-700 p-2 text-amber-950 font-mono text-xs flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 text-amber-800 shrink-0" />
                     <span>
-                      Advertencia (CA-01.2): La hora seleccionada debe ser posterior a la hora actual.
+                      La hora de recogida seleccionada debe ser posterior a la hora actual.
                     </span>
                   </div>
                 )}
@@ -470,7 +473,7 @@ export function DonacionWizard({ onCompleted }: { onCompleted?: (codigo: string,
               <div className="bevel-in bg-white p-3.5 border-2 border-[#000080]">
                 <div className="flex items-center gap-2 text-[#000080] font-mono font-bold text-xs mb-2">
                   <ShieldCheck className="w-5 h-5 shrink-0" />
-                  <span>COMPUERTA LEGAL SANITARIA OBLIGATORIA (LEY 1990 DE 2019)</span>
+                  <span>DECLARACIÓN SANITARIA OBLIGATORIA (LEY 1990 DE 2019)</span>
                 </div>
                 <p className="font-mono text-xs text-slate-800 leading-relaxed mb-3">
                   De conformidad con la Ley 1990 de 2019 (política contra la pérdida y el desperdicio de alimentos),
@@ -523,7 +526,7 @@ export function DonacionWizard({ onCompleted }: { onCompleted?: (codigo: string,
       <div className="lg:col-span-5 flex flex-col gap-3">
         <section className="scada-panel p-3" aria-label="Vista previa del lote">
           <h3 className="mb-2 font-mono text-xs font-bold tracking-widest text-nexo-phosphor">
-            ▣ LIVE PREVIEW · LOTE
+            ▶ VISTA PREVIA DEL LOTE
           </h3>
           <LotCard
             lot={{
@@ -536,7 +539,7 @@ export function DonacionWizard({ onCompleted }: { onCompleted?: (codigo: string,
           />
           <p className="mt-2 font-mono text-[11px] text-slate-400">
             Prioridad de despacho:{' '}
-            <b className="text-nexo-amber">{urgencia}</b> · Hora límite: <b className="text-white">{horaLimite}</b>
+            <b className="text-nexo-amber">{urgencia}</b> • Hora límite: <b className="text-white">{horaLimite}</b>
           </p>
           <p className="mt-2 font-mono text-slate-300">
             Raciones estimadas:{' '}
@@ -548,7 +551,7 @@ export function DonacionWizard({ onCompleted }: { onCompleted?: (codigo: string,
 
         <section className="scada-panel p-3" aria-label="Cálculo de impacto ambiental">
           <h3 className="mb-2 font-mono text-xs font-bold tracking-widest text-nexo-cyan">
-            ▣ IMPACTO AMBIENTAL Y TRIBUTARIO
+            ▶ IMPACTO AMBIENTAL Y TRIBUTARIO
           </h3>
           <div className="grid grid-cols-2 gap-2">
             <div className="bevel-in-dark bg-black/40 p-2">

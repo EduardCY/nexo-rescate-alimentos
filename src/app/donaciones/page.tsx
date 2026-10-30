@@ -17,11 +17,22 @@ import {
   tomarDonacion,
   marcarDonacionExpirada,
 } from '@/actions/donaciones';
+import dynamic from 'next/dynamic';
 import { filtrarDonacionesDisponibles } from '@/lib/utils/donaciones-helper';
 import { DonacionCard } from '@/components/donaciones/DonacionCard';
 import { ZonasFilter } from '@/components/donaciones/ZonasFilter';
 import { ConflictoTomaModal } from '@/components/donaciones/ConflictoTomaModal';
-import RadarMap from '@/components/nexo/RadarMap';
+
+// Carga dinámica segura de RadarMap con Leaflet sin renderizado en servidor (SSR)
+const RadarMap = dynamic(() => import('@/components/nexo/RadarMap'), {
+  ssr: false,
+  loading: () => (
+    <div className="bevel-in bg-[#070c18] p-6 text-center text-white font-mono text-xs border border-slate-700">
+      <div className="inline-block animate-spin mr-2">⏳</div>
+      <span>Cargando mapa interactivo OpenStreetMap ($0 USD/mes)...</span>
+    </div>
+  ),
+});
 
 /**
  * Catálogo reactivo de donaciones disponibles (CMP-02 / TASK-06, TASK-07, TASK-16, TASK-17, TASK-19)
@@ -284,7 +295,10 @@ export default function CatalogoDonacionesPage() {
         {/* Mapa Cartográfico Interactivo Plegable (TASK-19 / CMP-02) */}
         {mostrarMapa && (
           <div className="p-2 sm:p-3 bg-[#070c18] border-b border-[#808080]">
-            <RadarMap filtroZonaExterna={zonaSeleccionada} />
+            <RadarMap
+              filtroZonaExterna={zonaSeleccionada}
+              donacionesExternas={donacionesFiltradas}
+            />
           </div>
         )}
 

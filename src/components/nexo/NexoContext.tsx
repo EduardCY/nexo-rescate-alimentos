@@ -176,3 +176,11 @@ export function useNexo(): NexoStore {
   if (!c) throw new Error("useNexo debe usarse dentro de <NexoProvider>");
   return c;
 }
+
+/**
+ * Acceso seguro y opcional al store de Nexo que no arroja error
+ * si se invoca fuera del árbol de <NexoProvider> (útil para componentes autónomos como RadarMap).
+ */
+export function useNexoOptional(): NexoStore | null {
+  return useContext(Ctx);
+}

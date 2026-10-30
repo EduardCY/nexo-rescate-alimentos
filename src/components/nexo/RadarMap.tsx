@@ -2,9 +2,10 @@
 
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import type L from 'leaflet';
-import { useNexo } from './NexoContext';
+import { useNexoOptional } from './NexoContext';
+import { nexoApi } from '@/lib/nexo/api';
 import type { MapNode, MapNodeKind } from '@/lib/nexo/impact';
-import type { ZonaCali } from '@/types';
+import type { Donacion, ZonaCali } from '@/types';
 import {
   MapPin,
   Truck,
@@ -95,15 +96,58 @@ const VISTAS_MAPA: Record<VistaFiltro, VistaConfig> = {
 
 export default function RadarMap({
   filtroZonaExterna,
+  donacionesExternas,
 }: {
   filtroZonaExterna?: ZonaCali | 'TODAS';
+  donacionesExternas?: Donacion[];
 }) {
-  const { mapNodes } = useNexo();
+  const nexoCtx = useNexoOptional();
+  const [nodosLocales, setNodosLocales] = useState<MapNode[]>([]);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const [mapaListo, setMapaListo] = useState(false);
   const [nodoSeleccionado, setNodoSeleccionado] = useState<MapNode | null>(null);
   const [vistaActual, setVistaActual] = useState<VistaFiltro>('CALI_TODO');
+
+  // Si no está dentro de NexoProvider, cargar nodos autónomamente
+  useEffect(() => {
+    if (!nexoCtx) {
+      nexoApi
+        .listMapNodes()
+        .then((nodes) => setNodosLocales(nodes))
+        .catch(() => {});
+    }
+  }, [nexoCtx]);
+
+  const baseMapNodes = nexoCtx?.mapNodes ?? nodosLocales;
+
+  // Si se reciben donaciones del catálogo con coordenadas, incorporarlas como pines donantes
+  const mapNodes = useMemo(() => {
+    if (!donacionesExternas || donacionesExternas.length === 0) {
+      return baseMapNodes;
+    }
+
+    const nodosExtra: MapNode[] = donacionesExternas
+      .filter((d) => d.coordenadas && typeof d.coordenadas.lat === 'number' && typeof d.coordenadas.lng === 'number')
+      .map((d) => ({
+        id: `don-${d.id}`,
+        kind: 'donor' as const,
+        lat: d.coordenadas!.lat,
+        lng: d.coordenadas!.lng,
+        label: d.donanteNombre || 'Donante',
+        sub: `${d.cantidadEstimada} ${d.unidadMedida} • ${d.tipoAlimento}`,
+        zona: d.zona || 'CENTRO',
+        direccion: d.direccionRecogida,
+        alcance: 'URBANO' as const,
+        x: 0.5,
+        y: 0.5,
+      }));
+
+    if (nodosExtra.length === 0) return baseMapNodes;
+    const idsExistentes = new Set(baseMapNodes.map((n) => n.id));
+    const nuevos = nodosExtra.filter((n) => !idsExistentes.has(n.id));
+    return [...baseMapNodes, ...nuevos];
+  }, [baseMapNodes, donacionesExternas]);
 
   // Si se pasa un filtro externo (ej. desde el catálogo de donaciones)
   useEffect(() => {

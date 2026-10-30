@@ -69,42 +69,20 @@ graph TD
 
 Para evitar la doble toma de donaciones (dos voluntarios yendo por la misma donación), la asignación no se realiza mediante un `UPDATE` ingenuo en el cliente. Se ejecuta a través de una función transaccional atómica en PostgreSQL con bloqueo optimista/pesimista:
 
-```sql
--- Procedimiento RPC atómico en PostgreSQL
-CREATE OR REPLACE FUNCTION tomar_donacion(
-    p_donacion_id UUID,
-    p_voluntario_id UUID
-)
-RETURNS JSONB AS $$
-DECLARE
-    v_actual_estado TEXT;
-BEGIN
-    -- Bloqueo pesimista de la fila seleccionada
-    SELECT estado INTO v_actual_estado
-    FROM donaciones
-    WHERE id = p_donacion_id
-    FOR UPDATE;
+La implementación vigente vive en `supabase/migrations/20261028000000_task08_tomar_donacion_endurecida.sql` (reemplaza a la versión inicial de `20261009000000_init_schema.sql`). Firma: `tomar_donacion(p_donacion_id UUID, p_voluntario_id UUID, p_voluntario_nombre VARCHAR(255)) RETURNS JSONB`, `SECURITY DEFINER` con `search_path` fijo y `EXECUTE` solo para `anon`, `authenticated` y `service_role`.
 
-    IF v_actual_estado != 'DISPONIBLE' THEN
-        RETURN jsonb_build_object(
-            'exito', false,
-            'mensaje', 'Esta donación ya fue tomada por otro voluntario.'
-        );
-    END IF;
+Flujo: valida parámetros y quien toma → `SELECT ... FOR UPDATE` sobre la fila → evalúa estado → evalúa hora límite → `UPDATE` a `ASIGNADA` + `INSERT` en `trazabilidad_eventos`, todo en una sola transacción.
 
-    UPDATE donaciones
-    SET estado = 'ASIGNADA',
-        voluntario_id = p_voluntario_id,
-        asignada_at = NOW()
-    WHERE id = p_donacion_id;
+| `codigo` | Significado | Mensaje / criterio |
+|---|---|---|
+| `200` | Asignación exitosa (incluye `direccion_recogida`, `donante_nombre`, `donante_telefono`, `asignada_at`) | `CA-03.1` |
+| `400` | Parámetros nulos | — |
+| `403` | El usuario es `DONANTE` | — |
+| `404` | Donación o voluntario inexistentes | — |
+| `409` | La donación ya no está `DISPONIBLE` (ya tomada o entregada) | `CA-03.2` |
+| `410` | Oferta `EXPIRADA`, `CANCELADA` o con hora límite vencida | `CA-03.3` |
 
-    RETURN jsonb_build_object(
-        'exito', true,
-        'mensaje', 'Donación asignada correctamente.'
-    );
-END;
-$$ LANGUAGE plpgsql;
-```
+Verificación: `tests/db/tomar-donacion.test.ts` (PostgreSQL real, ver cabecera del archivo) incluye la prueba de concurrencia del DoD de `CMP-03`.
 
 ---
 

@@ -149,6 +149,13 @@ export default function RadarMap({
     return [...baseMapNodes, ...nuevos];
   }, [baseMapNodes, donacionesExternas]);
 
+  // Flota de voluntarios y unidades de transporte activas en campo
+  const voluntariosActivos = useMemo(
+    () => mapNodes.filter((n) => n.kind === 'truck'),
+    [mapNodes]
+  );
+  const [voluntarioCicloIndex, setVoluntarioCicloIndex] = useState<number>(-1);
+
   // Si se pasa un filtro externo (ej. desde el catálogo de donaciones)
   useEffect(() => {
     if (filtroZonaExterna && filtroZonaExterna !== 'TODAS') {
@@ -239,22 +246,39 @@ export default function RadarMap({
         }
       });
 
-      // 1. Trazado de ruta activa (Santa Elena -> Voluntario -> Siloé)
-      const rutaNodos = mapNodes.filter(
+      // 1. Trazado de ruta activa 1 (Santa Elena -> Voluntario Carromoto -> Siloé)
+      const ruta1Nodos = mapNodes.filter(
         (n) => n.id === 'node-1' || n.id === 'node-5' || n.id === 'node-3'
       );
-      if (rutaNodos.length >= 2) {
-        const coordsRuta: [number, number][] = [
+      if (ruta1Nodos.length >= 2) {
+        const coordsRuta1: [number, number][] = [
           [3.4258, -76.5244], // Santa Elena
-          [3.4315, -76.541],  // Voluntario en Calle 5ta
+          [3.4315, -76.541],  // Voluntario 1 en Calle 5ta (Juan Pérez)
           [3.4285, -76.5572], // Comedor Siloé
         ];
 
-        L.polyline(coordsRuta, {
+        L.polyline(coordsRuta1, {
           color: '#00e676',
           weight: 3.5,
           opacity: 0.85,
           dashArray: '6, 6',
+        }).addTo(map);
+      }
+
+      // Trazado de ruta activa 2 (Plaza Alameda -> Voluntario 2 Moto -> Comedor Norte)
+      const voluntario2 = mapNodes.find((n) => n.id === 'node-7');
+      if (voluntario2) {
+        const coordsRuta2: [number, number][] = [
+          [3.4372, -76.5389], // Plaza Alameda
+          [voluntario2.lat, voluntario2.lng], // Voluntario 2 (Carlos Gómez)
+          [3.475, -76.515],   // Destino La Flora
+        ];
+
+        L.polyline(coordsRuta2, {
+          color: '#38bdf8',
+          weight: 3,
+          opacity: 0.85,
+          dashArray: '4, 6',
         }).addTo(map);
       }
 
@@ -330,14 +354,63 @@ export default function RadarMap({
 
   const centrarRutaVoluntario = () => {
     if (!mapInstanceRef.current) return;
-    const camion = mapNodes.find((n) => n.kind === 'truck');
-    if (camion) {
-      mapInstanceRef.current.flyTo([camion.lat, camion.lng], 15, { duration: 1 });
-      setNodoSeleccionado(camion);
+    const map = mapInstanceRef.current;
+
+    if (voluntariosActivos.length === 0) {
+      map.flyTo([3.435, -76.53], 13, { duration: 1 });
+      return;
+    }
+
+    if (voluntariosActivos.length === 1) {
+      const v = voluntariosActivos[0];
+      map.flyTo([v.lat, v.lng], 15.5, { duration: 1 });
+      setNodoSeleccionado(v);
+      setVoluntarioCicloIndex(0);
+      return;
+    }
+
+    // Múltiples voluntarios: alternar 0 -> 1 -> ... -> N-1 -> Panorámica global (fitBounds) -> 0
+    const nextIdx = (voluntarioCicloIndex + 1) % (voluntariosActivos.length + 1);
+    setVoluntarioCicloIndex(nextIdx);
+
+    if (nextIdx < voluntariosActivos.length) {
+      // Centrar en voluntario individual específico
+      const target = voluntariosActivos[nextIdx];
+      map.flyTo([target.lat, target.lng], 15.5, { duration: 1.2 });
+      setNodoSeleccionado(target);
     } else {
-      mapInstanceRef.current.flyTo([3.435, -76.53], 13, { duration: 1 });
+      // Encuadre global de toda la flota de voluntarios en campo (fitBounds)
+      const coordsFlota: [number, number][] = voluntariosActivos.map((c) => [c.lat, c.lng]);
+      map.fitBounds(coordsFlota, { padding: [60, 60], maxZoom: 15 });
+      setNodoSeleccionado(null);
     }
   };
+
+  // Etiqueta y tooltip dinámicos según el estado de la flota
+  const botonVoluntarioInfo = useMemo(() => {
+    if (voluntariosActivos.length === 0) {
+      return {
+        label: 'Sin voluntarios',
+        titulo: 'No hay unidades de transporte activas en este momento',
+      };
+    }
+    if (voluntariosActivos.length === 1) {
+      return {
+        label: 'Centrar Voluntario',
+        titulo: `Centrar en ${voluntariosActivos[0].label}`,
+      };
+    }
+    if (voluntarioCicloIndex >= 0 && voluntarioCicloIndex < voluntariosActivos.length) {
+      return {
+        label: `Voluntario (${voluntarioCicloIndex + 1}/${voluntariosActivos.length})`,
+        titulo: `Viendo: ${voluntariosActivos[voluntarioCicloIndex].label}. Clic para siguiente unidad o ver toda la flota.`,
+      };
+    }
+    return {
+      label: `Ver Flota (${voluntariosActivos.length})`,
+      titulo: `Encuadrar a los ${voluntariosActivos.length} voluntarios activos en Cali`,
+    };
+  }, [voluntariosActivos, voluntarioCicloIndex]);
 
   return (
     <section
@@ -388,10 +461,13 @@ export default function RadarMap({
           type="button"
           onClick={centrarRutaVoluntario}
           className="ml-auto btn-98 !py-0.5 !px-2 text-[10px] font-mono flex items-center gap-1 shrink-0 text-[#000080]"
-          title="Centrar en el voluntario en ruta"
+          title={botonVoluntarioInfo.titulo}
         >
           <Compass className="w-3 h-3 text-[#000080]" />
-          <span>Centrar Voluntario</span>
+          <span>{botonVoluntarioInfo.label}</span>
+          {voluntariosActivos.length > 1 && (
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse ml-0.5" />
+          )}
         </button>
       </div>
 

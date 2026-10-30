@@ -194,6 +194,20 @@ const SEED_MAP_NODES: MapNode[] = [
     x: 0.48,
     y: 0.38,
   },
+  {
+    id: "node-7",
+    kind: "truck",
+    lat: 3.468,
+    lng: -76.519,
+    label: "Ruta 2 (Voluntario Moto)",
+    sub: "En tránsito · Av 3 Norte (Carlos Gómez)",
+    zona: "NORTE",
+    municipio: "Santiago de Cali",
+    direccion: "Avenida 3 Norte con Calle 38, La Flora",
+    alcance: "URBANO",
+    x: 0.38,
+    y: 0.18,
+  },
 ];
 
 const SEED_DELIVERIES: Delivery[] = [

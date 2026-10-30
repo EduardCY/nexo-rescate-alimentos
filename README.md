@@ -63,6 +63,46 @@ npm run test
 
 ---
 
+## Despliegue en la Nube y Ciclo de Vida del Servicio ($0 USD/mes)
+
+La plataforma está configurada y desplegada bajo una arquitectura **Serverless de costo cero**, utilizando los planes gratuitos (*Free Tier*) de **Vercel** y **Supabase**.
+
+- **URL de Producción Activa:** [https://nexo-rescate-alimentos.vercel.app](https://nexo-rescate-alimentos.vercel.app)
+- **Repositorio de Base de Datos:** Supabase Cloud (PostgreSQL 15 administrado).
+
+### ¿Se mantienen activos automáticamente?
+
+| Servicio | Permanencia y Disponibilidad | Política de Inactividad | Cómo reactivarlo si se apaga |
+| :--- | :--- | :--- | :--- |
+| **Vercel (Frontend & Serverless)** | **Siempre activo (24/7/365)** | Ninguna. Escala a cero computacionalmente cuando no hay peticiones, pero la URL nunca se desactiva. | No aplica; siempre está disponible. |
+| **Supabase (Base de Datos PostgreSQL)** | **Activo con uso regular** | **Pausa automática tras 7 días sin peticiones** (política del Free Tier de Supabase para ahorro de recursos). | Entrar a [supabase.com/dashboard](https://supabase.com/dashboard) y presionar **"Restore project"** (restaura datos y esquemas en 1 minuto). |
+
+> [!TIP]
+> **Para mantener Supabase activo durante el semestre:** Basta con ingresar a la aplicación web o consultar el catálogo de donaciones una vez por semana. Para las fechas de entrega y sustanciación, verificar 24 horas antes que el proyecto no esté en estado *Paused*.
+
+### Cómo desplegar nuevas versiones
+
+1. **Despliegue automático (CI/CD):** Cada `git push origin main` compila y despliega automáticamente la nueva versión una vez vinculado el repositorio en Vercel.
+2. **Despliegue manual por Terminal (CLI):**
+   ```bash
+   npx vercel --prod
+   ```
+
+### Cómo pausar o detener el proyecto (Apagado / Desactivación)
+
+Si una vez evaluado el proyecto el equipo desea apagar o desmantelar los servicios:
+
+1. **Detener o pausar Vercel:**
+   - **Pausa temporal:** Ir a [Vercel Dashboard](https://vercel.com) → Seleccionar proyecto `nexo-rescate-alimentos` → **Settings** → **Advanced** → **Pause Project**.
+   - **Eliminación definitiva:** En la misma pestaña **Advanced**, presionar **Delete Project**.
+2. **Pausar o eliminar Supabase:**
+   - **Pausa manual inmediata:** Ir a [Supabase Dashboard](https://supabase.com/dashboard) → **Project Settings** → **General** → **Pause project**.
+   - **Eliminación definitiva:** En **Project Settings** → **General** → **Delete project**.
+3. **Detener entorno local:**
+   - Presionar `Ctrl + C` en la terminal donde esté corriendo `npm run dev`.
+
+---
+
 ## Documentación
 
 La especificación completa del sistema y las decisiones de diseño se encuentran versionadas dentro del repositorio:

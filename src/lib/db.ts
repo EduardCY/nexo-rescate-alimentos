@@ -1,4 +1,5 @@
 import Dexie, { type Table } from 'dexie';
+import type { ZonaCali } from '@/types';
 
 /**
  * Estados posibles para la sincronización de una donación almacenada localmente en IndexedDB.
@@ -19,6 +20,10 @@ export interface DonacionOffline {
   cantidadEstimada: number;
   unidadMedida: 'kg' | 'canastillas' | 'bultos' | 'unidades' | string;
   direccionRecogida: string;
+  indicacionesPuesto?: string;
+  telefonoDonante?: string;
+  zona?: ZonaCali;
+  coordenadas?: { lat: number; lng: number };
   horaLimite: string;
   requiereFrio: boolean;
   exencionSanitariaAceptada: boolean;
@@ -54,6 +59,19 @@ export const db = new RescateAlimentosDB();
 export const RescateDatabase = RescateAlimentosDB;
 
 /**
+ * Notifica a la ventana del navegador que la cola local ha cambiado.
+ */
+function notificarCambioCola(count?: number) {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('nexo:offline-queue-changed', {
+        detail: { count },
+      })
+    );
+  }
+}
+
+/**
  * Guarda una donación en el almacenamiento local IndexedDB con estado 'PENDIENTE'
  * cuando no hay conexión a internet disponible (RNF-002).
  *
@@ -77,7 +95,16 @@ export async function guardarDonacionOffline(
     createdAt: donacion.createdAt || new Date(timestamp).toISOString(),
   };
 
-  return await db.donaciones.add(registro);
+  const id = await db.donaciones.add(registro);
+  
+  try {
+    const pendientesCount = await db.donaciones.where('estado').equals('PENDIENTE').count();
+    notificarCambioCola(pendientesCount);
+  } catch {
+    notificarCambioCola();
+  }
+
+  return id;
 }
 
 /**
@@ -108,4 +135,25 @@ export async function marcarDonacionSincronizada(
     syncStatus: 'SINCRONIZADO',
     codigoServidor,
   });
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('nexo:offline-synced', {
+        detail: {
+          localId,
+          codigoServidor,
+          codigoTemporal: `OFFLINE-DON-${localId}`,
+        },
+      })
+    );
+    try {
+      const pendientesCount = await db.donaciones.where('estado').equals('PENDIENTE').count();
+      notificarCambioCola(pendientesCount);
+    } catch {
+      notificarCambioCola();
+    }
+  }
 }
+
+export { sincronizarColaOffline } from './sync/offline-sync';
+

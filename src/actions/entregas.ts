@@ -4,6 +4,11 @@ import { createClient, esSupabaseConfigurado } from '@/lib/supabase/server';
 import { EntregaInputSchema, type EntregaInput } from '@/lib/validations/entrega';
 import type { Donacion, ZonaCali } from '@/types';
 import { inferirZonaCali } from '@/lib/utils/donaciones-helper';
+import {
+  resolverUuidDonacion,
+  resolverUuidVoluntario,
+  UUID_REGEX,
+} from '@/lib/utils/uuid-helper';
 
 export type ConfirmarEntregaResultado =
   | {
@@ -173,14 +178,24 @@ if (!globalThis.__NEXO_TRAZABILIDAD_EVENTOS) {
  * Permite sincronía inmediata entre el catálogo volátil y la hoja de ruta (TASK-18 / CMP-03 / CMP-04).
  */
 export async function obtenerDonacionParaEntrega(donacionId: string): Promise<Donacion | null> {
+  const uuidResuelto = resolverUuidDonacion(donacionId);
+
   if (esSupabaseConfigurado()) {
     try {
       const supabase = createClient();
-      const { data, error } = await supabase
-        .from('donaciones')
-        .select('*')
-        .eq('id', donacionId)
-        .single();
+      let query = supabase.from('donaciones').select('*');
+
+      if (uuidResuelto) {
+        query = query.eq('id', uuidResuelto);
+      } else if (UUID_REGEX.test(donacionId)) {
+        query = query.eq('id', donacionId);
+      } else if (donacionId.startsWith('DON-')) {
+        query = query.eq('codigo', donacionId);
+      } else {
+        query = query.eq('id', donacionId);
+      }
+
+      const { data, error } = await query.maybeSingle();
 
       if (!error && data) {
         return {
@@ -220,14 +235,26 @@ export async function obtenerDonacionParaEntrega(donacionId: string): Promise<Do
   if (globalThis.__NEXO_DONACIONES_VOLATILES) {
     const listaVol = Array.from(globalThis.__NEXO_DONACIONES_VOLATILES.values());
     for (const item of listaVol) {
-      if (item.codigo === donacionId) return { ...item };
+      if (
+        item.codigo === donacionId ||
+        item.id === donacionId ||
+        (uuidResuelto && (item.id === uuidResuelto || item.codigo === donacionId))
+      ) {
+        return { ...item };
+      }
     }
   }
 
   if (globalThis.__NEXO_CATALOGO_VOLATIL) {
     const listaCat = Array.from(globalThis.__NEXO_CATALOGO_VOLATIL.values());
     for (const item of listaCat) {
-      if (item.codigo === donacionId) return { ...item };
+      if (
+        item.codigo === donacionId ||
+        item.id === donacionId ||
+        (uuidResuelto && (item.id === uuidResuelto || item.codigo === donacionId))
+      ) {
+        return { ...item };
+      }
     }
   }
 
@@ -297,10 +324,18 @@ export async function confirmarEntrega(rawInput: EntregaInput): Promise<Confirma
   }
 
   // 6. DoD: Solo el voluntario asignado puede registrar la entrega del lote
+  const esVoluntarioEquivalente = (asignado?: string, entrante?: string): boolean => {
+    if (!asignado || !entrante) return true;
+    if (asignado === entrante) return true;
+    const asignadoNorm = resolverUuidVoluntario(asignado);
+    const entranteNorm = resolverUuidVoluntario(entrante);
+    return asignadoNorm === entranteNorm;
+  };
+
   if (
     donacion.voluntarioId &&
     input.voluntarioId &&
-    donacion.voluntarioId !== input.voluntarioId
+    !esVoluntarioEquivalente(donacion.voluntarioId, input.voluntarioId)
   ) {
     return {
       exito: false,
@@ -318,6 +353,8 @@ export async function confirmarEntrega(rawInput: EntregaInput): Promise<Confirma
   if (esSupabaseConfigurado()) {
     try {
       const supabase = createClient();
+      const targetId = donacion.id;
+      const voluntarioUuid = resolverUuidVoluntario(input.voluntarioId || donacion.voluntarioId || 'vol-001');
 
       // Actualización de donación a ENTREGADA con marca temporal UTC
       const { data: actualizada, error: updateError } = await supabase
@@ -326,19 +363,19 @@ export async function confirmarEntrega(rawInput: EntregaInput): Promise<Confirma
           estado: 'ENTREGADA',
           entregada_at: ahoraUtcIso,
         })
-        .eq('id', input.donacionId)
+        .eq('id', targetId)
         .eq('estado', 'ASIGNADA')
         .select()
-        .single();
+        .maybeSingle();
 
       if (!updateError && actualizada) {
         // Registro inmutable en trazabilidad_eventos
         await supabase.from('trazabilidad_eventos').insert([
           {
-            donacion_id: input.donacionId,
+            donacion_id: targetId,
             estado_anterior: 'ASIGNADA',
             estado_nuevo: 'ENTREGADA',
-            usuario_id: input.voluntarioId || donacion.voluntarioId || null,
+            usuario_id: voluntarioUuid,
             usuario_nombre: input.voluntarioNombre || donacion.voluntarioNombre || 'Voluntario',
             timestamp: ahoraUtcIso,
             observaciones: textoObservaciones,
@@ -350,6 +387,14 @@ export async function confirmarEntrega(rawInput: EntregaInput): Promise<Confirma
           estado: 'ENTREGADA',
           entregadaAt: ahoraUtcIso,
         };
+
+        // Mantener sincronía en memoria en todas las claves
+        globalThis.__NEXO_DONACIONES_VOLATILES?.set(input.donacionId, donacionEntregada);
+        globalThis.__NEXO_DONACIONES_VOLATILES?.set(donacion.id, donacionEntregada);
+        globalThis.__NEXO_DONACIONES_VOLATILES?.set(donacion.codigo, donacionEntregada);
+        globalThis.__NEXO_CATALOGO_VOLATIL?.set(input.donacionId, { ...donacionEntregada });
+        globalThis.__NEXO_CATALOGO_VOLATIL?.set(donacion.id, { ...donacionEntregada });
+        globalThis.__NEXO_CATALOGO_VOLATIL?.set(donacion.codigo, { ...donacionEntregada });
 
         return {
           exito: true,
@@ -373,7 +418,11 @@ export async function confirmarEntrega(rawInput: EntregaInput): Promise<Confirma
     entregadaAt: ahoraUtcIso,
   };
   globalThis.__NEXO_DONACIONES_VOLATILES?.set(input.donacionId, actualizadaVol);
+  globalThis.__NEXO_DONACIONES_VOLATILES?.set(donacion.id, actualizadaVol);
+  globalThis.__NEXO_DONACIONES_VOLATILES?.set(donacion.codigo, actualizadaVol);
   globalThis.__NEXO_CATALOGO_VOLATIL?.set(input.donacionId, { ...actualizadaVol });
+  globalThis.__NEXO_CATALOGO_VOLATIL?.set(donacion.id, { ...actualizadaVol });
+  globalThis.__NEXO_CATALOGO_VOLATIL?.set(donacion.codigo, { ...actualizadaVol });
 
   globalThis.__NEXO_TRAZABILIDAD_EVENTOS?.push({
     id: `ev-${Date.now()}`,

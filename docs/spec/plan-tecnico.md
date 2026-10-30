@@ -64,9 +64,9 @@ graph TD
    - `id`, `donacion_id` (FK), `estado_anterior`, `estado_nuevo`, `usuario_id` (FK), `usuario_nombre`, `timestamp`, `observaciones`.
 
 ### Módulos y Helpers Clave del Frontend/Backend (`CMP-01` a `CMP-04`):
-- **Validación y Reglas Puras:** `src/lib/validations/donacion.ts`, `src/lib/validations/entrega.ts`, `src/lib/utils/donaciones-helper.ts` (`filtrarDonacionesDisponibles`, `evaluarVigenciaDonacion`, `normalizarFechaHoraLimite`, `inferirZonaCali`) y `src/lib/nexo/impact.ts` (`scoreMatch` con restricción de cadena de frío `CA-02.2`, `calcularDistanciaKm` con fórmula de Haversine).
-- **Persistencia Offline-First (`CA-01.5`):** `src/lib/db.ts` (Dexie.js / IndexedDB) y sincronización reactiva automática al reconectar en `src/components/donaciones/OfflineStatusBadge.tsx`.
-- **Temporizador, Catálogo y Cartografía OpenStreetMap (`CMP-02` / `TASK-19`):** `src/lib/hooks/useCountdown.ts`, `src/components/donaciones/DonacionCard.tsx`, `src/components/donaciones/ZonasFilter.tsx`, `src/components/donaciones/ColdChainBadge.tsx`, `src/components/nexo/RadarMap.tsx` (Leaflet + OpenStreetMap con escala urbana Cali y corredor metropolitano/regional $0 USD/mes) y `src/app/donaciones/page.tsx`.
+- **Validación y Reglas Puras:** `src/lib/validations/donacion.ts` (con soporte para coordenadas, puesto y teléfono), `src/lib/validations/entrega.ts`, `src/lib/utils/donaciones-helper.ts` (`filtrarDonacionesDisponibles`, `evaluarVigenciaDonacion`, `normalizarFechaHoraLimite`, `inferirZonaCali`) y `src/lib/nexo/impact.ts` (`scoreMatch` con restricción de cadena de frío `CA-02.2`, `calcularDistanciaKm` con fórmula de Haversine).
+- **Georreferenciación y Cartografía OpenStreetMap ($0 USD/mes):** `src/components/donaciones/LocationPickerMap.tsx` (selector dinámico con Leaflet, pin arrastrable, presets de plazas de Cali y geolocalización GPS) y `src/components/nexo/RadarMap.tsx` (vista global de radar logístico).
+- **Persistencia Offline-First y Sincronización Reactiva (`CA-01.5` / `RNF-002`):** `src/lib/db.ts` (Dexie.js / IndexedDB), `src/lib/sync/offline-sync.ts` (coordinador centralizado de cola con normalización de horas vencidas y eventos `nexo:offline-synced` / `nexo:offline-queue-changed`) y sincronización automática en `src/components/donaciones/OfflineStatusBadge.tsx`, `src/components/nexo/MenuBar.tsx` y `src/components/donaciones/DonacionWizard.tsx`.
 - **Reserva Única y Ruta Activa (`CMP-03`):** `src/actions/donaciones.ts` (`tomarDonacion`, `marcarDonacionExpirada`), `src/components/donaciones/ConflictoTomaModal.tsx`, `src/components/donaciones/RutaActivaCard.tsx` y `src/app/ruta-activa/page.tsx`.
 - **Confirmación de Entrega y Habeas Data (`CMP-04`):** `src/actions/entregas.ts`, `src/components/entregas/ConfirmarEntregaModal.tsx` y `src/app/entregas/[id]/page.tsx`.
 
@@ -101,12 +101,25 @@ Verificación: `tests/db/tomar-donacion.test.ts` (PostgreSQL real, ver cabecera 
 
 ---
 
-## 5. Entorno y Despliegue
+## 5. Entorno, Despliegue y Ciclo de Vida del Servicio ($0 USD/mes)
 
 - **Entorno Local:** Node.js 20+, Next.js dev server (`npm run dev`) en puerto 3000.
-- **Variables de Entorno Requeridas (`.env.example`):**
+- **Variables de Entorno Requeridas (`.env.example` y `.env.local`):**
   - `NEXT_PUBLIC_SUPABASE_URL`
   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
   - `SUPABASE_SERVICE_ROLE_KEY`
+  - `SUPABASE_DB_PASSWORD` (gestión interna)
+  - `NEXT_PUBLIC_APP_URL`
+  - `NEXT_PUBLIC_APP_NAME`
 - **Despliegue Continuo (CI/CD):**
-  - Repositorio en GitHub enlazado a Vercel con despliegues automáticos por cada push a `main` y vistas previas en cada Pull Request.
+  - Repositorio en GitHub enlazado a Vercel con validación previa en GitHub Actions (`.github/workflows/ci.yml`).
+  - Despliegue manual directo en terminal: `npx vercel --prod`.
+
+### 5.1. Políticas de Disponibilidad y Ciclo de Vida (Free Tier)
+1. **Vercel (Hosting Serverless):**
+   - **Disponibilidad:** 24/7/365 continua. El frontend y los Server Actions escalan a cero bajo inactividad para garantizar $0.00 USD de facturación.
+   - **Procedimiento de Desactivación:** Vercel Dashboard → Proyecto → *Settings* → *Advanced* → *Pause Project* (para suspensión temporal) o *Delete Project* (para remoción total).
+2. **Supabase (Base de Datos PostgreSQL 15):**
+   - **Disponibilidad y Auto-Pausa:** Los proyectos en Free Tier entran en estado de **pausa automática tras 7 días consecutivos sin tráfico** a la API o base de datos.
+   - **Procedimiento de Restauración:** Ingresar a [https://supabase.com/dashboard](https://supabase.com/dashboard) y presionar *"Restore project"*; se restablece en ~60 a 90 segundos con esquemas y datos íntegros.
+   - **Procedimiento de Apagado Definitivo:** *Project Settings* → *General* → *Pause Project* / *Delete Project*.

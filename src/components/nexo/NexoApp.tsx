@@ -12,7 +12,9 @@ import ImpactView from "./ImpactView";
 const MENU: MenuEntry[] = [
   { id: "archivo", label: "Inicio", view: "dashboard" },
   { id: "donaciones", label: "Donar Alimentos", view: "donation" },
+  { id: "catalogo", label: "Catálogo y Mapa en Vivo", href: "/donaciones" },
   { id: "rutas", label: "Asignación de Comedores", view: "matching" },
+  { id: "ruta_activa", label: "Ruta Activa", href: "/ruta-activa" },
   { id: "fundaciones", label: "Directorio de Comedores", view: "matching", focusNgos: true },
   { id: "certificados", label: "Certificados de Donación", view: "impact" },
 ];

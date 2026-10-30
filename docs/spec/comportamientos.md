@@ -37,14 +37,17 @@ stateDiagram-v2
 ### Criterios de Aceptación (Gherkin):
 
 ```gherkin
-Escenario: CA-01.1 Publicación exitosa de oferta con aceptación legal
+Escenario: CA-01.1 Publicación exitosa de oferta con aceptación legal y georreferenciación
   Dado un comercio o donante con sesión iniciada en la plataforma,
-  Cuando registra tipo de alimento, cantidad estimada (kg/canastillas), dirección de recogida y ventana de tiempo,
+  Cuando registra tipo de alimento, cantidad estimada (kg/canastillas), ventana de tiempo,
+  Y selecciona la zona urbana de Cali (CENTRO, NORTE, SUR, ORIENTE, LADERA),
+  Y fija el punto de recogida mediante mapa interactivo OpenStreetMap o presets de plazas,
+  Y opcionalmente detalla indicaciones del puesto/muelle y teléfono de contacto,
   Y marca la casilla obligatoria de exención de responsabilidad sanitaria bajo la Ley 1990 de 2019,
   Y presiona "Publicar Donación",
   Entonces la donación queda creada en estado "DISPONIBLE",
   Y genera un código único de seguimiento (ej. DON-101),
-  Y se hace visible de forma inmediata en la lista de ofertas para los voluntarios.
+  Y se hace visible de forma inmediata en la lista de ofertas para los voluntarios con su posición geográfica.
 
 Escenario: CA-01.2 Bloqueo por ventana de tiempo inválida (hora límite anterior o igual)
   Dada una ventana de recogida cuya hora límite es anterior o igual a la hora de publicación,
@@ -64,12 +67,13 @@ Escenario: CA-01.4 Marcado de alimentos con requerimiento de refrigeración
   Entonces la donación queda registrada con el indicador requiereFrio = true,
   Y el sistema añade la etiqueta destacada visible para voluntarios y comedores con frío funcional.
 
-Escenario: CA-01.5 Registro en entorno sin conexión móvil (Offline-First)
+Escenario: CA-01.5 Registro en entorno sin conexión móvil y sincronización reactiva (Offline-First)
   Dado que el donante se encuentra en una plaza de mercado (Santa Elena o Cavasa) sin señal celular 4G,
   Cuando completa y envía el formulario de donación,
-  Entonces el sistema almacena la donación localmente en el dispositivo (IndexedDB),
+  Entonces el sistema almacena la donación localmente en el dispositivo (IndexedDB / Dexie.js) con código temporal OFFLINE-DON-X,
   Y muestra una confirmación visual: "Guardado localmente — pendiente de sincronización",
-  Y la envía automáticamente al servidor en cuanto se reanuda la conexión a Internet.
+  Y al reanudarse la conexión a Internet, el sistema procesa la cola automáticamente,
+  Y actualiza de forma reactiva la interfaz del donante de OFFLINE-DON-X al código definitivo DON-XXX sin requerir recargar la página.
 ```
 
 * **Se prueba como:** `comercio / donante` · `teléfono`

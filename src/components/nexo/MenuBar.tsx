@@ -1,14 +1,17 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
 import type { ViewId } from "./NexoContext";
 import { obtenerDonacionesPendientes } from "@/lib/db";
+import { sincronizarColaOffline } from "@/lib/sync/offline-sync";
 
 export interface MenuEntry {
   id: string;
   label: string;
   view?: ViewId;
   focusNgos?: boolean;
+  href?: string;
 }
 
 interface Props {
@@ -33,17 +36,49 @@ export default function MenuBar({ items, activeId, onSelect }: Props) {
       }
     };
 
+    const sincronizar = async () => {
+      if (typeof navigator !== "undefined" && !navigator.onLine) return;
+      try {
+        await sincronizarColaOffline();
+      } finally {
+        await check();
+      }
+    };
+
     check();
-    const handleOnline = () => { setIsOnline(true); check(); };
-    const handleOffline = () => { setIsOnline(false); check(); };
+
+    // Auto-sincronizar al cargar si hay red y elementos pendientes
+    const t0 = setTimeout(() => {
+      if (typeof navigator !== "undefined" && navigator.onLine) {
+        void sincronizar();
+      }
+    }, 400);
+
+    const handleOnline = () => {
+      setIsOnline(true);
+      void sincronizar();
+      setTimeout(() => {
+        void sincronizar();
+      }, 500);
+    };
+
+    const handleOffline = () => {
+      setIsOnline(false);
+      void check();
+    };
 
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
-    const interval = setInterval(check, 10000);
+    window.addEventListener("nexo:offline-queue-changed", check);
+    window.addEventListener("nexo:offline-synced", check);
+    const interval = setInterval(check, 8000);
 
     return () => {
+      clearTimeout(t0);
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("nexo:offline-queue-changed", check);
+      window.removeEventListener("nexo:offline-synced", check);
       clearInterval(interval);
     };
   }, []);
@@ -51,18 +86,34 @@ export default function MenuBar({ items, activeId, onSelect }: Props) {
   return (
     <nav aria-label="Menú principal" className="flex flex-wrap items-center justify-between border-b border-[#808080] bg-[#d4d0c8] px-1 py-[2px]">
       <div className="flex flex-wrap items-center">
-        {items.map((it) => (
-          <button
-            key={it.id}
-            id={`menu-${it.id}`}
-            className="menu-item font-sans text-xs sm:text-[13px]"
-            aria-current={activeId === it.id ? "page" : undefined}
-            onClick={() => onSelect(it)}
-          >
-            <span className="underline font-bold">{it.label[0]}</span>
-            {it.label.slice(1)}
-          </button>
-        ))}
+        {items.map((it) => {
+          if (it.href) {
+            return (
+              <Link
+                key={it.id}
+                id={`menu-${it.id}`}
+                href={it.href}
+                className="menu-item font-sans text-xs sm:text-[13px]"
+              >
+                <span className="underline font-bold">{it.label[0]}</span>
+                {it.label.slice(1)}
+              </Link>
+            );
+          }
+
+          return (
+            <button
+              key={it.id}
+              id={`menu-${it.id}`}
+              className="menu-item font-sans text-xs sm:text-[13px]"
+              aria-current={activeId === it.id ? "page" : undefined}
+              onClick={() => onSelect(it)}
+            >
+              <span className="underline font-bold">{it.label[0]}</span>
+              {it.label.slice(1)}
+            </button>
+          );
+        })}
       </div>
 
       {/* Indicador de Conectividad Estilo Windows 98 en Barra de Menú */}
@@ -79,9 +130,16 @@ export default function MenuBar({ items, activeId, onSelect }: Props) {
           </span>
         )}
         {pendientes > 0 && (
-          <span className="bevel-in bg-[#ffdddd] text-red-900 px-1 py-0.5 font-bold">
+          <button
+            type="button"
+            onClick={() => {
+              if (isOnline) void sincronizarColaOffline();
+            }}
+            title={isOnline ? "Hacer clic para sincronizar donaciones con el servidor" : "Sin conexión a internet"}
+            className="bevel-out bg-[#ffdddd] hover:bg-[#ffcccc] text-red-900 px-1.5 py-0.5 font-bold cursor-pointer text-[10px]"
+          >
             [{pendientes} por sincronizar]
-          </span>
+          </button>
         )}
       </div>
     </nav>

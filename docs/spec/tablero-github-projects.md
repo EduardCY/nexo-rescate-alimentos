@@ -53,7 +53,7 @@ Comportamiento: CMP-01 en comportamientos.md · Origen: RF-001 - US1.1
 Criterios de aceptación
 - CA-01.1 Dado un comercio con sesión iniciada, cuando registra el tipo de alimento, la cantidad, la ventana de recogida y la ubicación, y acepta la exoneración de la Ley 1990 de 2019, entonces la donación queda en estado DISPONIBLE y aparece en la lista de los voluntarios.
 - CA-01.2 Dada una ventana cuya hora límite es anterior o igual a la hora de publicación, cuando el comercio intenta publicar, entonces se rechaza y se le dice que la hora límite debe ser posterior.
-- CA-01.3 Dada una ventana cuya hora límite ya pasó, cuando el comercio intenta publicar, entonces se rechaza y se le pide revisar la hora.
+- CA-01.3 Dado que el comercio diligencia los datos pero omite la casilla de exención legal sanitaria (Ley 1990 de 2019), cuando intenta enviar, el sistema deshabilita el envío y resalta la advertencia legal de obligatoriedad.
 - CA-01.4 Dado que el alimento requiere refrigeración, cuando se publica, entonces la donación queda marcada con la etiqueta destacada "Requiere Refrigeración" y solo la pueden reservar comedores con refrigeración funcional (ver CMP-02).
 - CA-01.5 Dado que el comercio se encuentra sin señal en la plaza de mercado, cuando envía la oferta, el sistema la guarda localmente en IndexedDB y la sincroniza al recuperar red.
 
@@ -125,9 +125,8 @@ Comportamiento: CMP-03 en comportamientos.md · Origen: RF-004 / RF-010 - US3.1
 
 Criterios de aceptación
 - CA-03.1 Dada una donación en estado DISPONIBLE, cuando el voluntario A selecciona "Tomar Donación", entonces la transacción atómica actualiza el estado a ASIGNADA, asigna al voluntario A y muestra la dirección y contacto del donante.
-- CA-03.2 Dada una donación que acaba de ser asignada al voluntario A, cuando el voluntario B intenta tomarla en simultáneo, entonces la base de datos detecta que no está DISPONIBLE, rechaza la solicitud con HTTP 409 Conflict y muestra la notificación amigable: "Esta donación acaba de ser reservada por otra persona. Te mostramos las ofertas disponibles más cercanas."
-- CA-03.3 Dada la respuesta de conflicto en la interfaz del voluntario B, cuando se recibe el error 409, entonces la donación se remueve reactivamente de su lista sin necesidad de recargar la página.
-- CA-03.4 Dada una donación expirada o cancelada, cuando cualquier usuario intenta tomarla, el sistema bloquea la acción indicando que la oferta ya no se encuentra vigente.
+- CA-03.2 Dada una donación que acaba de ser asignada al voluntario A, cuando el voluntario B intenta tomarla en simultáneo, entonces la base de datos detecta que no está DISPONIBLE, rechaza la solicitud con HTTP 409 Conflict, muestra la notificación amigable "Esta donación acaba de ser reservada por otra persona..." y remueve inmediatamente la tarjeta de la vista del voluntario B sin recargar la página.
+- CA-03.3 Dada una donación expirada o cancelada, cuando cualquier voluntario intenta tomarla, el sistema deniega la operación indicando que la oferta ya no se encuentra vigente para recogida.
 
 Se prueba como: voluntario · teléfono (prueba de concurrencia simulada)
 
@@ -492,8 +491,7 @@ Como Full-Stack Developer, debo capturar la respuesta HTTP 409 del procedimiento
 - Remoción inmediata del elemento en el estado local de React.
 
 ### Criterios de Aceptación BDD
-- `CA-03.2`: Bloqueo atómico a segunda toma simultánea.
-- `CA-03.3`: Remoción reactiva ante conflicto.
+- `CA-03.2`: Bloqueo atómico a segunda toma simultánea, modal reactivo y remoción inmediata ante conflicto HTTP 409.
 ```
 
 ---

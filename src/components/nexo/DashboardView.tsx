@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import { useNexo } from "./NexoContext";
 import RadarMap from "./RadarMap";
 import LotCard from "./LotCard";
@@ -51,10 +52,13 @@ export default function DashboardView() {
               />
             ))}
           </div>
-          <div className="p-2">
-            <button id="btn-new-lot" className="btn-green w-full py-2.5 text-sm" onClick={() => setView("donation")}>
-              + REGISTRAR NUEVO EXCEDENTE
+          <div className="p-2 flex flex-col sm:flex-row gap-2">
+            <button id="btn-new-lot" className="btn-green flex-1 py-2 text-xs sm:text-sm font-bold" onClick={() => setView("donation")}>
+              + REGISTRAR DONACIÓN
             </button>
+            <Link href="/donaciones" className="btn-98 flex-1 py-2 text-xs sm:text-sm font-bold font-mono text-[#000080] flex items-center justify-center">
+              VER CATÁLOGO &gt;
+            </Link>
           </div>
         </section>
       </div>

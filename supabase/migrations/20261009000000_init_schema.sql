@@ -56,6 +56,7 @@ CREATE TABLE IF NOT EXISTS donaciones (
     cantidad_estimada NUMERIC(10,2) NOT NULL CHECK (cantidad_estimada > 0),
     unidad_medida VARCHAR(50) NOT NULL CHECK (unidad_medida IN ('kg', 'canastillas', 'bultos', 'unidades')),
     direccion_recogida TEXT NOT NULL,
+    zona VARCHAR(50) NOT NULL DEFAULT 'CENTRO' CHECK (zona IN ('NORTE', 'CENTRO', 'SUR', 'ORIENTE', 'LADERA')),
     hora_limite TIMESTAMPTZ NOT NULL,
     estado VARCHAR(20) NOT NULL DEFAULT 'DISPONIBLE' CHECK (estado IN ('DISPONIBLE', 'ASIGNADA', 'ENTREGADA', 'EXPIRADA', 'CANCELADA')),
     voluntario_id UUID NULL REFERENCES usuarios(id) ON DELETE SET NULL,

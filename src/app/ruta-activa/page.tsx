@@ -108,7 +108,7 @@ export default function RutaActivaPage() {
               Ruta Activa de Campo
             </h1>
             <p className="text-xs text-slate-400 font-mono">
-              CMP-03 · Trazabilidad y despacho en tiempo real
+              Información de recogida y entrega de alimentos en tiempo real
             </p>
           </div>
         </div>

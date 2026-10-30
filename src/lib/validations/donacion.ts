@@ -5,7 +5,7 @@ import { z } from 'zod';
  * de hora local simple (HH:mm, ej. 16:00) como en formato ISO completo (YYYY-MM-DDTHH:mm:ssZ).
  */
 function parseHoraLimite(val: string): Date | null {
-  const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+  const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?$/;
   const match = val.match(timeRegex);
   if (match) {
     const now = new Date();

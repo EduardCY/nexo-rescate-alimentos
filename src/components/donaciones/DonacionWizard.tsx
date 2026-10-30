@@ -56,34 +56,41 @@ export function DonacionWizard({ onCompleted }: { onCompleted?: (codigo: string,
   // Estado Paso 2: Dirección y Hora Límite
   const [donanteNombre, setDonanteNombre] = useState('Puesto 45 Galería Santa Elena');
   const [direccionRecogida, setDireccionRecogida] = useState('Plaza Santa Elena - Puesto 45');
-  const horaInicial = () => {
-    const d = new Date(Date.now() + 4 * 3600 * 1000);
+  const calcularHoraMas = (horasExtra: number) => {
+    const d = new Date(Date.now() + horasExtra * 3600 * 1000);
     return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
   };
-  const [horaLimite, setHoraLimite] = useState(horaInicial);
+  const [horaLimite, setHoraLimite] = useState(() => calcularHoraMas(4));
 
   // Estado Paso 3: Exención Sanitaria Ley 1990/2019
   const [exencionAceptada, setExencionAceptada] = useState(false);
 
   // Validación reactiva de hora futura
-  const validarHoraFutura = (val: string): boolean => {
-    const match = val.match(/^([01]\d|2[0-3]):([0-5]\d)$/);
-    if (!match) return false;
+  const validarHoraFutura = (val: string): { esValida: boolean; esManana: boolean } => {
+    const match = val.match(/^([01]\d|2[0-3]):([0-5]\d)(?::[0-5]\d)?$/);
+    if (!match) return { esValida: false, esManana: false };
     const now = new Date();
-    const target = new Date(
+    const hours = parseInt(match[1], 10);
+    const minutes = parseInt(match[2], 10);
+    const targetHoy = new Date(
       now.getFullYear(),
       now.getMonth(),
       now.getDate(),
-      parseInt(match[1], 10),
-      parseInt(match[2], 10),
+      hours,
+      minutes,
       0,
       0
     );
-    return target.getTime() > Date.now();
+    if (targetHoy.getTime() > now.getTime()) {
+      return { esValida: true, esManana: false };
+    }
+    const targetManana = new Date(targetHoy.getTime() + 24 * 3600 * 1000);
+    return { esValida: targetManana.getTime() > now.getTime(), esManana: true };
   };
 
   const cantidadNum = parseFloat(cantidadEstimada) || 0;
-  const horaEsFutura = validarHoraFutura(horaLimite);
+  const estHora = validarHoraFutura(horaLimite);
+  const horaEsFutura = estHora.esValida;
   const impacto = calcImpact(cantidadNum > 0 ? cantidadNum : 0, catId);
   const urgencia = urgencyOf(4);
 
@@ -182,7 +189,7 @@ export function DonacionWizard({ onCompleted }: { onCompleted?: (codigo: string,
 
           <p className="text-[11px] text-slate-700 leading-relaxed">
             {confirmacion.offline
-              ? 'El lote quedó almacenado de forma segura en la base local IndexedDB y se sincronizará automáticamente al recuperar señal en la plaza.'
+              ? 'Tu donación quedó guardada de forma segura en tu teléfono y se enviará automáticamente cuando recuperes la señal de internet.'
               : 'Los comedores comunitarios y voluntarios cercanos ya pueden visualizar y tomar esta donación.'}
           </p>
         </div>
@@ -204,7 +211,7 @@ export function DonacionWizard({ onCompleted }: { onCompleted?: (codigo: string,
       <div className="lg:col-span-7 bevel-out p-3 sm:p-4 text-black">
         <div className="titlebar px-2.5 py-1.5 text-white font-mono text-xs font-bold flex items-center justify-between mb-3">
           <span>PUBLICAR DONACIÓN — PASO {paso} DE 3</span>
-          <span className="bg-white/20 px-1.5 py-0.5 text-[10px]">Registro exprés (&lt;45s)</span>
+          <span className="bg-white/20 px-1.5 py-0.5 text-[10px]">Registro rápido</span>
         </div>
 
         {/* Indicador de Pasos Estilo Pestañas Windows 98 */}
@@ -236,7 +243,7 @@ export function DonacionWizard({ onCompleted }: { onCompleted?: (codigo: string,
               paso === 3 ? 'bevel-in bg-white text-[#000080]' : 'bevel-out text-slate-700 disabled:opacity-50'
             }`}
           >
-            3. Ley 1990
+            3. Confirmación
           </button>
         </div>
 
@@ -424,6 +431,23 @@ export function DonacionWizard({ onCompleted }: { onCompleted?: (codigo: string,
                 <label className="retro-label" htmlFor="wiz-hora">
                   Hora límite de recogida *
                 </label>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  {[
+                    { label: '+2 Horas', horas: 2 },
+                    { label: '+4 Horas', horas: 4 },
+                    { label: '+6 Horas', horas: 6 },
+                  ].map((op) => (
+                    <button
+                      key={op.horas}
+                      type="button"
+                      onClick={() => setHoraLimite(calcularHoraMas(op.horas))}
+                      className="btn-98 min-h-[40px] px-3 text-[11px] font-mono font-bold text-[#000080]"
+                    >
+                      <Clock className="w-3 h-3 mr-1" />
+                      {op.label}
+                    </button>
+                  ))}
+                </div>
                 <div className="flex items-center gap-2">
                   <Clock className="w-5 h-5 text-[#000080] shrink-0" />
                   <input
@@ -435,11 +459,19 @@ export function DonacionWizard({ onCompleted }: { onCompleted?: (codigo: string,
                     required
                   />
                 </div>
+                {estHora.esValida && estHora.esManana && (
+                  <div className="mt-2 bevel-in bg-[#e8f4fd] border border-sky-700 p-2 text-sky-950 font-mono text-xs flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-sky-800 shrink-0" />
+                    <span>
+                      Hora programada para mañana a las <b>{horaLimite}</b> (próximas 24 horas).
+                    </span>
+                  </div>
+                )}
                 {!horaEsFutura && (
                   <div className="mt-2 bevel-in bg-[#fff4cc] border border-amber-700 p-2 text-amber-950 font-mono text-xs flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 text-amber-800 shrink-0" />
                     <span>
-                      La hora de recogida seleccionada debe ser posterior a la hora actual.
+                      Por favor selecciona una hora válida en formato HH:MM.
                     </span>
                   </div>
                 )}
@@ -460,7 +492,7 @@ export function DonacionWizard({ onCompleted }: { onCompleted?: (codigo: string,
                   disabled={!paso2Valido}
                   className="btn-green min-h-[48px] px-6 text-xs sm:text-sm gap-2"
                 >
-                  <span>SIGUIENTE: EXENCIÓN LEGAL</span>
+                  <span>SIGUIENTE: PASO FINAL</span>
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>
@@ -535,6 +567,7 @@ export function DonacionWizard({ onCompleted }: { onCompleted?: (codigo: string,
               hoursLeft: 4,
               donor: donanteNombre || direccionRecogida,
               coldChain: requiereFrio ? '4°C - 8°C' : 'Ambiente (sin refrigeración)',
+              requiereFrio,
             }}
           />
           <p className="mt-2 font-mono text-[11px] text-slate-400">

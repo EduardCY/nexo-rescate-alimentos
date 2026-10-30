@@ -61,14 +61,14 @@ export default function WindowFrame({ title, menu, statusLeft, statusRight, chil
                 <a
                   href="/donaciones"
                   className="bevel-out px-2 py-0.5 hover:bg-slate-200 active:translate-y-px text-[11px] font-bold"
-                  title="Abrir Catálogo Móvil (CMP-02)"
+                  title="Abrir Catálogo de Alimentos"
                 >
                   📱 Catálogo Móvil
                 </a>
                 <a
                   href="/ruta-activa"
                   className="bevel-out px-2 py-0.5 hover:bg-slate-200 active:translate-y-px text-[11px] font-bold"
-                  title="Abrir Ruta Activa Móvil (CMP-03)"
+                  title="Ver Mi Recogida en Curso"
                 >
                   🚚 Ruta Activa
                 </a>

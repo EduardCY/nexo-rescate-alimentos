@@ -70,17 +70,17 @@ export default function MenuBar({ items, activeId, onSelect }: Props) {
         {isOnline ? (
           <span className="bevel-in bg-[#e0ffd8] text-green-900 px-1.5 py-0.5 font-bold flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-green-600 animate-pulse" />
-            ONLINE
+            CONECTADO
           </span>
         ) : (
           <span className="bevel-in bg-[#fff4cc] text-amber-900 px-1.5 py-0.5 font-bold flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-amber-600" />
-            MODO OFFLINE
+            SIN INTERNET
           </span>
         )}
         {pendientes > 0 && (
           <span className="bevel-in bg-[#ffdddd] text-red-900 px-1 py-0.5 font-bold">
-            [{pendientes} pend.]
+            [{pendientes} por sincronizar]
           </span>
         )}
       </div>

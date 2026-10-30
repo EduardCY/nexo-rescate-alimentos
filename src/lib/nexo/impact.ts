@@ -1,3 +1,5 @@
+import type { EstadoDonacion, ZonaCali, AlcanceLogistico } from "@/types";
+
 export type CategoryId =
   | "fruta"
   | "panaderia"
@@ -79,6 +81,9 @@ export interface Lot {
   dock: string;
   status: LotStatus;
   ngoId?: string;
+  zona?: ZonaCali;
+  estado?: EstadoDonacion;
+  requiereFrio?: boolean;
 }
 
 export type NgoUrgency = "Alta" | "Media" | "Normal";
@@ -92,6 +97,9 @@ export interface Ngo {
   hasFridge: boolean;
   distanceKm: number;
   prefers: CategoryId[];
+  zona?: ZonaCali;
+  capacidadFrio?: boolean;
+  tieneRefrigeracion?: boolean;
 }
 
 export interface MatchScore {
@@ -116,7 +124,11 @@ export function scoreMatch(lot: Lot, ngo: Ngo): MatchScore {
   const total = Math.round(proximity * 0.35 + urgency * 0.3 + affinity * 0.25 + (lot.hoursLeft < 8 ? urgency : 70) * 0.1);
   let eligible = true;
   let reason: string | undefined;
-  if (requiresCold(lot.coldChain) && !ngo.hasFridge) {
+
+  const lotExigeFrio = lot.requiereFrio !== undefined ? lot.requiereFrio : requiresCold(lot.coldChain);
+  const ngoAceptaFrio = ngo.capacidadFrio ?? ngo.tieneRefrigeracion ?? ngo.hasFridge;
+
+  if (lotExigeFrio && !ngoAceptaFrio) {
     eligible = false;
     reason = "Sin cadena de frío";
   } else if (etaMin > lot.hoursLeft * 60) {
@@ -174,13 +186,47 @@ export interface Certificate {
 
 export type MapNodeKind = "donor" | "receiver" | "agro" | "truck";
 
+/**
+ * Representa un nodo logístico en la cartografía OpenStreetMap.
+ * Diseñado con coordenadas reales y soporte de alcance (Urbano Cali hoy -> Intermunicipal a futuro).
+ */
 export interface MapNode {
   id: string;
   kind: MapNodeKind;
-  x: number;
-  y: number;
+  lat: number;
+  lng: number;
   label: string;
   sub?: string;
+  zona?: ZonaCali;
+  municipio?: string;
+  direccion?: string;
+  alcance?: AlcanceLogistico;
+  x?: number;
+  y?: number;
+}
+
+/**
+ * Calcula la distancia ortodrómica en kilómetros entre dos puntos geográficos (Fórmula de Haversine).
+ * Válida tanto para el radio urbano de Cali como para trayectos intermunicipales/regionales.
+ */
+export function calcularDistanciaKm(
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number }
+): number {
+  const R = 6371; // Radio medio de la Tierra en km
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const lat1 = (a.lat * Math.PI) / 180;
+  const lat2 = (b.lat * Math.PI) / 180;
+
+  const sinDLat = Math.sin(dLat / 2);
+  const sinDLng = Math.sin(dLng / 2);
+
+  const h =
+    sinDLat * sinDLat +
+    Math.cos(lat1) * Math.cos(lat2) * sinDLng * sinDLng;
+  const c = 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+  return Math.round(R * c * 10) / 10;
 }
 
 export const fmt = new Intl.NumberFormat("en-US");

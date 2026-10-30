@@ -122,11 +122,16 @@ export function NexoProvider({
   const assignLot = useCallback(
     async (id: string) => {
       const lot = lotsRef.current.find((l) => l.id === id);
-      if (!lot || lot.status !== "available") return;
+      const isAvailable = lot ? (lot.estado ? lot.estado === "DISPONIBLE" : lot.status === "available") : false;
+      if (!lot || !isAvailable) return;
       const m = bestMatch(lot, ngosRef.current);
       try {
         await nexoApi.assignLot(id, m?.ngo.id);
-        setLots((ls) => ls.map((l) => (l.id === id ? { ...l, status: "assigned", ngoId: m?.ngo.id } : l)));
+        setLots((ls) =>
+          ls.map((l) =>
+            l.id === id ? { ...l, status: "assigned", estado: "ASIGNADA", ngoId: m?.ngo.id } : l
+          )
+        );
         pushLog("info", `Lote ${id} asignado${m ? ` a ${m.ngo.name}` : " (sin receptor elegible)"}.`);
       } catch {
         pushLog("warn", `No se pudo asignar el lote ${id}.`);
@@ -139,14 +144,19 @@ export function NexoProvider({
     async (lotId: string, ngoId: string) => {
       const lot = lotsRef.current.find((l) => l.id === lotId);
       const ngo = ngosRef.current.find((n) => n.id === ngoId);
-      if (!lot || !ngo || lot.status === "delivered") return;
+      const isDelivered = lot ? (lot.estado === "ENTREGADA" || lot.status === "delivered") : true;
+      if (!lot || !ngo || isDelivered) return;
       try {
         const d = await nexoApi.confirmMatch(lotId, ngoId);
         setDispatch(d);
-        setLots((ls) => ls.map((l) => (l.id === lotId ? { ...l, status: "assigned", ngoId } : l)));
-        pushLog("ok", `Match validado: ${lot.id} → ${ngo.name}.`);
+        setLots((ls) =>
+          ls.map((l) =>
+            l.id === lotId ? { ...l, status: "assigned", estado: "ASIGNADA", ngoId } : l
+          )
+        );
+        pushLog("ok", `Asignación confirmada: ${lot.id} → ${ngo.name}.`);
       } catch {
-        pushLog("warn", `No se pudo validar el match de ${lot.id}.`);
+        pushLog("warn", `No se pudo confirmar la asignación de ${lot.id}.`);
       }
     },
     [pushLog],

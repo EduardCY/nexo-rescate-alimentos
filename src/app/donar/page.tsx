@@ -37,7 +37,7 @@ export default function DonarPage() {
               className="btn-98 !py-0.5 !px-2 text-[11px] font-mono flex items-center gap-1 shrink-0"
             >
               <ArrowLeft className="w-3 h-3" />
-              <span>Dashboard</span>
+              <span>Inicio</span>
             </Link>
           </div>
         </header>

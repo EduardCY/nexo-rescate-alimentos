@@ -146,8 +146,8 @@ export default function DonationForm() {
         <form onSubmit={publish} className="bevel-out p-3 sm:p-4 flex flex-col justify-between" aria-label="Formulario de donación rápida">
           <div>
             <h2 className="mb-3 bg-[#000080] px-2 py-1 font-mono text-xs font-bold tracking-wide text-white flex items-center justify-between">
-              <span>▣ ALTA DE LOTE EXCEDENTE · DONACIÓN RÁPIDA (CMP-01)</span>
-              <span className="text-[10px] bg-white/20 px-1.5 py-0.2 rounded font-normal">&lt; 45s</span>
+              <span>▣ REGISTRAR DONACIÓN DE ALIMENTOS</span>
+              <span className="text-[10px] bg-white/20 px-1.5 py-0.2 rounded font-normal">Registro rápido</span>
             </h2>
 
             {/* Diálogo de Éxito */}
@@ -161,7 +161,7 @@ export default function DonationForm() {
                 </p>
                 <p className="mt-1 text-slate-700">
                   {mensajeExito.offline 
-                    ? 'Guardado en almacenamiento seguro local. Se sincronizará automáticamente al detectar señal.'
+                    ? 'Guardado de forma segura en tu teléfono. Se enviará automáticamente al recuperar internet.'
                     : 'Notificación despachada a comedores comunitarios de Cali.'}
                 </p>
                 <div className="mt-2.5 flex gap-2">
@@ -177,7 +177,7 @@ export default function DonationForm() {
                     className="btn-98 px-3"
                     onClick={() => setView('dashboard')}
                   >
-                    Ir al Dashboard &gt;
+                    Volver al Inicio &gt;
                   </button>
                 </div>
               </div>
@@ -322,7 +322,7 @@ export default function DonationForm() {
         <div className="flex flex-col gap-3">
           <section className="scada-panel p-3" aria-label="Previsualización del lote">
             <h2 className="mb-2 font-mono text-xs font-bold tracking-widest text-nexo-phosphor flex items-center justify-between">
-              <span>▣ LIVE PREVIEW · LOTE</span>
+              <span>▣ RESUMEN DE TU DONACIÓN</span>
               <span className="text-[10px] text-slate-400 font-normal">Actualización automática</span>
             </h2>
             <LotCard 
@@ -352,7 +352,7 @@ export default function DonationForm() {
 
           <section className="scada-panel p-3" aria-label="Cálculo de impacto">
             <h2 className="mb-2 font-mono text-xs font-bold tracking-widest text-nexo-cyan">
-              ▣ CÁLCULO DE IMPACTO EN TIEMPO REAL
+              ▣ IMPACTO SOCIAL Y AMBIENTAL ESTIMADO
             </h2>
             <dl className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               <div className="bevel-in-dark bg-black/40 p-2.5">

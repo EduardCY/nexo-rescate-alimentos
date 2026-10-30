@@ -30,6 +30,13 @@
 --   410  La oferta no está vigente: EXPIRADA, CANCELADA o hora límite vencida. CA-03.3.
 -- ==============================================================================
 
+-- Asegura que la columna zona exista en entornos donde la migración inicial ya corrió
+ALTER TABLE donaciones
+    ADD COLUMN IF NOT EXISTS zona VARCHAR(50) NOT NULL DEFAULT 'CENTRO'
+    CHECK (zona IN ('NORTE', 'CENTRO', 'SUR', 'ORIENTE', 'LADERA'));
+
+CREATE INDEX IF NOT EXISTS idx_donaciones_zona ON donaciones(zona);
+
 CREATE OR REPLACE FUNCTION tomar_donacion(
     p_donacion_id UUID,
     p_voluntario_id UUID,

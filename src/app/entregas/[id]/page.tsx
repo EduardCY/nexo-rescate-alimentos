@@ -218,7 +218,7 @@ export default function ConfirmarEntregaPage() {
                   </p>
                   <div className="bevel-out bg-white p-2.5 flex flex-col gap-1 text-[11px] text-slate-900">
                     <p><b>Receptor en comedor:</b> {entregaCompletada.receptorNombre}</p>
-                    <p><b>Marca temporal UTC:</b> {new Date(entregaCompletada.entregadaAt).toUTCString()}</p>
+                    <p><b>Fecha y hora de entrega:</b> {new Date(entregaCompletada.entregadaAt).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })}</p>
                     <p><b>Código de custodia:</b> {donacion.codigo}-AUDIT</p>
                   </div>
                   <Link

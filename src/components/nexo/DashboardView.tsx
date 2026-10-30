@@ -5,12 +5,16 @@ import { useNexo } from "./NexoContext";
 import RadarMap from "./RadarMap";
 import LotCard from "./LotCard";
 import KpiCard from "./KpiCard";
-import { CO2_KG_PER_KG, fmt } from "@/lib/nexo/impact";
+import { CO2_KG_PER_KG, fmt, type Lot } from "@/lib/nexo/impact";
+
+const esDisponible = (lot: Lot) => (lot.estado ? lot.estado === "DISPONIBLE" : lot.status === "available");
 
 export default function DashboardView() {
   const { lots, assignLot, setView, totals } = useNexo();
-  const available = lots.filter((l) => l.status === "available");
-  const sorted = [...lots].sort((a, b) => Number(a.status !== "available") - Number(b.status !== "available") || a.hoursLeft - b.hoursLeft);
+  const available = lots.filter(esDisponible);
+  const sorted = [...lots].sort(
+    (a, b) => Number(!esDisponible(a)) - Number(!esDisponible(b)) || a.hoursLeft - b.hoursLeft
+  );
 
   return (
     <div className="flex flex-col gap-4">
@@ -34,13 +38,13 @@ export default function DashboardView() {
                 key={lot.id}
                 lot={lot}
                 action={
-                  lot.status === "available" ? (
+                  esDisponible(lot) ? (
                     <button id={`assign-${lot.id}`} className="btn-98 font-mono" onClick={() => assignLot(lot.id)}>
                       Asignar &gt;
                     </button>
                   ) : (
                     <span className="font-mono text-[11px] font-bold text-slate-600">
-                      {lot.status === "delivered" ? "ENTREGADO ✔" : "ASIGNADO ✔"}
+                      {lot.estado === "ENTREGADA" || lot.status === "delivered" ? "ENTREGADO ✔" : "ASIGNADO ✔"}
                     </span>
                   )
                 }

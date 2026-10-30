@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useCallback } from 'react';
 import { Clock, MapPin, ShieldCheck, Check } from 'lucide-react';
 import type { Donacion, ZonaCali } from '@/types';
 import { ColdChainBadge } from './ColdChainBadge';
+import { useCountdown } from '@/lib/hooks/useCountdown';
 
 interface DonacionCardProps {
   donacion: Donacion;
@@ -23,7 +24,7 @@ const ZONA_COLORES: Record<ZonaCali, { bg: string; text: string; border: string 
 };
 
 /**
- * Tarjeta de donación reactiva con cuenta regresiva en vivo (TASK-06 / CA-02.1)
+ * Tarjeta de donación reactiva con cuenta regresiva en vivo (TASK-06 & TASK-16 / CA-02.1, CA-02.4)
  * e insignia destacada de cadena de frío (TASK-07 / CA-02.2).
  * Implementa accesibilidad táctil para dispositivos móviles (min-h-[48px]).
  */
@@ -35,39 +36,21 @@ export function DonacionCard({
   tomando = false,
   className = '',
 }: DonacionCardProps) {
-  const [segundosRestantes, setSegundosRestantes] = useState<number>(() => {
-    const ms = new Date(donacion.horaLimite).getTime() - Date.now();
-    return Math.max(0, Math.floor(ms / 1000));
-  });
+  const handleExpire = useCallback(() => {
+    onExpirada?.(donacion.id);
+  }, [onExpirada, donacion.id]);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      const ms = new Date(donacion.horaLimite).getTime() - Date.now();
-      const seg = Math.max(0, Math.floor(ms / 1000));
-      setSegundosRestantes(seg);
-
-      if (seg === 0) {
-        onExpirada?.(donacion.id);
-      }
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [donacion.horaLimite, donacion.id, onExpirada]);
+  const {
+    tiempoFormateado: textoTiempo,
+    expirado,
+    esMuyUrgente,
+    esUrgenciaMedia,
+  } = useCountdown(donacion.horaLimite, handleExpire);
 
   // Si ya expiró, no se renderiza (CA-02.4)
-  if (segundosRestantes <= 0) {
+  if (expirado) {
     return null;
   }
-
-  // Formato HH:MM:SS
-  const horas = Math.floor(segundosRestantes / 3600);
-  const minutos = Math.floor((segundosRestantes % 3600) / 60);
-  const segundos = segundosRestantes % 60;
-  const textoTiempo = `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:${String(segundos).padStart(2, '0')}`;
-
-  // Nivel de urgencia
-  const esMuyUrgente = horas < 2;
-  const esUrgenciaMedia = horas >= 2 && horas < 4;
 
   const zona = donacion.zona || 'CENTRO';
   const estiloZona = ZONA_COLORES[zona] || ZONA_COLORES.CENTRO;

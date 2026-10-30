@@ -19,12 +19,28 @@ export type RolUsuario =
 export type ZonaCali = 'NORTE' | 'CENTRO' | 'SUR' | 'ORIENTE' | 'LADERA';
 export type ZonaFiltro = 'TODAS' | ZonaCali;
 
+/**
+ * Coordenadas geográficas decimales WGS84 para cartografía OpenStreetMap.
+ */
+export interface CoordenadaGeo {
+  lat: number;
+  lng: number;
+}
+
+/**
+ * Alcance logístico del transporte y cobertura geográfica.
+ * Permite operar hoy en el perímetro urbano de Cali y escalar a rutas intermunicipales/regionales.
+ */
+export type AlcanceLogistico = 'URBANO' | 'METROPOLITANO' | 'INTERMUNICIPAL';
+
 export interface Organizacion {
   id: string;
   nombre: string;
   tipo: 'DONANTE' | 'RECEPTOR' | 'FUNDACION';
   direccion: string;
   zona: ZonaCali;
+  municipio?: string;
+  coordenadas?: CoordenadaGeo;
   telefono?: string;
   tieneRefrigeracion: boolean;
   capacidadRacionesDia?: number;
@@ -53,6 +69,9 @@ export interface Donacion {
   indicacionesPuesto?: string;
   telefonoDonante?: string;
   zona?: ZonaCali;
+  municipio?: string;
+  coordenadas?: CoordenadaGeo;
+  alcance?: AlcanceLogistico;
   horaLimite: string;
   estado: EstadoDonacion;
   voluntarioId?: string;

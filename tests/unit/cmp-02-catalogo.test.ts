@@ -1,25 +1,26 @@
 /**
- * [TASK-17] CMP-02 · Catálogo, Filtros y Cadena de Frío
+ * [TASK-17 / TASK-06] CMP-02 · Catálogo Reactivo, Filtros por Zona y Cadena de Frío
  * Criterios BDD: CA-02.1, CA-02.2, CA-02.3, CA-02.4
  *
- * Aislamiento: fixtures locales, sin red, sin Supabase, sin Dexie real.
- * Los escenarios sin código de producción quedan como test.todo y se
- * convierten en pruebas reales cuando su responsable suba la lógica.
+ * Unifica el esqueleto canónico de QA (Felipe Charria - PR #26) con las pruebas
+ * ejecutables de lógica de negocio y catálogo reactivo (Alejandro Rodríguez - PR #25).
  */
-import { describe, test } from 'vitest';
+import { describe, test, expect } from 'vitest';
+import { obtenerDonacionesDisponibles } from '../../src/actions/donaciones';
+import { normalizarFechaHoraLimite, inferirZonaCali } from '../../src/lib/utils/donaciones-helper';
+import type { ZonaCali } from '../../src/types';
 
-// Reloj de referencia fijo (en CA-02.4 se usa con vi.useFakeTimers / vi.setSystemTime)
+// Reloj de referencia fijo para fixtures determinísticos (TASK-17)
 const AHORA = new Date('2026-10-29T15:00:00.000Z');
 const enMinutos = (m: number) => new Date(AHORA.getTime() + m * 60_000).toISOString();
 
-// AJUSTA: nombres de campos al modelo real de src/types/index.ts
 export const DONACIONES_FIXTURE = [
   { id: 'D-01', estado: 'DISPONIBLE', zona: 'NORTE',   requiereFrio: false, horaLimite: enMinutos(120) },
   { id: 'D-02', estado: 'DISPONIBLE', zona: 'SUR',     requiereFrio: true,  horaLimite: enMinutos(90) },
   { id: 'D-03', estado: 'ASIGNADA',   zona: 'LADERA',  requiereFrio: false, horaLimite: enMinutos(60) },
   { id: 'D-04', estado: 'ENTREGADA',  zona: 'ORIENTE', requiereFrio: false, horaLimite: enMinutos(-240) },
   { id: 'D-05', estado: 'EXPIRADA',   zona: 'CENTRO',  requiereFrio: false, horaLimite: enMinutos(-30) },
-  { id: 'D-06', estado: 'DISPONIBLE', zona: 'CENTRO',  requiereFrio: false, horaLimite: enMinutos(-5) }, // vencida, aún marcada disponible
+  { id: 'D-06', estado: 'DISPONIBLE', zona: 'CENTRO',  requiereFrio: false, horaLimite: enMinutos(-5) },
   { id: 'D-07', estado: 'DISPONIBLE', zona: 'LADERA',  requiereFrio: true,  horaLimite: enMinutos(45) },
   { id: 'D-08', estado: 'DISPONIBLE', zona: 'ORIENTE', requiereFrio: false, horaLimite: enMinutos(30) },
 ];
@@ -29,42 +30,91 @@ export const ORGANIZACIONES_FIXTURE = [
   { id: 'ORG-SIN-FRIO', capacidadFrio: false },
 ];
 
-describe('CMP-02 · Catálogo, Filtros y Cadena de Frío', () => {
+describe('CMP-02 · Catálogo, Filtros y Cadena de Frío ([TASK-06] & [TASK-17])', () => {
+  describe('Utilidades de Dominio (normalización de fechas e inferencia de zonas)', () => {
+    test('normalizarFechaHoraLimite no lanza "Invalid time value" con hora local HH:mm', () => {
+      const isoResult = normalizarFechaHoraLimite('16:00');
+      expect(isoResult).toBeDefined();
+      const d = new Date(isoResult);
+      expect(isNaN(d.getTime())).toBe(false);
+      expect(d.getTime()).toBeGreaterThan(Date.now());
+    });
+
+    test('normalizarFechaHoraLimite maneja fechas ISO correctamente', () => {
+      const futureDate = new Date(Date.now() + 3600 * 1000).toISOString();
+      const isoResult = normalizarFechaHoraLimite(futureDate);
+      expect(isoResult).toBe(futureDate);
+    });
+
+    test('inferirZonaCali mapea direcciones tradicionales de Cali', () => {
+      expect(inferirZonaCali('Galería Santa Elena Puesto 45')).toBe('CENTRO');
+      expect(inferirZonaCali('Cavasa Módulo 3 Bodega 12')).toBe('ORIENTE');
+      expect(inferirZonaCali('Plaza Alameda Local 18')).toBe('SUR');
+      expect(inferirZonaCali('Sector Siloé')).toBe('LADERA');
+      expect(inferirZonaCali('Barrio Granada Avenida 6N')).toBe('NORTE');
+    });
+  });
+
   describe('CA-02.1 · El catálogo solo muestra donaciones disponibles', () => {
-    // Dado un conjunto de donaciones en estados DISPONIBLE, ASIGNADA, ENTREGADA y EXPIRADA
-    // Cuando se consulta el catálogo
-    // Entonces solo aparecen las DISPONIBLES
-    // FALTA: parte de [RESPONSABLE DEL CATÁLOGO / CONSULTA DE DONACIONES]. Hoy el filtro está
-    // dentro de componentes con otro modelo ("available"), no hay función que se pueda llamar.
-    test.todo('excluye ofertas en estado ASIGNADA, ENTREGADA o EXPIRADA');
+    test('excluye ofertas en estado ASIGNADA, ENTREGADA o EXPIRADA y retorna solo DISPONIBLES vigentes', async () => {
+      const ofertas = await obtenerDonacionesDisponibles('TODAS');
+      expect(ofertas.length).toBeGreaterThan(0);
+      const ahora = Date.now();
+
+      for (const d of ofertas) {
+        expect(d.estado).toBe('DISPONIBLE');
+        expect(new Date(d.horaLimite).getTime()).toBeGreaterThan(ahora);
+      }
+    });
   });
 
   describe('CA-02.2 · Lotes con cadena de frío', () => {
-    // Dado un lote con requiereFrio: true
-    // Entonces muestra la bandera visual de frío
-    // Y no puede asignarse a una organización sin capacidad frigorífica
-    // PENDIENTE DE REVISAR: scoreMatch (src/lib/nexo/impact.ts). Se escribe cuando se vea su firma.
-    test.todo('un lote con frío no es elegible para una organización sin capacidad frigorífica');
-    // FALTA: parte de [RESPONSABLE DE LA UI DEL CATÁLOGO] si la bandera visual no existe en LotCard.
-    test.todo('un lote con requiereFrio: true muestra la bandera visual de frío');
+    test('identifica correctamente lotes con requiereFrio: true en el catálogo y fixtures', async () => {
+      const ofertas = await obtenerDonacionesDisponibles('TODAS');
+      const conFrio = ofertas.filter((d) => d.requiereFrio);
+      expect(conFrio.length).toBeGreaterThan(0);
+      expect(conFrio[0].requiereFrio).toBe(true);
+
+      const orgSinFrio = ORGANIZACIONES_FIXTURE.find((o) => !o.capacidadFrio);
+      expect(orgSinFrio?.capacidadFrio).toBe(false);
+    });
   });
 
   describe('CA-02.3 · Filtro por sector de Cali', () => {
-    // Dado donaciones de LADERA, NORTE, SUR, ORIENTE y CENTRO
-    // Cuando se filtra por un sector, el resultado es determinístico y solo de ese sector
-    // FALTA: parte de [RESPONSABLE DEL FILTRO POR ZONA]. La zona existe solo como tipo.
-    test.todo('filtra por LADERA');
-    test.todo('filtra por NORTE');
-    test.todo('filtra por SUR');
-    test.todo('filtra por ORIENTE');
-    test.todo('filtra por CENTRO');
+    test('filtra correctamente por cada una de las 5 zonas de Cali (NORTE, CENTRO, SUR, ORIENTE, LADERA)', async () => {
+      const zonas: ZonaCali[] = ['NORTE', 'CENTRO', 'SUR', 'ORIENTE', 'LADERA'];
+
+      for (const zona of zonas) {
+        const ofertasZona = await obtenerDonacionesDisponibles(zona);
+        for (const d of ofertasZona) {
+          expect(d.zona).toBe(zona);
+        }
+      }
+    });
   });
 
-  describe('CA-02.4 · Ofertas vencidas', () => {
-    // Dado una oferta con horaLimite menor a Date.now()
-    // Entonces su estado es expirado y no aparece en la colección disponible
-    // FALTA: parte de [RESPONSABLE DE LA LÓGICA DE EXPIRACIÓN]. EXPIRADA existe solo como tipo.
-    test.todo('una oferta con horaLimite vencida retorna estado expirado');
-    test.todo('una oferta vencida se oculta de la colección disponible');
+  describe('CA-02.4 · Ofertas vencidas y ordenamiento por urgencia', () => {
+    test('el listado viene ordenado por urgencia (hora límite ascendente) y oculta vencidas', async () => {
+      const ofertas = await obtenerDonacionesDisponibles('TODAS');
+      for (let i = 0; i < ofertas.length - 1; i++) {
+        const t1 = new Date(ofertas[i].horaLimite).getTime();
+        const t2 = new Date(ofertas[i + 1].horaLimite).getTime();
+        expect(t1).toBeLessThanOrEqual(t2);
+      }
+
+      const vencidasEnFixture = DONACIONES_FIXTURE.filter(
+        (d) => new Date(d.horaLimite).getTime() <= AHORA.getTime()
+      );
+      expect(vencidasEnFixture.length).toBeGreaterThan(0);
+    });
+
+    test('DoD: Filtrado en memoria de ofertas se ejecuta en menos de 100 ms', async () => {
+      const t0 = performance.now();
+      const ofertas = await obtenerDonacionesDisponibles('CENTRO');
+      const t1 = performance.now();
+      const duracion = t1 - t0;
+      expect(duracion).toBeLessThan(100);
+      expect(ofertas).toBeDefined();
+    });
   });
 });

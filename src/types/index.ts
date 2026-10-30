@@ -16,12 +16,14 @@ export type RolUsuario =
   | 'DONANTE'
   | 'RECEPTOR';
 
+export type ZonaCali = 'NORTE' | 'CENTRO' | 'SUR' | 'ORIENTE' | 'LADERA';
+
 export interface Organizacion {
   id: string;
   nombre: string;
   tipo: 'DONANTE' | 'RECEPTOR' | 'FUNDACION';
   direccion: string;
-  zona: 'NORTE' | 'CENTRO' | 'SUR' | 'ORIENTE' | 'LADERA';
+  zona: ZonaCali;
   telefono?: string;
   tieneRefrigeracion: boolean;
   capacidadRacionesDia?: number;
@@ -47,6 +49,7 @@ export interface Donacion {
   cantidadEstimada: number;
   unidadMedida: 'kg' | 'canastillas' | 'bultos' | 'unidades';
   direccionRecogida: string;
+  zona?: ZonaCali;
   horaLimite: string;
   estado: EstadoDonacion;
   voluntarioId?: string;

@@ -11,18 +11,18 @@ import ImpactView from "./ImpactView";
 
 const MENU: MenuEntry[] = [
   { id: "archivo", label: "Dashboard", view: "dashboard" },
-  { id: "donaciones", label: "Donar (CMP-01)", view: "donation" },
-  { id: "rutas", label: "Rutas & Matching", view: "matching" },
-  { id: "fundaciones", label: "Fundaciones", view: "matching", focusNgos: true },
-  { id: "certificados", label: "Certificados", view: "impact" },
-  { id: "config", label: "Config" },
+  { id: "donaciones", label: "Donar Alimentos", view: "donation" },
+  { id: "rutas", label: "Rutas y Asignación", view: "matching" },
+  { id: "fundaciones", label: "Comedores y Fundaciones", view: "matching", focusNgos: true },
+  { id: "certificados", label: "Certificados de Impacto", view: "impact" },
+  { id: "config", label: "Configuración" },
 ];
 
 const TITLES: Record<ViewId, string> = {
-  dashboard: "DASHBOARD MASTER · LOGÍSTICA & RESCATE",
-  donation: "ALTA DE LOTE EXCEDENTE (CMP-01)",
-  matching: "PORTAL DE FUNDACIONES Y ASIGNACIÓN (CMP-02)",
-  impact: "IMPACTO AMBIENTAL Y DEDUCCIÓN TRIBUTARIA (CMP-05)",
+  dashboard: "DASHBOARD MASTER — LOGÍSTICA & RESCATE",
+  donation: "ALTA DE LOTE EXCEDENTE",
+  matching: "PORTAL DE ASIGNACIÓN A COMEDORES",
+  impact: "IMPACTO AMBIENTAL Y DEDUCCIÓN TRIBUTARIA",
 };
 
 function ConfigDialog({ onClose }: { onClose: () => void }) {
@@ -71,7 +71,7 @@ function Shell() {
       <WindowFrame
         title={`NEXO: RESCATE DE ALIMENTOS [${TITLES[view]}]`}
         menu={<MenuBar items={MENU} activeId={activeId} onSelect={select} />}
-        statusLeft={`Listo · ${lots.filter((l) => l.status === "available").length} lotes disponibles · Plaza Santa Elena / Cavasa`}
+        statusLeft={`Listo • ${lots.filter((l) => l.status === "available").length} lotes disponibles • Plazas de Cali`}
         statusRight="NEXO v2.0 (Win98 Edition)"
       >
         {view === "dashboard" && <DashboardView />}

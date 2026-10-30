@@ -59,9 +59,24 @@ graph TD
 2. **`usuarios`**: Donantes, voluntarios, coordinadoras.
    - `id`, `nombre`, `email`, `rol` (COORDINADOR, VOLUNTARIO, DONANTE, RECEPTOR), `telefono`, `vehiculo_tipo`, `disponible`.
 3. **`donaciones`**: Núcleo transaccional del sistema.
-   - `id`, `codigo` (ej. DON-101), `donante_id` (FK), `tipo_alimento`, `requiere_frio` (BOOLEAN), `cantidad_estimada`, `unidad_medida` (kg, bultos, canastillas), `direccion_recogida`, `hora_limite`, `estado` (DISPONIBLE, ASIGNADA, ENTREGADA, EXPIRADA, CANCELADA), `voluntario_id` (FK nullable), `comedor_id` (FK nullable), `exencion_sanitaria_aceptada` (BOOLEAN), `created_at`, `asignada_at`, `entregada_at`.
+   - `id`, `codigo` (ej. DON-101), `donante_id` (FK), `donante_nombre`, `tipo_alimento`, `requiere_frio` (BOOLEAN), `cantidad_estimada`, `unidad_medida` (kg, bultos, canastillas, unidades), `direccion_recogida`, `zona` (NORTE, CENTRO, SUR, ORIENTE, LADERA), `hora_limite`, `estado` (DISPONIBLE, ASIGNADA, ENTREGADA, EXPIRADA, CANCELADA), `voluntario_id` (FK nullable), `voluntario_nombre`, `comedor_id` (FK nullable), `comedor_nombre`, `exencion_sanitaria_aceptada` (BOOLEAN), `created_at`, `asignada_at`, `entregada_at`.
 4. **`trazabilidad_eventos`**: Auditoría inmutable de cada transición.
-   - `id`, `donacion_id` (FK), `estado_anterior`, `estado_nuevo`, `usuario_id` (FK), `timestamp`, `observaciones`.
+   - `id`, `donacion_id` (FK), `estado_anterior`, `estado_nuevo`, `usuario_id` (FK), `usuario_nombre`, `timestamp`, `observaciones`.
+
+### Módulos y Helpers Clave del Frontend/Backend (`CMP-01` a `CMP-04`):
+- **Validación y Reglas Puras:** `src/lib/validations/donacion.ts`, `src/lib/validations/entrega.ts`, `src/lib/utils/donaciones-helper.ts` (`filtrarDonacionesDisponibles`, `evaluarVigenciaDonacion`, `normalizarFechaHoraLimite`, `inferirZonaCali`) y `src/lib/nexo/impact.ts` (`scoreMatch` con restricción de cadena de frío `CA-02.2`, `calcularDistanciaKm` con fórmula de Haversine).
+- **Persistencia Offline-First (`CA-01.5`):** `src/lib/db.ts` (Dexie.js / IndexedDB) y sincronización reactiva automática al reconectar en `src/components/donaciones/OfflineStatusBadge.tsx`.
+- **Temporizador, Catálogo y Cartografía OpenStreetMap (`CMP-02` / `TASK-19`):** `src/lib/hooks/useCountdown.ts`, `src/components/donaciones/DonacionCard.tsx`, `src/components/donaciones/ZonasFilter.tsx`, `src/components/donaciones/ColdChainBadge.tsx`, `src/components/nexo/RadarMap.tsx` (Leaflet + OpenStreetMap con escala urbana Cali y corredor metropolitano/regional $0 USD/mes) y `src/app/donaciones/page.tsx`.
+- **Reserva Única y Ruta Activa (`CMP-03`):** `src/actions/donaciones.ts` (`tomarDonacion`, `marcarDonacionExpirada`), `src/components/donaciones/ConflictoTomaModal.tsx`, `src/components/donaciones/RutaActivaCard.tsx` y `src/app/ruta-activa/page.tsx`.
+- **Confirmación de Entrega y Habeas Data (`CMP-04`):** `src/actions/entregas.ts`, `src/components/entregas/ConfirmarEntregaModal.tsx` y `src/app/entregas/[id]/page.tsx`.
+
+---
+
+## 3.1. Arquitectura y Escalabilidad Geográfica (Urbano Cali -> Intermunicipal / Regional)
+
+El modelo cartográfico y de ruteo (`src/types/index.ts`, `src/lib/nexo/impact.ts`, `src/lib/nexo/api.ts`) opera con coordenadas geográficas decimales WGS84 (`CoordenadaGeo`: `lat`, `lng`) y clasifica las operaciones bajo el tipo `AlcanceLogistico`:
+1. **`URBANO` (Alcance Actual del MVP):** Cubre las 5 zonas de Santiago de Cali (`NORTE`, `CENTRO`, `SUR`, `ORIENTE`, `LADERA`), enlazando plazas tradicionales (Santa Elena, Alameda) con comedores comunitarios vulnerables (Siloé, Aguablanca).
+2. **`METROPOLITANO` / `INTERMUNICIPAL` (Escalabilidad Futura Post-5 Comportamientos):** Permite incorporar nodos de abastecimiento mayorista agropecuario fuera del casco urbano (ej. Cavasa en Candelaria, Yumbo, Jamundí, Palmira, Buga, Tuluá) sin requerir reescritura de modelos, calculando distancias con la función matemática pura de Haversine (`calcularDistanciaKm`) y encuadres multicapa en OpenStreetMap.
 
 ---
 
@@ -82,7 +97,7 @@ Flujo: valida parámetros y quien toma → `SELECT ... FOR UPDATE` sobre la fila
 | `409` | La donación ya no está `DISPONIBLE` (ya tomada o entregada) | `CA-03.2` |
 | `410` | Oferta `EXPIRADA`, `CANCELADA` o con hora límite vencida | `CA-03.3` |
 
-Verificación: `tests/db/tomar-donacion.test.ts` (PostgreSQL real, ver cabecera del archivo) incluye la prueba de concurrencia del DoD de `CMP-03`.
+Verificación: `tests/db/tomar-donacion.test.ts` (PostgreSQL real, ver cabecera del archivo) y `tests/integration/concurrency-lock.test.ts` incluyen la prueba de concurrencia del DoD de `CMP-03`.
 
 ---
 

@@ -9,17 +9,24 @@ import {
   CheckCircle2,
   Truck,
   Snowflake,
+  MapPin,
 } from 'lucide-react';
 import type { Donacion, ZonaFiltro } from '@/types';
-import { obtenerDonacionesDisponibles, tomarDonacion } from '@/actions/donaciones';
+import {
+  obtenerDonacionesDisponibles,
+  tomarDonacion,
+  marcarDonacionExpirada,
+} from '@/actions/donaciones';
+import { filtrarDonacionesDisponibles } from '@/lib/utils/donaciones-helper';
 import { DonacionCard } from '@/components/donaciones/DonacionCard';
 import { ZonasFilter } from '@/components/donaciones/ZonasFilter';
 import { ConflictoTomaModal } from '@/components/donaciones/ConflictoTomaModal';
+import RadarMap from '@/components/nexo/RadarMap';
 
 /**
- * Catálogo reactivo de donaciones disponibles (CMP-02 / TASK-06 & TASK-07) con
- * filtro interactivo por zonas de Cali, filtro de cadena de frío, y manejo de
- * colisión de toma concurrente HTTP 409 con modal amigable (CMP-03 / TASK-09).
+ * Catálogo reactivo de donaciones disponibles (CMP-02 / TASK-06, TASK-07, TASK-16, TASK-17, TASK-19)
+ * con filtro determinístico por zonas de Cali, filtro de cadena de frío, mapa interactivo
+ * OpenStreetMap integrado y manejo de colisión de toma concurrente HTTP 409 (CMP-03 / TASK-09).
  */
 export default function CatalogoDonacionesPage() {
   const [donaciones, setDonaciones] = useState<Donacion[]>([]);
@@ -27,7 +34,7 @@ export default function CatalogoDonacionesPage() {
   const [tomandoId, setTomandoId] = useState<string | null>(null);
   const [zonaSeleccionada, setZonaSeleccionada] = useState<ZonaFiltro>('TODAS');
   const [soloSinFrio, setSoloSinFrio] = useState(false);
-  const [tiempoFiltroMs, setTiempoFiltroMs] = useState<number | null>(null);
+  const [mostrarMapa, setMostrarMapa] = useState(false);
   const [modalColisionAbierto, setModalColisionAbierto] = useState(false);
   const [mensajeExito, setMensajeExito] = useState<{
     id: string;
@@ -53,19 +60,15 @@ export default function CatalogoDonacionesPage() {
     cargarOfertas();
   }, []);
 
-  // Cambio reactivo de zona con medición de tiempo (< 100 ms DoD)
+  // Cambio reactivo de zona (< 100 ms DoD)
   const handleCambioZona = (nuevaZona: ZonaFiltro) => {
-    const t0 = performance.now();
     startTransition(() => {
       setZonaSeleccionada(nuevaZona);
-      const t1 = performance.now();
-      setTiempoFiltroMs(Math.round((t1 - t0) * 100) / 100);
     });
   };
 
-  // Conteos reactivos por zona para ZonasFilter (TASK-07)
+  // Conteos reactivos por zona para ZonasFilter (TASK-07 / TASK-17)
   const conteosPorZona = useMemo<Record<ZonaFiltro, number>>(() => {
-    const ahora = Date.now();
     const conteos: Record<ZonaFiltro, number> = {
       TODAS: 0,
       NORTE: 0,
@@ -75,41 +78,29 @@ export default function CatalogoDonacionesPage() {
       LADERA: 0,
     };
 
-    for (const d of donaciones) {
-      if (d.estado === 'DISPONIBLE' && new Date(d.horaLimite).getTime() > ahora) {
-        if (!soloSinFrio || !d.requiereFrio) {
-          conteos.TODAS += 1;
-          if (d.zona && conteos[d.zona] !== undefined) {
-            conteos[d.zona] += 1;
-          }
-        }
+    const vigentes = filtrarDonacionesDisponibles(donaciones, { soloSinFrio });
+    for (const d of vigentes) {
+      conteos.TODAS += 1;
+      if (d.zona && conteos[d.zona] !== undefined) {
+        conteos[d.zona] += 1;
       }
     }
 
     return conteos;
   }, [donaciones, soloSinFrio]);
 
-  // Filtrado y ordenamiento reactivo por urgencia
+  // Filtrado y ordenamiento determinístico mediante el helper unificado (TASK-17 / CA-02.1..CA-02.4)
   const donacionesFiltradas = useMemo(() => {
-    const ahora = Date.now();
-    return donaciones
-      .filter((d) => {
-        const esDisponible = d.estado === 'DISPONIBLE';
-        const noExpirada = new Date(d.horaLimite).getTime() > ahora;
-        const coincideZona =
-          zonaSeleccionada === 'TODAS' || d.zona === zonaSeleccionada;
-        const cumpleFrio = !soloSinFrio || !d.requiereFrio;
-        return esDisponible && noExpirada && coincideZona && cumpleFrio;
-      })
-      .sort(
-        (a, b) =>
-          new Date(a.horaLimite).getTime() - new Date(b.horaLimite).getTime()
-      );
+    return filtrarDonacionesDisponibles(donaciones, {
+      zona: zonaSeleccionada,
+      soloSinFrio,
+    });
   }, [donaciones, zonaSeleccionada, soloSinFrio]);
 
-  // Manejador cuando una oferta expira en vivo (CA-02.4 / CA-03.3)
+  // Manejador cuando una oferta expira en vivo (CA-02.4 / CA-03.3 / TASK-16)
   const handleOfertaExpirada = (id: string) => {
     setDonaciones((prev) => prev.filter((d) => d.id !== id));
+    void marcarDonacionExpirada(id);
   };
 
   // Acción de reserva con captura de colisión concurrente HTTP 409 (TASK-09)
@@ -175,7 +166,7 @@ export default function CatalogoDonacionesPage() {
               className="btn-98 !py-0.5 !px-2 text-[11px] font-mono flex items-center gap-1 shrink-0"
             >
               <ArrowLeft className="w-3 h-3" />
-              <span>Dashboard</span>
+              <span>Inicio</span>
             </Link>
           </div>
         </header>
@@ -237,11 +228,17 @@ export default function CatalogoDonacionesPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {tiempoFiltroMs !== null && (
-              <span className="text-[10px] bg-green-100 text-green-800 px-1.5 py-0.5 bevel-in">
-                Filtro: {tiempoFiltroMs} ms (&lt;100ms)
-              </span>
-            )}
+            <button
+              type="button"
+              onClick={() => setMostrarMapa(!mostrarMapa)}
+              className={`btn-98 !py-0.5 !px-2 text-[11px] flex items-center gap-1 font-bold ${
+                mostrarMapa ? 'bg-[#000080] text-white' : 'text-[#000080]'
+              }`}
+              title="Alternar vista de mapa cartográfico"
+            >
+              <MapPin className="w-3 h-3" />
+              <span>{mostrarMapa ? 'Ocultar Mapa' : 'Ver Mapa en Vivo'}</span>
+            </button>
             <button
               type="button"
               onClick={cargarOfertas}
@@ -283,6 +280,13 @@ export default function CatalogoDonacionesPage() {
             </label>
           </div>
         </div>
+
+        {/* Mapa Cartográfico Interactivo Plegable (TASK-19 / CMP-02) */}
+        {mostrarMapa && (
+          <div className="p-2 sm:p-3 bg-[#070c18] border-b border-[#808080]">
+            <RadarMap filtroZonaExterna={zonaSeleccionada} />
+          </div>
+        )}
 
         {/* Cuadrícula Reactiva de Donaciones */}
         <div id="panel-donaciones" className="p-3 sm:p-4 bg-[#c0c0c0]">
@@ -333,7 +337,7 @@ export default function CatalogoDonacionesPage() {
             Red de Rescate de Alimentos • Cali, Colombia • Ley 1990 de 2019
           </div>
           <div className="bevel-in px-2 py-0.5 hidden sm:block">
-            Respuesta &lt; 100 ms
+            Catálogo en Tiempo Real
           </div>
         </footer>
       </div>

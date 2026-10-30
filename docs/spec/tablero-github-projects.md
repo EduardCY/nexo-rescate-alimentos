@@ -4,7 +4,7 @@
 **Organización:** Fundación Mesa Común (Cali, Colombia)  
 **Equipo:** Nexo Cívico Studio (Equipo 3)  
 **Herramienta:** GitHub Projects (`https://github.com/users/EduardCY/projects/` / Repositorio: `EduardCY/nexo-rescate-alimentos`)  
-**Versión:** 2.0 — Entrega 3A  
+**Versión:** 2.1 — Entrega 3B (Sprints 1 y 2 Completados)  
 
 ---
 
@@ -39,7 +39,7 @@ A continuación se presentan los issues principales del núcleo del MVP, estruct
 * **Título:** `CMP-01 · Un comercio publica una donación`
 * **Labels:** `historia`, `mvp`, `cmp-01`
 * **Campos del Tablero:**
-  * **Status:** `En revisión` (o `Por hacer`)
+  * **Status:** `Terminado`
   * **CMP:** `CMP-01`
   * **Origen:** `RF-001 · US1.1`
   * **Estimación:** `4`
@@ -60,13 +60,13 @@ Criterios de aceptación
 Se prueba como: comercio · teléfono
 
 Definición de Terminado
-- [ ] Cumple todos sus criterios de aceptación
-- [ ] El código está revisado y aprobado por otro integrante (Felipe Charria - QA)
-- [ ] Tiene pruebas automatizadas y todas pasan: pruebas unitarias de validación de horas y formulario
-- [ ] Está integrada en main sin romper la compilación
-- [ ] La documentación afectada está actualizada en docs/spec/
-- [ ] Pasan las dos pruebas de gobierno (cero datos inventados y consentimiento legal sin almacenar datos sensibles)
-- [ ] Se probó entrando con el rol real (comercio) en dispositivo teléfono móvil
+- [x] Cumple todos sus criterios de aceptación
+- [x] El código está revisado y aprobado por otro integrante (Felipe Charria - QA)
+- [x] Tiene pruebas automatizadas y todas pasan: pruebas unitarias de validación de horas y formulario
+- [x] Está integrada en main sin romper la compilación
+- [x] La documentación afectada está actualizada en docs/spec/
+- [x] Pasan las dos pruebas de gobierno (cero datos inventados y consentimiento legal sin almacenar datos sensibles)
+- [x] Se probó entrando con el rol real (comercio) en dispositivo teléfono móvil
 ```
 
 ---
@@ -76,7 +76,7 @@ Definición de Terminado
 * **Título:** `CMP-02 · Visualización y filtrado de donaciones disponibles`
 * **Labels:** `historia`, `mvp`, `cmp-02`
 * **Campos del Tablero:**
-  * **Status:** `Por hacer`
+  * **Status:** `Terminado`
   * **CMP:** `CMP-02`
   * **Origen:** `RF-002 · US2.1`
   * **Estimación:** `3`
@@ -96,13 +96,13 @@ Criterios de aceptación
 Se prueba como: voluntario / comedor receptor · teléfono
 
 Definición de Terminado
-- [ ] Cumple todos sus criterios de aceptación
-- [ ] El código está revisado y aprobado por otro integrante
-- [ ] Tiene pruebas automatizadas y todas pasan
-- [ ] Está integrada en main sin romper la compilación
-- [ ] La documentación afectada está actualizada en docs/spec/
-- [ ] Pasan las dos pruebas de gobierno (tiempos y cantidades calculadas desde base de datos, sin cifras inventadas)
-- [ ] Se probó entrando con el rol real (voluntario/comedor) en dispositivo teléfono móvil
+- [x] Cumple todos sus criterios de aceptación
+- [x] El código está revisado y aprobado por otro integrante
+- [x] Tiene pruebas automatizadas y todas pasan
+- [x] Está integrada en main sin romper la compilación
+- [x] La documentación afectada está actualizada en docs/spec/
+- [x] Pasan las dos pruebas de gobierno (tiempos y cantidades calculadas desde base de datos, sin cifras inventadas)
+- [x] Se probó entrando con el rol real (voluntario/comedor) en dispositivo teléfono móvil
 ```
 
 ---
@@ -112,7 +112,7 @@ Definición de Terminado
 * **Título:** `CMP-03 · Toma de donación con bloqueo de segunda toma (Reserva Única)`
 * **Labels:** `historia`, `mvp`, `cmp-03`, `nucleo`
 * **Campos del Tablero:**
-  * **Status:** `Por hacer`
+  * **Status:** `Terminado`
   * **CMP:** `CMP-03`
   * **Origen:** `RF-004 · US3.1`
   * **Estimación:** `4`
@@ -132,14 +132,14 @@ Criterios de aceptación
 Se prueba como: voluntario · teléfono (prueba de concurrencia simulada)
 
 Definición de Terminado
-- [ ] Cumple todos sus criterios de aceptación
-- [ ] El código está revisado y aprobado por otro integrante (Felipe Charria - QA)
-- [ ] Tiene pruebas automatizadas de concurrencia y todas pasan (simulación de 2 requests en paralelo)
-- [ ] Está integrada en main sin romper la compilación
-- [ ] La documentación afectada está actualizada en docs/spec/
-- [ ] Pasan las dos pruebas de gobierno
-- [ ] Se probó entrando con el rol real de voluntario en dispositivo móvil
-- [ ] Verificación de bloqueo atómico: no genera condiciones de carrera ni doble asignación de donaciones
+- [x] Cumple todos sus criterios de aceptación
+- [x] El código está revisado y aprobado por otro integrante (Felipe Charria - QA)
+- [x] Tiene pruebas automatizadas de concurrencia y todas pasan (simulación de 2 requests en paralelo)
+- [x] Está integrada en main sin romper la compilación
+- [x] La documentación afectada está actualizada en docs/spec/
+- [x] Pasan las dos pruebas de gobierno
+- [x] Se probó entrando con el rol real de voluntario en dispositivo móvil
+- [x] Verificación de bloqueo atómico: no genera condiciones de carrera ni doble asignación de donaciones
 ```
 
 ---
@@ -149,7 +149,7 @@ Definición de Terminado
 * **Título:** `CMP-04 · Registro y confirmación de entrega a organización receptora`
 * **Labels:** `historia`, `mvp`, `cmp-04`
 * **Campos del Tablero:**
-  * **Status:** `Por hacer`
+  * **Status:** `Terminado`
   * **CMP:** `CMP-04`
   * **Origen:** `RF-005 · US4.1`
   * **Estimación:** `3`
@@ -168,13 +168,13 @@ Criterios de aceptación
 Se prueba como: voluntario / encargado de comedor · teléfono
 
 Definición de Terminado
-- [ ] Cumple todos sus criterios de aceptación
-- [ ] El código está revisado y aprobado por otro integrante
-- [ ] Tiene pruebas automatizadas y todas pasan
-- [ ] Está integrada en main sin romper la compilación
-- [ ] La documentación afectada está actualizada en docs/spec/
-- [ ] Pasan las dos pruebas de gobierno (cero datos personales de comensales)
-- [ ] Se probó entrando con el rol real de voluntario/comedor en dispositivo teléfono móvil
+- [x] Cumple todos sus criterios de aceptación
+- [x] El código está revisado y aprobado por otro integrante
+- [x] Tiene pruebas automatizadas y todas pasan
+- [x] Está integrada en main sin romper la compilación
+- [x] La documentación afectada está actualizada en docs/spec/
+- [x] Pasan las dos pruebas de gobierno (cero datos personales de comensales)
+- [x] Se probó entrando con el rol real de voluntario/comedor en dispositivo teléfono móvil
 ```
 
 ---
@@ -214,33 +214,37 @@ Definición de Terminado
 
 ---
 
-## 3. Desglose de Tareas Atómicas por Criterio para el Sprint 1 (Asignaciones Individuales)
+## 3. Desglose de Tareas Atómicas por Criterio para Sprints 1 y 2 (Asignaciones Individuales)
 
-Cumpliendo con la regla de oro del Módulo 3 (**cada tarea atómica apunta a un único criterio de aceptación y se ejecuta en ≤ 4 horas por una persona asignada**), a continuación se presentan las tareas iniciales para alimentar el tablero:
+Cumpliendo con la regla de oro del Módulo 3 (**cada tarea atómica apunta a un único criterio de aceptación y se ejecuta en ≤ 4 horas por una persona asignada**), a continuación se presentan las tareas del tablero:
 
-| ID Tarea | Título Atómico | Criterio de Aceptación Asociado | Responsable Asignado | Rol en el Equipo | Estimación |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **`TASK-01`** | Configurar esquemas DDL en PostgreSQL y tipos TypeScript para Donación, Usuario y Reserva | Transversal (`src/types/index.ts`) | **Juan Sebastián Delgado** | Backend Developer | 3h |
-| **`TASK-02`** | Diseñar formulario Mobile-First de donación con selector de categoría y fecha/hora límite | `CA-01.1` (Publicación exitosa) | **Santiago Valencia Sandoval** | UX / Frontend Support | 3h |
-| **`TASK-03`** | Implementar validaciones en cliente para ventana de tiempo de recogida y bloqueo de horas pasadas | `CA-01.2`, `CA-01.3` (Ventana válida) | **Alejandro Rodríguez Cortés** | Full-Stack Developer | 3h |
-| **`TASK-04`** | Integrar casilla obligatoria de exención legal Ley 1990/2019 e indicador de cadena de frío | `CA-01.4` (Refrigeración y Ley 1990) | **Alejandro Rodríguez Cortés** | Full-Stack Developer | 2h |
-| **`TASK-05`** | Configurar persistencia offline con IndexedDB (Dexie.js) para publicación en plazas sin señal | `CA-01.5` (Offline-First) | **Juan Sebastián Delgado** | Backend Developer | 4h |
-| **`TASK-06`** | Construir catálogo reactivo de donaciones disponibles con ordenamiento y filtros por zona | `CA-02.1`, `CA-02.3` (Catálogo y zonas) | **Alejandro Rodríguez Cortés** | Full-Stack Developer | 3h |
-| **`TASK-07`** | Implementar etiqueta visual destacada de cadena de frío y filtro de exclusión para comedores sin nevera | `CA-02.2` (Cadena de frío) | **Santiago Valencia Sandoval** | UX / Frontend Support | 2h |
-| **`TASK-08`** | Desarrollar procedimiento RPC / transacción atómica SQL con `SELECT ... FOR UPDATE` para toma única | `CA-03.1` (Asignación indivisible) | **Juan Sebastián Delgado** | Backend Developer | 4h |
-| **`TASK-09`** | Implementar respuesta HTTP 409 Conflict y modal amigable en frontend ante colisión de toma concurrente | `CA-03.2`, `CA-03.3` (Bloqueo segunda toma) | **Alejandro Rodríguez Cortés** | Full-Stack Developer | 3h |
-| **`TASK-10`** | Diseñar y ejecutar suite de pruebas automatizadas de concurrencia y estrés para `CMP-03` | `CA-03.2` (Prueba de gobierno concurrencia) | **Felipe Charria Caicedo** | QA Engineer | 4h |
-| **`TASK-11`** | Construir flujo móvil de confirmación de entrega física en comedor con registro de receptor | `CA-04.1`, `CA-04.2` (Cierre entrega) | **Alejandro Rodríguez Cortés** | Full-Stack Developer | 3h |
-| **`TASK-12`** | Auditar y verificar que no se capturen datos personales sensibles de beneficiarios (Ley 1581) | `CA-04.3` (Habeas Data) | **Felipe Charria Caicedo** | QA Engineer | 2h |
-| **`TASK-13`** | Implementar pantalla de consulta pública y línea de tiempo por código único (`DON-XXX`) | `CA-05.1`, `CA-05.2` (Trazabilidad) | **Santiago Valencia Sandoval** | UX / Frontend Support | 3h |
-| **`TASK-14`** | Construir agregador de métricas de kilogramos rescatados garantizando cero datos inventados | `CA-05.3` (Cifras reales auditadas) | **Eduard Criollo Yule** | Product Owner / Lead | 3h |
-| **`TASK-15`** | Configurar pipeline de CI en GitHub Actions y monitoreo de cuotas de capa gratuita ($0 USD/mes) | Transversal (`RNF-005`) | **Juan Camilo Peña Sandoval** | DevOps Engineer | 4h |
+| ID Tarea | Título Atómico | Criterio de Aceptación Asociado | Responsable Asignado | Rol en el Equipo | Estimación | Estado |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| **`TASK-01`** | Configurar esquemas DDL en PostgreSQL y tipos TypeScript para Donación, Usuario y Reserva | Transversal (`src/types/index.ts`) | **Juan Sebastián Delgado** | Backend Developer | 3h | `Terminado` |
+| **`TASK-02`** | Diseñar formulario Mobile-First de donación con selector de categoría y fecha/hora límite | `CA-01.1` (Publicación exitosa) | **Santiago Valencia Sandoval** | UX / Frontend Support | 3h | `Terminado` |
+| **`TASK-03`** | Implementar validaciones en cliente para ventana de tiempo de recogida y bloqueo de horas pasadas | `CA-01.2`, `CA-01.3` (Ventana válida) | **Alejandro Rodríguez Cortés** | Full-Stack Developer | 3h | `Terminado` |
+| **`TASK-04`** | Integrar casilla obligatoria de exención legal Ley 1990/2019 e indicador de cadena de frío | `CA-01.4` (Refrigeración y Ley 1990) | **Alejandro Rodríguez Cortés** | Full-Stack Developer | 2h | `Terminado` |
+| **`TASK-05`** | Configurar persistencia offline con IndexedDB (Dexie.js) para publicación en plazas sin señal | `CA-01.5` (Offline-First) | **Juan Sebastián Delgado** | Backend Developer | 4h | `Terminado` |
+| **`TASK-06`** | Construir catálogo reactivo de donaciones disponibles con ordenamiento y filtros por zona | `CA-02.1`, `CA-02.3` (Catálogo y zonas) | **Alejandro Rodríguez Cortés** | Full-Stack Developer | 3h | `Terminado` |
+| **`TASK-07`** | Implementar etiqueta visual destacada de cadena de frío y filtro de exclusión para comedores sin nevera | `CA-02.2` (Cadena de frío) | **Santiago Valencia Sandoval** | UX / Frontend Support | 2h | `Terminado` |
+| **`TASK-08`** | Desarrollar procedimiento RPC / transacción atómica SQL con `SELECT ... FOR UPDATE` para toma única | `CA-03.1` (Asignación indivisible) | **Juan Sebastián Delgado** | Backend Developer | 4h | `Terminado` |
+| **`TASK-09`** | Implementar respuesta HTTP 409 Conflict y modal amigable en frontend ante colisión de toma concurrente | `CA-03.2`, `CA-03.3` (Bloqueo segunda toma) | **Alejandro Rodríguez Cortés** | Full-Stack Developer | 3h | `Terminado` |
+| **`TASK-10`** | Diseñar y ejecutar suite de pruebas automatizadas de concurrencia y estrés para `CMP-03` | `CA-03.2` (Prueba de gobierno concurrencia) | **Felipe Charria Caicedo** | QA Engineer | 4h | `Terminado` |
+| **`TASK-11`** | Construir flujo móvil de confirmación de entrega física en comedor con registro de receptor | `CA-04.1`, `CA-04.2` (Cierre entrega) | **Alejandro Rodríguez Cortés** | Full-Stack Developer | 3h | `Terminado` |
+| **`TASK-12`** | Auditar y verificar que no se capturen datos personales sensibles de beneficiarios (Ley 1581) | `CA-04.3` (Habeas Data) | **Felipe Charria Caicedo** | QA Engineer | 2h | `Terminado` |
+| **`TASK-13`** | Implementar pantalla de consulta pública y línea de tiempo por código único (`DON-XXX`) | `CA-05.1`, `CA-05.2` (Trazabilidad) | **Santiago Valencia Sandoval** | UX / Frontend Support | 3h | `Por hacer` |
+| **`TASK-14`** | Construir agregador de métricas de kilogramos rescatados garantizando cero datos inventados | `CA-05.3` (Cifras reales auditadas) | **Eduard Criollo Yule** | Product Owner / Lead | 3h | `Por hacer` |
+| **`TASK-15`** | Configurar pipeline de CI en GitHub Actions y monitoreo de cuotas de capa gratuita ($0 USD/mes) | Transversal (`RNF-005`) | **Juan Camilo Peña Sandoval** | DevOps Engineer | 4h | `Terminado` |
+| **`TASK-16`** | Implementar temporizador reactivo `useCountdown` y ocultamiento automático de donaciones expiradas | `CA-02.4` (Expiración automática) | **Juan Sebastián Delgado** | Backend / Full-Stack | 3h | `Terminado` |
+| **`TASK-17`** | Construir suite automatizada de pruebas unitarias para `CMP-02` (Catálogo, Filtros y Cadena de Frío) | `CA-02.1` a `CA-02.4` (Cobertura QA) | **Felipe Charria Caicedo** | QA Engineer | 3h | `Terminado` |
+| **`TASK-18`** | Implementar tarjeta y pantalla de Ruta Activa del voluntario (`RutaActivaCard.tsx` y `/ruta-activa`) | `CA-03.1` (Datos de recogida en ruta) | **Eduard Criollo Yule** | Product Owner / Lead | 3h | `Terminado` |
+| **`TASK-19`** | Integrar mapa cartográfico interactivo OpenStreetMap / Leaflet con arquitectura escalable multi-región | `CA-02.1`, `CA-02.3` (Mapa y zonas) | **Alejandro Rodríguez Cortés** | Full-Stack Developer | 4h | `Terminado` |
 
 ---
 
 ### 3.1. Fichas de Issues Técnicos Atómicos para el Tablero (Carga Individual)
 
-A continuación se presenta el detalle exhaustivo de cada una de las 15 tareas atómicas estructuradas en el formato canónico de Issue de GitHub para alimentar directamente el tablero del proyecto:
+A continuación se presenta el detalle exhaustivo de cada una de las tareas atómicas estructuradas en el formato canónico de Issue de GitHub para alimentar directamente el tablero del proyecto:
 
 ---
 
@@ -273,7 +277,7 @@ Como ingeniero de backend y base de datos, necesito definir el modelo relacional
 #### Issue TASK-02: Formulario Mobile-First de Donación
 * **Título:** `[TASK-02] Diseñar formulario Mobile-First de donación con selector de categoría y fecha/hora límite`
 * **Campos del Tablero:**
-  * **Status:** `Por hacer`
+  * **Status:** `Terminado`
   * **CMP:** `CMP-01`
   * **Origen:** `RF-001`, `RNF-001`
   * **Estimación:** `3`
@@ -294,8 +298,8 @@ Como comerciante donante en una plaza de mercado (Cavasa, Santa Elena), quiero d
 - `CA-01.1`: Permite registrar tipo de alimento, cantidad (kg/canastillas), dirección y ventana de tiempo en <3 pasos.
 
 ### Definición de Terminado (DoD)
-- [ ] Operable en viewport móvil (375px a 414px) en <45 segundos.
-- [ ] Pasa auditoría de contraste WCAG 2.1 AA.
+- [x] Operable en viewport móvil (375px a 414px) en <45 segundos.
+- [x] Pasa auditoría de contraste WCAG 2.1 AA.
 ```
 
 ---
@@ -303,7 +307,7 @@ Como comerciante donante en una plaza de mercado (Cavasa, Santa Elena), quiero d
 #### Issue TASK-03: Validaciones de Ventana Temporal (Cliente y Servidor)
 * **Título:** `[TASK-03] Implementar validaciones en cliente y servidor para ventana de tiempo de recogida y bloqueo de horas pasadas`
 * **Campos del Tablero:**
-  * **Status:** `Por hacer`
+  * **Status:** `Terminado`
   * **CMP:** `CMP-01`
   * **Origen:** `RF-001`, `RF-017`
   * **Estimación:** `3`
@@ -323,8 +327,8 @@ Como Full-Stack Developer, quiero garantizar que ninguna oferta de alimentos sea
 - `CA-01.2`: Si la hora límite es anterior o igual a la actual, el sistema impide el envío y muestra mensaje de validación.
 
 ### Definición de Terminado (DoD)
-- [ ] Prueba unitaria automatizada en Vitest certificando el rechazo de fechas pasadas.
-- [ ] Validación defensiva activa en Server Action (`safeParse`).
+- [x] Prueba unitaria automatizada en Vitest certificando el rechazo de fechas pasadas.
+- [x] Validación defensiva activa en Server Action (`safeParse`).
 ```
 
 ---
@@ -332,7 +336,7 @@ Como Full-Stack Developer, quiero garantizar que ninguna oferta de alimentos sea
 #### Issue TASK-04: Exención Legal Ley 1990/2019 e Indicador de Frío
 * **Título:** `[TASK-04] Integrar casilla obligatoria de exención legal Ley 1990/2019 e indicador de cadena de frío`
 * **Campos del Tablero:**
-  * **Status:** `Por hacer`
+  * **Status:** `Terminado`
   * **CMP:** `CMP-01`
   * **Origen:** `RF-014`, `RF-017`
   * **Estimación:** `2`
@@ -354,8 +358,8 @@ Como asesor técnico y desarrollador, debo blindar a los comerciantes donantes b
 - `CA-01.4`: Marcado de alimentos con requerimiento de refrigeración (`requiereFrio = true`).
 
 ### Definición de Terminado (DoD)
-- [ ] No existe camino de código que permita enviar `exencionSanitariaAceptada: false`.
-- [ ] Pasa prueba de gobierno legal.
+- [x] No existe camino de código que permita enviar `exencionSanitariaAceptada: false`.
+- [x] Pasa prueba de gobierno legal.
 ```
 
 ---
@@ -363,7 +367,7 @@ Como asesor técnico y desarrollador, debo blindar a los comerciantes donantes b
 #### Issue TASK-05: Persistencia Offline con IndexedDB (Dexie.js)
 * **Título:** `[TASK-05] Configurar persistencia offline con IndexedDB (Dexie.js) para publicación en plazas sin señal`
 * **Campos del Tablero:**
-  * **Status:** `Por hacer`
+  * **Status:** `Terminado`
   * **CMP:** `CMP-01`
   * **Origen:** `RNF-002`, `RF-001`
   * **Estimación:** `4`
@@ -383,8 +387,8 @@ Como Backend Engineer, debo implementar el almacenamiento local en el navegador 
 - `CA-01.5`: Registro exitoso en entorno sin conexión móvil y sincronización automática al reanudar red.
 
 ### Definición de Terminado (DoD)
-- [ ] Tolerancia a desconexión simulada con `fake-indexeddb` en suite de pruebas.
-- [ ] Notificación visual en pantalla: "Guardado localmente — pendiente de sincronización".
+- [x] Tolerancia a desconexión simulada con `fake-indexeddb` en suite de pruebas.
+- [x] Notificación visual en pantalla: "Guardado localmente — pendiente de sincronización".
 ```
 
 ---
@@ -392,12 +396,12 @@ Como Backend Engineer, debo implementar el almacenamiento local en el navegador 
 #### Issue TASK-06: Catálogo Reactivo de Donaciones Disponibles
 * **Título:** `[TASK-06] Construir catálogo reactivo de donaciones disponibles con ordenamiento y filtros por zona`
 * **Campos del Tablero:**
-  * **Status:** `Por hacer`
+  * **Status:** `Terminado`
   * **CMP:** `CMP-02`
   * **Origen:** `RF-002`, `RF-011`
   * **Estimación:** `3`
   * **Assignee:** Alejandro Rodríguez Cortés (`Full-Stack Developer`)
-  * **Labels:** `tarea`, `sprint-1`, `frontend`, `cmp-02`
+  * **Labels:** `tarea`, `sprint-2`, `frontend`, `cmp-02`
 
 ```markdown
 ### Contexto y Descripción Técnica
@@ -406,7 +410,7 @@ Como voluntario o comedor comunitario receptor, quiero visualizar en tiempo real
 ### Entregables
 - Vista de catálogo en `src/app/donaciones/page.tsx`.
 - Componente `DonacionCard.tsx` con temporizador regresivo de hora límite.
-- Barra de filtrado reactivo por zona de Cali sin recarga de página.
+- Barra de filtrado reactivo por zona de Cali sin recarga de página (`ZonasFilter.tsx`).
 
 ### Criterios de Aceptación BDD
 - `CA-02.1`: Visualización reactiva de ofertas vigentes.
@@ -418,12 +422,12 @@ Como voluntario o comedor comunitario receptor, quiero visualizar en tiempo real
 #### Issue TASK-07: Etiqueta de Cadena de Frío y Filtro para Comedores
 * **Título:** `[TASK-07] Implementar etiqueta visual destacada de cadena de frío y filtro de exclusión para comedores sin nevera`
 * **Campos del Tablero:**
-  * **Status:** `Por hacer`
+  * **Status:** `Terminado`
   * **CMP:** `CMP-02`
   * **Origen:** `RF-014`, `RNF-001`
   * **Estimación:** `2`
   * **Assignee:** Santiago Valencia Sandoval (`UX Designer / Frontend Support`)
-  * **Labels:** `tarea`, `sprint-1`, `ux`, `frontend`, `cmp-02`
+  * **Labels:** `tarea`, `sprint-2`, `ux`, `frontend`, `cmp-02`
 
 ```markdown
 ### Contexto y Descripción Técnica
@@ -471,12 +475,12 @@ Como Backend Engineer, debo asegurar que bajo ninguna circunstancia dos voluntar
 #### Issue TASK-09: Modal de Conflicto HTTP 409 ante Doble Toma
 * **Título:** `[TASK-09] Implementar respuesta HTTP 409 Conflict y modal amigable en frontend ante colisión de toma concurrente`
 * **Campos del Tablero:**
-  * **Status:** `Por hacer`
+  * **Status:** `Terminado`
   * **CMP:** `CMP-03`
   * **Origen:** `RF-010`, `RNF-004`
   * **Estimación:** `3`
   * **Assignee:** Alejandro Rodríguez Cortés (`Full-Stack Developer`)
-  * **Labels:** `tarea`, `sprint-1`, `frontend`, `cmp-03`
+  * **Labels:** `tarea`, `sprint-2`, `frontend`, `cmp-03`
 
 ```markdown
 ### Contexto y Descripción Técnica
@@ -484,7 +488,7 @@ Como Full-Stack Developer, debo capturar la respuesta HTTP 409 del procedimiento
 
 ### Entregables
 - Manejador de error 409 en el cliente Supabase.
-- Modal reactivo con el mensaje: "Esta donación acaba de ser reservada por otra persona. Te mostramos las ofertas disponibles más cercanas."
+- Modal reactivo `ConflictoTomaModal.tsx` con el mensaje: "Esta donación acaba de ser reservada por otra persona. Te mostramos las ofertas disponibles más cercanas."
 - Remoción inmediata del elemento en el estado local de React.
 
 ### Criterios de Aceptación BDD
@@ -497,12 +501,12 @@ Como Full-Stack Developer, debo capturar la respuesta HTTP 409 del procedimiento
 #### Issue TASK-10: Suite de Pruebas de Estrés y Concurrencia (QA)
 * **Título:** `[TASK-10] Diseñar y ejecutar suite de pruebas automatizadas de concurrencia y estrés para CMP-03`
 * **Campos del Tablero:**
-  * **Status:** `Por hacer`
+  * **Status:** `Terminado`
   * **CMP:** `CMP-03`
   * **Origen:** `RF-004`, `RNF-004`
   * **Estimación:** `4`
   * **Assignee:** Felipe Charria Caicedo (`QA Engineer`)
-  * **Labels:** `tarea`, `sprint-1`, `qa`, `testing`, `cmp-03`
+  * **Labels:** `tarea`, `sprint-2`, `qa`, `testing`, `cmp-03`
 
 ```markdown
 ### Contexto y Descripción Técnica
@@ -522,12 +526,12 @@ Como QA Engineer, debo diseñar una prueba automatizada que simule dos o más pe
 #### Issue TASK-11: Flujo Móvil de Confirmación de Entrega en Comedor
 * **Título:** `[TASK-11] Construir flujo móvil de confirmación de entrega física en comedor con registro de receptor`
 * **Campos del Tablero:**
-  * **Status:** `Por hacer`
+  * **Status:** `Terminado`
   * **CMP:** `CMP-04`
   * **Origen:** `RF-005`, `RF-006`
   * **Estimación:** `3`
   * **Assignee:** Alejandro Rodríguez Cortés (`Full-Stack Developer`)
-  * **Labels:** `tarea`, `sprint-1`, `frontend`, `cmp-04`
+  * **Labels:** `tarea`, `sprint-2`, `frontend`, `cmp-04`
 
 ```markdown
 ### Contexto y Descripción Técnica
@@ -548,19 +552,19 @@ Como voluntario en ruta, quiero registrar la entrega física de los alimentos al
 #### Issue TASK-12: Auditoría y Verificación de Habeas Data (Ley 1581)
 * **Título:** `[TASK-12] Auditar y verificar que no se capturen datos personales sensibles de beneficiarios (Ley 1581)`
 * **Campos del Tablero:**
-  * **Status:** `Por hacer`
+  * **Status:** `Terminado`
   * **CMP:** `CMP-04`
   * **Origen:** `RNF-003`
   * **Estimación:** `2`
   * **Assignee:** Felipe Charria Caicedo (`QA Engineer`)
-  * **Labels:** `tarea`, `sprint-1`, `qa`, `gobierno`, `cmp-04`
+  * **Labels:** `tarea`, `sprint-2`, `qa`, `gobierno`, `cmp-04`
 
 ```markdown
 ### Contexto y Descripción Técnica
 Como QA Engineer, debo auditar las estructuras de datos, formularios y endpoints de entrega para certificar que bajo ninguna circunstancia se capturen nombres, fotos de rostros ni documentos de personas beneficiarias en los comedores comunitarios.
 
 ### Entregables
-- Prueba automatizada de gobierno en `tests/governance/habeas-data.test.ts`.
+- Prueba automatizada de gobierno en `tests/governance/habeas-data.test.ts` y `tests/unit/cmp-04-confirmacion-entrega.test.ts`.
 - Certificado de anonimización: únicamente se persisten raciones cuantitativas agregadas e institución receptora.
 
 ### Criterio de Aceptación BDD
@@ -577,7 +581,7 @@ Como QA Engineer, debo auditar las estructuras de datos, formularios y endpoints
   * **Origen:** `RF-002`, `RF-006`
   * **Estimación:** `3`
   * **Assignee:** Santiago Valencia Sandoval (`UX Designer / Frontend Support`)
-  * **Labels:** `tarea`, `sprint-1`, `ux`, `frontend`, `cmp-05`
+  * **Labels:** `tarea`, `sprint-3`, `ux`, `frontend`, `cmp-05`
 
 ```markdown
 ### Contexto y Descripción Técnica
@@ -603,7 +607,7 @@ Como donante o coordinadora, quiero ingresar un código único (ej. `DON-101`) e
   * **Origen:** `RF-007`, `Gobierno`
   * **Estimación:** `3`
   * **Assignee:** Eduard Criollo Yule (`Product Owner / Lead`)
-  * **Labels:** `tarea`, `sprint-1`, `po`, `gobierno`, `cmp-05`
+  * **Labels:** `tarea`, `sprint-3`, `po`, `gobierno`, `cmp-05`
 
 ```markdown
 ### Contexto y Descripción Técnica
@@ -623,7 +627,7 @@ Como Product Owner y Lead, debo asegurar la veracidad de los reportes para coope
 #### Issue TASK-15: Pipeline de CI en GitHub Actions y Monitoreo Free Tier ($0 USD)
 * **Título:** `[TASK-15] Configurar pipeline de CI en GitHub Actions y monitoreo de cuotas de capa gratuita ($0 USD/mes)`
 * **Campos del Tablero:**
-  * **Status:** `Por hacer`
+  * **Status:** `Terminado`
   * **CMP:** `TRANSVERSAL`
   * **Origen:** `RNF-005`
   * **Estimación:** `4`
@@ -640,8 +644,107 @@ Como DevOps Engineer, debo automatizar la compuerta de integración continua par
 - Documentación de políticas de purga multimedia tras 30 días (`RF-018`).
 
 ### Criterio de Aceptación (DoD)
-- Pipeline en verde automático ante cada Pull Request hacia `main` o `develop`.
-- Protección de costos: $0.00 USD/mes de costo de servidores.
+- [x] Pipeline en verde automático ante cada Pull Request hacia `main` o `develop`.
+- [x] Protección de costos: $0.00 USD/mes de costo de servidores.
+```
+
+---
+
+#### Issue TASK-16: Temporizador Reactivo `useCountdown` y Expiración Automática
+* **Título:** `[TASK-16] Implementar temporizador reactivo useCountdown y ocultamiento automático de donaciones expiradas`
+* **Campos del Tablero:**
+  * **Status:** `Terminado`
+  * **CMP:** `CMP-02`
+  * **Origen:** `RF-002`, `RF-017`
+  * **Estimación:** `3`
+  * **Assignee:** Juan Sebastián Delgado (`Backend / Full-Stack`)
+  * **Labels:** `tarea`, `sprint-2`, `frontend`, `backend`, `cmp-02`
+
+```markdown
+### Contexto y Descripción Técnica
+Como desarrollador, debo garantizar que cada tarjeta de donación muestre en vivo el tiempo restante antes del vencimiento y que, al llegar a cero, la oferta transicione a estado `EXPIRADA` y desaparezca reactivamente del catálogo sin recargar la página.
+
+### Entregables
+- Hook `src/lib/hooks/useCountdown.ts` con limpieza segura de `setInterval`.
+- Integración en `src/components/donaciones/DonacionCard.tsx` y `marcarDonacionExpirada` en `src/actions/donaciones.ts`.
+
+### Criterio de Aceptación BDD
+- `CA-02.4`: Ocultamiento automático de donaciones expiradas.
+```
+
+---
+
+#### Issue TASK-17: Suite de Pruebas Unitarias del Catálogo y Cadena de Frío (`CMP-02`)
+* **Título:** `[TASK-17] Construir suite automatizada de pruebas unitarias para CMP-02 (Catálogo, Filtros y Cadena de Frío)`
+* **Campos del Tablero:**
+  * **Status:** `Terminado`
+  * **CMP:** `CMP-02`
+  * **Origen:** `RF-002`, `RF-014`
+  * **Estimación:** `3`
+  * **Assignee:** Felipe Charria Caicedo (`QA Engineer`)
+  * **Labels:** `tarea`, `sprint-2`, `qa`, `testing`, `cmp-02`
+
+```markdown
+### Contexto y Descripción Técnica
+Como QA Engineer, debo certificar mediante pruebas unitarias aisladas (con reloj simulado `vi.useFakeTimers()`) el cumplimiento de los 4 criterios de aceptación de `CMP-02`.
+
+### Entregables
+- Suite en `tests/unit/cmp-02-catalogo.test.ts` validando `filtrarDonacionesDisponibles`, `evaluarVigenciaDonacion` y `scoreMatch`.
+
+### Criterios de Aceptación BDD
+- `CA-02.1`, `CA-02.2`, `CA-02.3`, `CA-02.4`.
+```
+
+---
+
+#### Issue TASK-18: Tarjeta y Pantalla de Ruta Activa del Voluntario (`CMP-03`)
+* **Título:** `[TASK-18] Implementar tarjeta y pantalla de Ruta Activa del voluntario (RutaActivaCard.tsx y /ruta-activa)`
+* **Campos del Tablero:**
+  * **Status:** `Terminado`
+  * **CMP:** `CMP-03`
+  * **Origen:** `RF-004`
+  * **Estimación:** `3`
+  * **Assignee:** Eduard Criollo Yule (`Product Owner / Lead`)
+  * **Labels:** `tarea`, `sprint-2`, `frontend`, `ux`, `cmp-03`
+
+```markdown
+### Contexto y Descripción Técnica
+Como voluntario que acaba de tomar una donación, necesito visualizar de inmediato la hoja de ruta activa con la dirección exacta del puesto en la galería, teléfono directo del comerciante donante y botón hacia el acta de confirmación de entrega en el comedor.
+
+### Entregables
+- Componente `src/components/donaciones/RutaActivaCard.tsx` y vista `src/app/ruta-activa/page.tsx`.
+- Sincronía inmediata con la donación recién reservada desde `/donaciones`.
+
+### Criterio de Aceptación BDD
+- `CA-03.1`: Visualización de dirección completa de recogida y datos de contacto del donante tras la reserva.
+```
+
+---
+
+#### Issue TASK-19: Mapa Cartográfico Real OpenStreetMap y Escalabilidad Multi-Región
+* **Título:** `[TASK-19] Integrar mapa cartográfico interactivo OpenStreetMap / Leaflet con arquitectura escalable multi-región`
+* **Campos del Tablero:**
+  * **Status:** `Terminado`
+  * **CMP:** `CMP-02`
+  * **Origen:** `RF-002`, `RF-011`, `RNF-001`, `RNF-005`
+  * **Estimación:** `4`
+  * **Assignee:** Alejandro Rodríguez Cortés (`Full-Stack Developer`)
+  * **Labels:** `tarea`, `sprint-2`, `frontend`, `ux`, `mapa`, `cmp-02`
+
+```markdown
+### Contexto y Descripción Técnica
+Como voluntario o donante, quiero visualizar la ubicación geográfica real de los puntos de recogida (galerías y plazas) y los comedores receptores sobre un mapa cartográfico interactivo de OpenStreetMap con calles y barrios reconocibles de Cali, sin textos superpuestos y con capacidad de escalar a rutas intermunicipales ($0 USD/mes).
+
+### Entregables
+- Componente `RadarMap.tsx` refactorizado con Leaflet y OpenStreetMap (teselas gratuitas sin API key).
+- Pines diferenciados por tipo (`Donante`, `Mayorista`, `Comedor`, `En ruta`) con popups legibles y enlace directo a navegación GPS (Google Maps).
+- Selector de escala: Urbano Cali (`Norte`, `Centro`, `Sur`, `Oriente`, `Ladera`) y Corredor Metropolitano / Regional (`Cavasa / Candelaria / Valle`).
+- Soporte para cálculo determinístico de distancias Haversine (`calcularDistanciaKm`).
+- Integración conmutable en el catálogo de `/donaciones`.
+
+### Criterios de Aceptación BDD
+- `CA-02.1`: Visualización de ofertas vigentes georreferenciadas.
+- `CA-02.3`: Filtrado por zonas de Cali y encuadre cartográfico reactivo.
 ```
 
 ---
@@ -659,4 +762,3 @@ Para que las tarjetas queden físicamente creadas y sincronizadas en el tablero 
   # 2. Ejecutar el aprovisionamiento de etiquetas y tareas atómicas en el repositorio
   powershell -ExecutionPolicy Bypass -File ./scripts/sync-github-board.ps1
   ```
-

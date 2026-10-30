@@ -76,13 +76,13 @@ Escenario: CA-01.5 Registro en entorno sin conexión móvil (Offline-First)
 
 ### Definición de Terminado (DoD Específico):
 
-- [ ] Cumple todos sus criterios de aceptación (`CA-01.1` a `CA-01.5`).
-- [ ] El código está revisado y aprobado por otro integrante (Peer review / QA).
-- [ ] Tiene pruebas automatizadas y todas pasan.
-- [ ] Está integrada en `main` sin romper la compilación (`npm run build` en verde).
-- [ ] La documentación afectada está actualizada en `docs/spec/`.
-- [ ] Pasan las dos pruebas de gobierno (cero datos inventados y consentimiento legal sin captura de datos sensibles).
-- [ ] Se probó entrando con el rol real de donante en dispositivo móvil (viewport celular).
+- [x] Cumple todos sus criterios de aceptación (`CA-01.1` a `CA-01.5`).
+- [x] El código está revisado y aprobado por otro integrante (Peer review / QA).
+- [x] Tiene pruebas automatizadas y todas pasan.
+- [x] Está integrada en `main` sin romper la compilación (`npm run build` en verde).
+- [x] La documentación afectada está actualizada en `docs/spec/`.
+- [x] Pasan las dos pruebas de gobierno (cero datos inventados y consentimiento legal sin captura de datos sensibles).
+- [x] Se probó entrando con el rol real de donante en dispositivo móvil (viewport celular).
 
 ---
 
@@ -98,7 +98,8 @@ Escenario: CA-02.1 Visualización reactiva de ofertas vigentes
   Dado que existen donaciones en la base de datos con estado "DISPONIBLE" y ventana vigente,
   Cuando un voluntario o comedor receptor abre el catálogo móvil,
   Entonces el sistema muestra únicamente las donaciones en estado "DISPONIBLE",
-  Y presenta para cada una: donante, tipo de alimento, cantidad en kg, zona de Cali y temporizador restante.
+  Y presenta para cada una: donante, tipo de alimento, cantidad en kg, zona de Cali y temporizador restante,
+  Y ofrece la opción de visualizar los puntos georreferenciados sobre el mapa interactivo OpenStreetMap (Leaflet).
 
 Escenario: CA-02.2 Identificación destacada de cadena de frío
   Dado que una oferta activa contiene alimentos con el indicador requiereFrio = true,
@@ -106,10 +107,12 @@ Escenario: CA-02.2 Identificación destacada de cadena de frío
   Entonces la tarjeta exhibe una etiqueta destacada visual "Requiere Refrigeración",
   Y restringe la asignación para que no sea canalizada a comedores sin nevera funcional.
 
-Escenario: CA-02.3 Filtrado por zona geográfica de Cali
+Escenario: CA-02.3 Filtrado por zona geográfica de Cali y escala cartográfica
   Dadas donaciones ubicadas en diferentes sectores ("NORTE", "CENTRO", "SUR", "ORIENTE", "LADERA"),
   Cuando el voluntario selecciona un filtro por zona específica,
-  Entonces el catálogo filtra en el cliente de forma reactiva mostrando solo las ofertas del sector seleccionado.
+  Entonces el catálogo filtra en el cliente de forma reactiva mostrando solo las ofertas del sector seleccionado,
+  Y el mapa cartográfico OpenStreetMap centra su encuadre en el sector correspondiente,
+  Permitiendo a su vez ampliar la escala al corredor regional (nodos metropolitanos e intermunicipales como Cavasa).
 
 Escenario: CA-02.4 Ocultamiento automático de donaciones expiradas
   Dada una donación cuya hora límite de recogida es superada en el reloj del sistema sin haber sido tomada,
@@ -122,13 +125,13 @@ Escenario: CA-02.4 Ocultamiento automático de donaciones expiradas
 
 ### Definición de Terminado (DoD Específico):
 
-- [ ] Cumple todos sus criterios de aceptación (`CA-02.1` a `CA-02.4`).
-- [ ] El código está revisado y aprobado por otro integrante (Peer review / QA).
-- [ ] Tiene pruebas automatizadas y todas pasan.
-- [ ] Está integrada en `main` sin romper la compilación.
-- [ ] La documentación afectada está actualizada en `docs/spec/`.
-- [ ] Pasan las dos pruebas de gobierno (tiempos y cantidades calculadas desde base de datos, sin cifras inventadas).
-- [ ] Se probó entrando con el rol real de voluntario/comedor en dispositivo móvil.
+- [x] Cumple todos sus criterios de aceptación (`CA-02.1` a `CA-02.4`).
+- [x] El código está revisado y aprobado por otro integrante (Peer review / QA).
+- [x] Tiene pruebas automatizadas y todas pasan.
+- [x] Está integrada en `main` sin romper la compilación.
+- [x] La documentación afectada está actualizada en `docs/spec/`.
+- [x] Pasan las dos pruebas de gobierno (tiempos y cantidades calculadas desde base de datos, sin cifras inventadas).
+- [x] Se probó entrando con el rol real de voluntario/comedor en dispositivo móvil.
 
 ---
 
@@ -167,13 +170,13 @@ Escenario: CA-03.3 Bloqueo de toma sobre ofertas expiradas o canceladas
 
 ### Definición de Terminado (DoD Específico):
 
-- [ ] Cumple todos sus criterios de aceptación (`CA-03.1` a `CA-03.3`).
-- [ ] El código está revisado y aprobado por otro integrante (Peer review / QA).
-- [ ] **Prueba de concurrencia verificada:** Se demostró mediante test automatizado o simulación concurrente que dos peticiones simultáneas nunca asignan la donación dos veces (el segundo intento recibe HTTP 409).
-- [ ] Está integrada en `main` sin romper la compilación.
-- [ ] La documentación afectada está actualizada en `docs/spec/`.
-- [ ] Pasan las dos pruebas de gobierno.
-- [ ] Se probó entrando con el rol real de voluntario en dispositivo móvil.
+- [x] Cumple todos sus criterios de aceptación (`CA-03.1` a `CA-03.3`).
+- [x] El código está revisado y aprobado por otro integrante (Peer review / QA).
+- [x] **Prueba de concurrencia verificada:** Se demostró mediante test automatizado o simulación concurrente que dos peticiones simultáneas nunca asignan la donación dos veces (el segundo intento recibe HTTP 409).
+- [x] Está integrada en `main` sin romper la compilación.
+- [x] La documentación afectada está actualizada en `docs/spec/`.
+- [x] Pasan las dos pruebas de gobierno.
+- [x] Se probó entrando con el rol real de voluntario en dispositivo móvil.
 
 ---
 
@@ -210,13 +213,13 @@ Escenario: CA-04.3 Anonimización de beneficiarios finales (Cumplimiento Ley 158
 
 ### Definición de Terminado (DoD Específico):
 
-- [ ] Cumple todos sus criterios de aceptación (`CA-04.1` a `CA-04.3`).
-- [ ] El código está revisado y aprobado por otro integrante (Peer review / QA).
-- [ ] Tiene pruebas automatizadas y todas pasan.
-- [ ] Está integrada en `main` sin romper la compilación.
-- [ ] La documentación afectada está actualizada en `docs/spec/`.
-- [ ] Pasan las dos pruebas de gobierno (comprobado que no se almacenan datos personales de comensales).
-- [ ] Se probó entrando con el rol real de voluntario/comedor en dispositivo móvil.
+- [x] Cumple todos sus criterios de aceptación (`CA-04.1` a `CA-04.3`).
+- [x] El código está revisado y aprobado por otro integrante (Peer review / QA).
+- [x] Tiene pruebas automatizadas y todas pasan.
+- [x] Está integrada en `main` sin romper la compilación.
+- [x] La documentación afectada está actualizada en `docs/spec/`.
+- [x] Pasan las dos pruebas de gobierno (comprobado que no se almacenan datos personales de comensales).
+- [x] Se probó entrando con el rol real de voluntario/comedor en dispositivo móvil.
 
 ---
 

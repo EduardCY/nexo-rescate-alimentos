@@ -1,14 +1,17 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Clock, MapPin, Snowflake, ShieldCheck, AlertCircle, Check } from 'lucide-react';
+import { Clock, MapPin, ShieldCheck, Check } from 'lucide-react';
 import type { Donacion, ZonaCali } from '@/types';
+import { ColdChainBadge } from './ColdChainBadge';
 
 interface DonacionCardProps {
   donacion: Donacion;
   onTomar?: (donacionId: string) => Promise<void> | void;
+  onTomarDonacion?: (donacionId: string) => Promise<void> | void;
   onExpirada?: (donacionId: string) => void;
   tomando?: boolean;
+  className?: string;
 }
 
 const ZONA_COLORES: Record<ZonaCali, { bg: string; text: string; border: string }> = {
@@ -20,10 +23,18 @@ const ZONA_COLORES: Record<ZonaCali, { bg: string; text: string; border: string 
 };
 
 /**
- * Tarjeta de donación reactiva con cuenta regresiva en vivo (TASK-06 / CA-02.1).
+ * Tarjeta de donación reactiva con cuenta regresiva en vivo (TASK-06 / CA-02.1)
+ * e insignia destacada de cadena de frío (TASK-07 / CA-02.2).
  * Implementa accesibilidad táctil para dispositivos móviles (min-h-[48px]).
  */
-export function DonacionCard({ donacion, onTomar, onExpirada, tomando = false }: DonacionCardProps) {
+export function DonacionCard({
+  donacion,
+  onTomar,
+  onTomarDonacion,
+  onExpirada,
+  tomando = false,
+  className = '',
+}: DonacionCardProps) {
   const [segundosRestantes, setSegundosRestantes] = useState<number>(() => {
     const ms = new Date(donacion.horaLimite).getTime() - Date.now();
     return Math.max(0, Math.floor(ms / 1000));
@@ -60,10 +71,11 @@ export function DonacionCard({ donacion, onTomar, onExpirada, tomando = false }:
 
   const zona = donacion.zona || 'CENTRO';
   const estiloZona = ZONA_COLORES[zona] || ZONA_COLORES.CENTRO;
+  const handleAccionTomar = onTomar || onTomarDonacion;
 
   return (
     <article
-      className="bevel-out p-3.5 bg-[#ece9d8] text-black flex flex-col justify-between transition-all shadow-sm hover:shadow-md"
+      className={`bevel-out p-3.5 bg-[#ece9d8] text-black flex flex-col justify-between transition-all shadow-sm hover:shadow-md ${className}`}
       aria-label={`Donación ${donacion.codigo}: ${donacion.tipoAlimento}`}
     >
       <div>
@@ -74,7 +86,11 @@ export function DonacionCard({ donacion, onTomar, onExpirada, tomando = false }:
           </span>
           <span
             className="font-mono text-[11px] font-bold px-2 py-0.5 rounded border"
-            style={{ backgroundColor: estiloZona.bg, color: estiloZona.text, borderColor: estiloZona.border }}
+            style={{
+              backgroundColor: estiloZona.bg,
+              color: estiloZona.text,
+              borderColor: estiloZona.border,
+            }}
           >
             ZONA {zona}
           </span>
@@ -106,13 +122,14 @@ export function DonacionCard({ donacion, onTomar, onExpirada, tomando = false }:
           </div>
         </div>
 
-        {/* Badges de Estado: Frío y Ley 1990 */}
-        <div className="flex flex-wrap gap-1.5 mb-3 text-[10px] font-mono">
+        {/* Badges de Estado: Cadena de Frío (TASK-07) y Ley 1990 */}
+        <div className="flex flex-wrap items-center gap-1.5 mb-3 text-[10px] font-mono">
           {donacion.requiereFrio ? (
-            <span className="bevel-in bg-[#e0f2fe] text-[#0369a1] px-2 py-0.5 font-bold flex items-center gap-1 border border-sky-400">
-              <Snowflake className="w-3 h-3 text-sky-600" />
-              CADENA DE FRÍO (4°C - 8°C)
-            </span>
+            <ColdChainBadge
+              requiereFrio={true}
+              mostrarAdvertencia={true}
+              size="sm"
+            />
           ) : (
             <span className="bevel-in bg-[#f1f5f9] text-slate-700 px-2 py-0.5 font-semibold">
               Ambiente (sin frío)
@@ -148,7 +165,7 @@ export function DonacionCard({ donacion, onTomar, onExpirada, tomando = false }:
 
         <button
           type="button"
-          onClick={() => onTomar?.(donacion.id)}
+          onClick={() => handleAccionTomar?.(donacion.id)}
           disabled={tomando}
           className="btn-green w-full min-h-[48px] font-mono text-xs sm:text-sm font-bold flex items-center justify-center gap-2"
           aria-label={`Tomar donación ${donacion.codigo}`}

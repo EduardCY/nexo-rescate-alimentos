@@ -3,20 +3,21 @@
  * Mapea los requerimientos funcionales del Módulo 1 y la especificación del MVP.
  */
 
-export type EstadoDonacion = 
+export type EstadoDonacion =
   | 'DISPONIBLE'
   | 'ASIGNADA'
   | 'ENTREGADA'
   | 'EXPIRADA'
   | 'CANCELADA';
 
-export type RolUsuario = 
+export type RolUsuario =
   | 'COORDINADOR'
   | 'VOLUNTARIO'
   | 'DONANTE'
   | 'RECEPTOR';
 
 export type ZonaCali = 'NORTE' | 'CENTRO' | 'SUR' | 'ORIENTE' | 'LADERA';
+export type ZonaFiltro = 'TODAS' | ZonaCali;
 
 export interface Organizacion {
   id: string;
@@ -49,6 +50,8 @@ export interface Donacion {
   cantidadEstimada: number;
   unidadMedida: 'kg' | 'canastillas' | 'bultos' | 'unidades';
   direccionRecogida: string;
+  indicacionesPuesto?: string;
+  telefonoDonante?: string;
   zona?: ZonaCali;
   horaLimite: string;
   estado: EstadoDonacion;

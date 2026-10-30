@@ -55,8 +55,24 @@ export default function WindowFrame({ title, menu, statusLeft, statusRight, chil
         {!minimized && (
           <>
             <main className="bg-[#0b1020] m-[2px] mt-1 p-3 sm:p-4 bevel-in-dark">{children}</main>
-            <footer className="flex gap-1 mt-1 text-[11px] text-black font-mono">
+            <footer className="flex flex-wrap items-center gap-1 mt-1 text-[11px] text-black font-mono">
               <div className="bevel-in flex-1 px-2 py-0.5 truncate">{statusLeft}</div>
+              <div className="flex items-center gap-1">
+                <a
+                  href="/donaciones"
+                  className="bevel-out px-2 py-0.5 hover:bg-slate-200 active:translate-y-px text-[11px] font-bold"
+                  title="Abrir Catálogo Móvil (CMP-02)"
+                >
+                  📱 Catálogo Móvil
+                </a>
+                <a
+                  href="/ruta-activa"
+                  className="bevel-out px-2 py-0.5 hover:bg-slate-200 active:translate-y-px text-[11px] font-bold"
+                  title="Abrir Ruta Activa Móvil (CMP-03)"
+                >
+                  🚚 Ruta Activa
+                </a>
+              </div>
               <div className="bevel-in px-2 py-0.5 hidden sm:block">{statusRight}</div>
             </footer>
           </>

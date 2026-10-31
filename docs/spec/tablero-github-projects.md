@@ -238,6 +238,10 @@ Cumpliendo con la regla de oro del Módulo 3 (**cada tarea atómica apunta a un 
 | **`TASK-17`** | Construir suite automatizada de pruebas unitarias para `CMP-02` (Catálogo, Filtros y Cadena de Frío) | `CA-02.1` a `CA-02.4` (Cobertura QA) | **Felipe Charria Caicedo** | QA Engineer | 3h | `Terminado` |
 | **`TASK-18`** | Implementar tarjeta y pantalla de Ruta Activa del voluntario (`RutaActivaCard.tsx` y `/ruta-activa`) | `CA-03.1` (Datos de recogida en ruta) | **Eduard Criollo Yule** | Product Owner / Lead | 3h | `Terminado` |
 | **`TASK-19`** | Integrar mapa cartográfico interactivo OpenStreetMap / Leaflet con arquitectura escalable multi-región | `CA-02.1`, `CA-02.3` (Mapa y zonas) | **Alejandro Rodríguez Cortés** | Full-Stack Developer | 4h | `Terminado` |
+| **`TASK-20`** | Integrar selector cartográfico interactivo OpenStreetMap en `/donar` con Leaflet, pin arrastrable, presets de plazas y captura de puesto y teléfono | `CA-01.1`, `RNF-001` (Georreferenciación $0 USD) | **Alejandro Rodríguez Cortés** | Full-Stack Developer | 3h | `Terminado` |
+| **`TASK-21`** | Desarrollar coordinador centralizado de sincronización offline reactiva (`offline-sync.ts`), normalización temporal de horas vencidas y suite de integración | `CA-01.5`, `RNF-002` (Offline-First) | **Juan Sebastián Delgado** | Backend Developer | 4h | `Terminado` |
+| **`TASK-22`** | Implementar soporte multivoluntario en `RadarMap.tsx` con gestión dinámica de flota, ciclado secuencial `map.fitBounds()` y trazado de rutas concurrentes | `CA-02.3` (Radar logístico de flota) | **Alejandro Rodríguez Cortés** | Full-Stack Developer | 3h | `Terminado` |
+| **`TASK-23`** | Georreferenciar excedentes disponibles en el mapa interactivo con pines de producto/kg y fallback automático por zona de Cali | `CA-02.1`, `CA-02.3` (Excedentes en mapa) | **Eduard Criollo Yule** | Product Owner / Lead | 2h | `Terminado` |
 
 ---
 
@@ -743,6 +747,113 @@ Como voluntario o donante, quiero visualizar la ubicación geográfica real de l
 ### Criterios de Aceptación BDD
 - `CA-02.1`: Visualización de ofertas vigentes georreferenciadas.
 - `CA-02.3`: Filtrado por zonas de Cali y encuadre cartográfico reactivo.
+```
+
+---
+
+#### Issue TASK-20: Selector Cartográfico OpenStreetMap en Wizard de Donación
+* **Título:** `[TASK-20] Integrar selector cartográfico interactivo OpenStreetMap en /donar con Leaflet, pin arrastrable, presets de plazas y captura de puesto y teléfono`
+* **Campos del Tablero:**
+  * **Status:** `Terminado`
+  * **CMP:** `CMP-01`
+  * **Origen:** `RF-001`, `RNF-001`, `RNF-005`
+  * **Estimación:** `3`
+  * **Assignee:** Alejandro Rodríguez Cortés (`Full-Stack Developer`)
+  * **Labels:** `tarea`, `sprint-2`, `frontend`, `mapa`, `cmp-01`
+
+```markdown
+### Contexto y Descripción Técnica
+Como comerciante donante, quiero fijar el punto exacto de recogida en un mapa cartográfico interactivo de Cali o elegir mi plaza con un clic rápido, indicando mi número de puesto y teléfono, para que el voluntario no se pierda al llegar a la galería y la plataforma no incurra en cobros de API ($0 USD/mes).
+
+### Entregables
+- Componente `LocationPickerMap.tsx` con Leaflet y OpenStreetMap (SSR desactivado).
+- Pin arrastrable (`dragend`) y fijación por clic en mapa (`map.on('click')`).
+- Presets rápidos de las 5 principales plazas de Cali: Galería Santa Elena, Plaza Alameda, Cavasa Mayorista, La Flora y Siloé.
+- Botón de geolocalización GPS del navegador (`navigator.geolocation.getCurrentPosition`).
+- Campos `indicacionesPuesto` y `telefonoDonante` integrados en `DonacionWizard.tsx` y validados por Zod.
+
+### Criterios de Aceptación BDD
+- `CA-01.1`: Publicación con coordenadas geográficas decimales e indicaciones precisas de recogida.
+```
+
+---
+
+#### Issue TASK-21: Coordinador Centralizado de Sincronización Offline Reactiva
+* **Título:** `[TASK-21] Desarrollar coordinador centralizado de sincronización offline reactiva (offline-sync.ts), normalización temporal de horas vencidas y suite de integración`
+* **Campos del Tablero:**
+  * **Status:** `Terminado`
+  * **CMP:** `CMP-01`
+  * **Origen:** `RF-001`, `RNF-002` (Offline-First)
+  * **Estimación:** `4`
+  * **Assignee:** Juan Sebastián Delgado (`Backend Developer`)
+  * **Labels:** `tarea`, `sprint-2`, `backend`, `offline`, `indexeddb`, `cmp-01`
+
+```markdown
+### Contexto y Descripción Técnica
+Como donante en plaza de mercado sin señal celular, necesito que mis donaciones registradas localmente en Dexie.js se sincronicen de manera automática y reactiva al volver a tener internet, incluso si la hora límite caducó mientras estaba desconectado, para no perder los alimentos y ver el código final sin recargar la página.
+
+### Entregables
+- Módulo despachador `src/lib/sync/offline-sync.ts` con función `sincronizarColaOffline`.
+- Mutex / semáforo en vuelo (`sincronizandoEnVuelo`) para evitar condiciones de carrera por dobles eventos `online`.
+- Normalización preventiva de hora límite (+2 horas desde la hora actual si expiró durante la desconexión).
+- Emisión de eventos globales de ventana `nexo:offline-synced` y `nexo:offline-queue-changed`.
+- Actualización reactiva sin recarga en `DonacionWizard.tsx`, `OfflineStatusBadge.tsx` y `MenuBar.tsx`.
+- Suite automatizada de pruebas de integración `tests/integration/offline-flow.test.ts`.
+
+### Criterios de Aceptación BDD
+- `CA-01.5`: Captura tolerante a caídas de red y sincronización reactiva inmediata al restablecer conexión.
+```
+
+---
+
+#### Issue TASK-22: Radar Multivoluntario y Gestión Dinámica de Flota con fitBounds
+* **Título:** `[TASK-22] Implementar soporte multivoluntario en RadarMap.tsx con gestión dinámica de flota, ciclado secuencial map.fitBounds() y trazado de rutas concurrentes`
+* **Campos del Tablero:**
+  * **Status:** `Terminado`
+  * **CMP:** `CMP-02`
+  * **Origen:** `RF-002`, `RF-004`, `RNF-001`
+  * **Estimación:** `3`
+  * **Assignee:** Alejandro Rodríguez Cortés (`Full-Stack Developer`)
+  * **Labels:** `tarea`, `sprint-2`, `frontend`, `mapa`, `flota`, `cmp-02`
+
+```markdown
+### Contexto y Descripción Técnica
+Como voluntario o coordinador, quiero que el mapa cartográfico soporte múltiples unidades de transporte en ruta al mismo tiempo, permitiendo ciclar individualmente entre cada voluntario o encuadrar a toda la flota en una vista panorámica con fitBounds, para tener visibilidad total de la logística activa en Cali.
+
+### Entregables
+- Detección dinámica de unidades de transporte (`mapNodes.filter(n => n.kind === 'truck')`).
+- Función `centrarRutaVoluntario` con ciclado secuencial: Voluntario 1 (zoom 15.5) -> Voluntario 2 -> Panorámica global (`map.fitBounds`).
+- Botón adaptativo con pulso verde y etiqueta dinámica: `Voluntario (1/N)`, `Voluntario (2/N)` y `Ver Flota (N)`.
+- Trazado de polilíneas concurrentes diferenciadas: Ruta 1 (verde `#00e676`) y Ruta 2 (azul cielo `#38bdf8`).
+- Datos de flota ampliada en `src/lib/nexo/api.ts` con `node-7` (*Ruta 2 - Voluntario Moto*).
+
+### Criterios de Aceptación BDD
+- `CA-02.3`: Visualización cartográfica reactiva y gestión de flota multivoluntario en Cali.
+```
+
+---
+
+#### Issue TASK-23: Georreferenciación de Excedentes Disponibles en Mapa Cartográfico
+* **Título:** `[TASK-23] Georreferenciar excedentes disponibles en el mapa interactivo con pines de producto/kg y fallback automático por zona de Cali`
+* **Campos del Tablero:**
+  * **Status:** `Terminado`
+  * **CMP:** `CMP-02`
+  * **Origen:** `RF-002`, `RNF-001`
+  * **Estimación:** `2`
+  * **Assignee:** Eduard Criollo Yule (`Product Owner / Lead`)
+  * **Labels:** `tarea`, `sprint-2`, `frontend`, `ux`, `catalogo`, `cmp-02`
+
+```markdown
+### Contexto y Descripción Técnica
+Como voluntario en campo, quiero que los excedentes de comida disponibles del catálogo aparezcan directamente como marcadores en el mapa interactivo con su producto, cantidad en kg y etiqueta de frío, para identificar de inmediato qué alimentos puedo rescatar cerca a mi ubicación.
+
+### Entregables
+- Asignación de coordenadas decimales WGS84 a las donaciones semilla (`DON-201` a `DON-205`) en `src/actions/donaciones.ts`.
+- Lógica de fallback geográfico por zona de Cali en `RadarMap.tsx` para ofertas que no incluyan GPS explícito.
+- Marcadores de excedentes disponibles con etiqueta de producto, cantidad y advertencia de frío.
+
+### Criterios de Aceptación BDD
+- `CA-02.1`: Visualización cartográfica de ofertas vigentes y excedentes en mapa.
 ```
 
 ---

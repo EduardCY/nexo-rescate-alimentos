@@ -98,12 +98,14 @@ Escenario: CA-01.5 Registro en entorno sin conexión móvil y sincronización re
 ### Criterios de Aceptación (Gherkin):
 
 ```gherkin
-Escenario: CA-02.1 Visualización reactiva de ofertas vigentes
+Escenario: CA-02.1 Visualización reactiva de ofertas vigentes y excedentes en mapa
   Dado que existen donaciones en la base de datos con estado "DISPONIBLE" y ventana vigente,
   Cuando un voluntario o comedor receptor abre el catálogo móvil,
   Entonces el sistema muestra únicamente las donaciones en estado "DISPONIBLE",
   Y presenta para cada una: donante, tipo de alimento, cantidad en kg, zona de Cali y temporizador restante,
-  Y ofrece la opción de visualizar los puntos georreferenciados sobre el mapa interactivo OpenStreetMap (Leaflet).
+  Y ofrece la opción de desplegar el mapa interactivo OpenStreetMap (Leaflet),
+  Proyectando cada excedente disponible como un marcador cartográfico con código, producto, peso y bandera de frío,
+  Con fallback automático al centro de la zona de Cali si la oferta no incluyó GPS manual.
 
 Escenario: CA-02.2 Identificación destacada de cadena de frío
   Dado que una oferta activa contiene alimentos con el indicador requiereFrio = true,
@@ -111,12 +113,14 @@ Escenario: CA-02.2 Identificación destacada de cadena de frío
   Entonces la tarjeta exhibe una etiqueta destacada visual "Requiere Refrigeración",
   Y restringe la asignación para que no sea canalizada a comedores sin nevera funcional.
 
-Escenario: CA-02.3 Filtrado por zona geográfica de Cali y escala cartográfica
+Escenario: CA-02.3 Filtrado por zona geográfica de Cali y radar multivoluntario con fitBounds
   Dadas donaciones ubicadas en diferentes sectores ("NORTE", "CENTRO", "SUR", "ORIENTE", "LADERA"),
   Cuando el voluntario selecciona un filtro por zona específica,
   Entonces el catálogo filtra en el cliente de forma reactiva mostrando solo las ofertas del sector seleccionado,
   Y el mapa cartográfico OpenStreetMap centra su encuadre en el sector correspondiente,
-  Permitiendo a su vez ampliar la escala al corredor regional (nodos metropolitanos e intermunicipales como Cavasa).
+  Permitiendo a su vez ciclar secuencialmente entre las unidades de transporte de la flota activa (Voluntario 1 -> Voluntario 2),
+  O encuadrar a toda la flota en una panorámica colectiva de Cali mediante map.fitBounds(),
+  Trazando polilíneas discontinuas diferenciadas por ruta (Ruta 1 verde esmeralda y Ruta 2 azul cielo).
 
 Escenario: CA-02.4 Ocultamiento automático de donaciones expiradas
   Dada una donación cuya hora límite de recogida es superada en el reloj del sistema sin haber sido tomada,
@@ -192,25 +196,26 @@ Escenario: CA-03.3 Bloqueo de toma sobre ofertas expiradas o canceladas
 ### Criterios de Aceptación (Gherkin):
 
 ```gherkin
-Escenario: CA-04.1 Cierre formal de entrega en comedor comunitario
+Escenario: CA-04.1 Cierre formal de entrega e inspección física en comedor comunitario
   Dada una donación en estado "ASIGNADA" asignada al voluntario en ruta,
   Cuando el voluntario arriba al comedor receptor "Comedor Siloé",
-  Y diligencia el nombre del encargado receptor y presiona "Confirmar Entrega",
+  Y la persona encargada de la cocina en el comedor inspecciona el estado de los alimentos (EXCELENTE, BUENO, REGULAR),
+  Y diligencia su nombre completo institucional y observaciones y presiona "CONFIRMAR ENTREGA FÍSICA Y FIRMAR ACTA",
   Entonces el sistema transiciona la donación al estado definitivo "ENTREGADA",
-  Y registra la marca temporal de entrega (UTC) y el responsable de recepción,
+  Y emite el acta digital inmutable con marca de tiempo UTC y código de auditoría,
   Y la donación pasa irreversiblemente al historial auditado de impacto.
 
-Escenario: CA-04.2 Bloqueo de entrega de donación no asignada
-  Dada una donación en estado "DISPONIBLE",
-  Cuando se intenta registrar una confirmación de entrega sin haber sido tomada previamente por un voluntario,
-  Entonces el sistema bloquea la acción,
-  Y muestra un error indicando que la donación debe ser tomada formalmente antes de su entrega.
+Escenario: CA-04.2 Bloqueo defensivo de entrega de donación no asignada
+  Dada una donación en estado "DISPONIBLE" que aún no ha sido tomada en el catálogo por ningún voluntario,
+  Cuando se intenta ingresar a su URL de confirmación de entrega,
+  Entonces el sistema bloquea defensivamente el formulario desplegando la advertencia "ENTREGA BLOQUEADA",
+  E instruye al usuario a reservar la oferta previamente desde el catálogo de donaciones.
 
-Escenario: CA-04.3 Anonimización de beneficiarios finales (Cumplimiento Ley 1581)
+Escenario: CA-04.3 Anonimización de beneficiarios finales (Cumplimiento Ley 1581 de 2012)
   Dada la confirmación de entrega en el comedor comunitario,
   Cuando se consolida la información del acta digital,
   Entonces el sistema registra únicamente la institución receptora y la estimación agregada de raciones beneficiadas,
-  Y garantiza que no se solicitan ni almacenan nombres, documentos ni datos personales de personas beneficiarias.
+  Y garantiza que no se solicitan ni almacenan cédulas, documentos de identidad ni fotografías de comensales beneficiarios.
 ```
 
 * **Se prueba como:** `voluntario / encargado de comedor` · `teléfono`

@@ -127,21 +127,37 @@ export default function RadarMap({
       return baseMapNodes;
     }
 
-    const nodosExtra: MapNode[] = donacionesExternas
-      .filter((d) => d.coordenadas && typeof d.coordenadas.lat === 'number' && typeof d.coordenadas.lng === 'number')
-      .map((d) => ({
+    const ZONAS_FALLBACK: Record<ZonaCali, [number, number]> = {
+      CENTRO: [3.435, -76.528],
+      SUR: [3.434, -76.538],
+      NORTE: [3.475, -76.515],
+      ORIENTE: [3.422, -76.492],
+      LADERA: [3.428, -76.56],
+    };
+
+    const nodosExtra: MapNode[] = donacionesExternas.map((d) => {
+      let lat = d.coordenadas?.lat;
+      let lng = d.coordenadas?.lng;
+      if (typeof lat !== 'number' || typeof lng !== 'number') {
+        const fb = ZONAS_FALLBACK[d.zona || 'CENTRO'] || [3.435, -76.528];
+        lat = fb[0];
+        lng = fb[1];
+      }
+
+      return {
         id: `don-${d.id}`,
         kind: 'donor' as const,
-        lat: d.coordenadas!.lat,
-        lng: d.coordenadas!.lng,
-        label: d.donanteNombre || 'Donante',
-        sub: `${d.cantidadEstimada} ${d.unidadMedida} • ${d.tipoAlimento}`,
+        lat,
+        lng,
+        label: d.codigo ? `${d.codigo}: ${d.tipoAlimento}` : (d.donanteNombre || 'Donante'),
+        sub: `${d.cantidadEstimada} ${d.unidadMedida} • ${d.donanteNombre || 'Excedente'}${d.requiereFrio ? ' • ❄️ Frío' : ''}`,
         zona: d.zona || 'CENTRO',
         direccion: d.direccionRecogida,
         alcance: 'URBANO' as const,
         x: 0.5,
         y: 0.5,
-      }));
+      };
+    });
 
     if (nodosExtra.length === 0) return baseMapNodes;
     const idsExistentes = new Set(baseMapNodes.map((n) => n.id));

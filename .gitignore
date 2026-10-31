@@ -43,4 +43,11 @@ Contenido/**
 
 /planeacion_sprints/
 
+# Entregables y archivos de sustentacion interna
+*.docx
+Entrega*.docx
+docs/sustentacion/
+/docs/sustentacion/
+*sustentacion*
+
 .vercel

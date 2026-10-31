@@ -1,5 +1,5 @@
-// @vitest-environment jsdom
-import 'fake-indexeddb/auto'; // debe ir antes de importar la base de datos
+import 'fake-indexeddb/auto';
+if (typeof (globalThis as any).navigator === 'undefined') { (globalThis as any).navigator = { onLine: true }; }
 import { describe, test, expect, beforeEach, afterEach, vi } from 'vitest';
 import { db, guardarDonacionOffline, obtenerDonacionesPendientes } from '../../src/lib/db';
 import { sincronizarColaOffline } from '../../src/lib/sync/offline-sync';

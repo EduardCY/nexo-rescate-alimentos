@@ -55,25 +55,25 @@ Escenario: CA-01.2 Bloqueo por ventana de tiempo inválida (hora límite anterio
   Entonces el sistema impide el registro,
   Y muestra un mensaje de validación indicando que la hora límite de recogida debe ser posterior a la hora actual.
 
-Escenario: CA-01.3 Bloqueo por omisión de exención legal (Ley 1990 de 2019)
-  Dado que el comerciante diligencia todos los datos del lote de alimentos,
-  Cuando intenta presionar "Publicar Donación" sin marcar la casilla de exoneración legal sanitaria,
-  Entonces el sistema deshabilita el envío,
-  Y resalta la advertencia legal de obligatoriedad según la normativa colombiana.
+Escenario: CA-01.3 Bloqueo por omisión y resaltado visual de advertencia legal (Normativa Colombiana)
+  Dado que el comerciante diligencia el formulario de registro de donación en "/donar",
+  Cuando visualiza el bloque de declaración juramentada de inocuidad y responsabilidad legal,
+  Entonces el sistema exhibe un contenedor de alta visibilidad (borde semántico ámbar/esmeralda, icono de escudo legal y contraste >= 4.5:1 WCAG AA) que cita explícitamente la obligatoriedad de cumplir con la Ley 1990 de 2019 (política contra la pérdida y desperdicio de alimentos y exoneración de responsabilidad), la Resolución 2674 de 2013 del Ministerio de Salud / INVIMA (requisitos sanitarios de inocuidad) y la Ley 1581 de 2012 (Habeas Data),
+  Y cuando intenta presionar "Publicar Donación" sin marcar la casilla obligatoria, el sistema bloquea el envío, desplaza el foco al aviso legal y aplica un estado de alerta visual ("ring-2 ring-red-500") con el mensaje: "El cumplimiento y aceptación expresa de la normativa sanitaria y legal colombiana es obligatorio para publicar donaciones".
 
-Escenario: CA-01.4 Marcado de alimentos con requerimiento de refrigeración
-  Dado que el lote contiene alimentos perecederos (lácteos, carnes, preparados calientes),
-  Cuando el comercio marca la casilla "Requiere refrigeración",
-  Entonces la donación queda registrada con el indicador requiereFrio = true,
-  Y el sistema añade la etiqueta destacada visible para voluntarios y comedores con frío funcional.
+Escenario: CA-01.4 Marcado de cadena de frío y etiqueta explícita de "Temperatura Ambiente"
+  Dado un lote de alimentos en proceso de registro o publicado en el catálogo y radar logístico,
+  Cuando el alimento requiere cadena de frío (requiereFrio = true),
+  Entonces el sistema asigna y renderiza la etiqueta destacada "Requiere Refrigeración (0°C - 4°C)" y restringe su canalización a comedores con refrigeración funcional,
+  Y cuando el alimento no requiere refrigeración (requiereFrio = false),
+  Entonces el sistema asigna y renderiza explícitamente en el selector del formulario, tarjetas del catálogo y tablas operativas la etiqueta canónica "Temperatura Ambiente", erradicando abreviaturas ambiguas como "No (amb)" o "NO (AMB.)".
 
-Escenario: CA-01.5 Registro en entorno sin conexión móvil y sincronización reactiva (Offline-First)
-  Dado que el donante se encuentra en una plaza de mercado (Santa Elena o Cavasa) sin señal celular 4G,
+Escenario: CA-01.5 Generación determinista de código único offline y reconciliación sin colisiones
+  Dado que el donante se encuentra en una plaza de mercado (Santa Elena o Cavasa) sin conexión a Internet (navigator.onLine = false),
   Cuando completa y envía el formulario de donación,
-  Entonces el sistema almacena la donación localmente en el dispositivo (IndexedDB / Dexie.js) con código temporal OFFLINE-DON-X,
-  Y muestra una confirmación visual: "Guardado localmente — pendiente de sincronización",
-  Y al reanudarse la conexión a Internet, el sistema procesa la cola automáticamente,
-  Y actualiza de forma reactiva la interfaz del donante de OFFLINE-DON-X al código definitivo DON-XXX sin requerir recargar la página.
+  Entonces el sistema genera localmente un código único determinista bajo el formato "OFFLINE-DON-<YYMMDD>-<DEV4>-<SEQ3>-<ENT4>" (donde YYMMDD es la fecha local UTC-5, DEV4 son 4 caracteres hexadecimales de la huella persistente del dispositivo, SEQ3 es el secuencial diario local 001..999 y ENT4 son 4 caracteres base36 de entropía criptográfica) junto con una llave de idempotencia UUID v4 (idempotency_key),
+  Y almacena la donación en IndexedDB (Dexie.js) mostrando la confirmación: "Guardado localmente — pendiente de sincronización",
+  Y al restablecerse la conexión, el servidor verifica idempotency_key para prevenir duplicados, asigna el código secuencial canónico definitivo "DON-XXX", preserva el código local en codigo_origen_offline para trazabilidad forense, y actualiza reactivamente la interfaz del donante sin requerir recargar la página.
 ```
 
 * **Se prueba como:** `comercio / donante` · `teléfono`
@@ -232,43 +232,100 @@ Escenario: CA-04.3 Anonimización de beneficiarios finales (Cumplimiento Ley 158
 
 ---
 
-## CMP-05 · Consulta del estado y trazabilidad de una donación
+## CMP-05 · Control de Acceso Basado en Roles (RBAC), Gestión Corporativa de Usuarios, Trazabilidad e Impacto Real
 
-* **Historia (US5.1):** Como coordinadora general (Marcela Ocampo) o donante, quiero consultar en cualquier momento la línea de tiempo y el estado actual de una donación mediante su código de seguimiento, para verificar la trazabilidad completa y generar soporte auditado para los cooperantes.
-* **Comportamiento:** `CMP-05` en `comportamientos.md` · **Origen:** `RF-002` (Consulta de estado) | `RF-006` (Línea de tiempo) | `RF-007` (Reportes de impacto)
+* **Historia (US5.1 / US5.2):** Como Administrador del Sistema (`ADMIN`) o Coordinadora General (`COORDINADOR` — Marcela Ocampo), quiero aplicar un control de acceso estricto basado en roles (RBAC) con persistencia segura de sesión offline, administrar usuarios corporativos (creación, edición, suspensión), consultar la línea de tiempo inmutable por código (`DON-XXX`) y consolidar métricas de impacto 100% reales derivadas de base de datos, mientras que el rol `VOLUNTARIO` permanece confinado exclusivamente a sus operaciones logísticas de campo.
+* **Comportamiento:** `CMP-05` en `comportamientos.md` · **Origen:** `RF-002` (Consulta de estado) | `RF-006` (Línea de tiempo) | `RF-007` (Reportes de impacto) | `RNF-003` (Seguridad RBAC / Habeas Data) | `RNF-002` (Persistencia Offline)
 
 ### Criterios de Aceptación (Gherkin):
 
 ```gherkin
-Escenario: CA-05.1 Consulta de estado en tiempo real por código único
-  Dada una donación registrada con código "DON-101",
-  Cuando cualquier usuario con el código consulta su detalle,
-  Entonces el sistema presenta su estado vigente ("DISPONIBLE", "ASIGNADA", "ENTREGADA", "EXPIRADA", "CANCELADA"),
-  Y los datos públicos del lote (tipo de alimento, kilogramos y fecha de registro).
+Escenario: CA-05.1 Separación estricta de roles y confinamiento operativo del rol Voluntario (RBAC)
+  Dado un usuario autenticado cuyo rol asignado es "VOLUNTARIO",
+  Cuando opera en la plataforma o intenta navegar manualmente hacia rutas administrativas, de configuración o reportes globales ("/admin/usuarios", "/impacto", "/configuracion") o invocar sus Server Actions,
+  Entonces el sistema oculta de la barra de navegación cualquier acceso a módulos de administración y reportes globales,
+  Y el guardián de rutas y políticas RLS bloquean la solicitud devolviendo estado HTTP 403 Forbidden con la notificación: "Acceso restringido: Tu perfil de Voluntario está habilitado exclusivamente para operaciones de rescate y entrega en campo",
+  Permitiéndole operar únicamente en sus vistas delegadas ("/donaciones", "/ruta-activa", "/entregas/[id]" y "/rastreo" público).
 
-Escenario: CA-05.2 Línea de tiempo auditada de punta a punta
-  Dada una donación que ha culminado su ciclo de rescate en estado "ENTREGADA",
-  Cuando la coordinadora general consulta el historial detallado,
-  Entonces el sistema exhibe la línea de tiempo inmutable con marcas de tiempo verificables:
-    1. Registro: Donante emisor, cantidad en kg y fecha/hora de publicación.
-    2. Asignación: Voluntario de transporte y fecha/hora en que tomó la donación.
-    3. Cierre: Comedor comunitario receptor, fecha/hora de llegada y nombre del encargado de recepción.
+Escenario: CA-05.2 Módulo de Administración Corporativa de Usuarios exclusivo para Administrador del Sistema
+  Dado un usuario autenticado con rol "ADMIN" (Administrador del Sistema) en la ruta "/admin/usuarios",
+  Cuando ejecuta operaciones de creación de usuario, edición de atributos (rol, zona asignada, vehículo, teléfono, permisos granulares) o cambio de estado de cuenta ("ACTIVO" | "SUSPENDIDO" | "PENDIENTE_AUTORIZACION"),
+  Entonces el sistema valida que el ejecutor posea el permiso "admin:users:write",
+  Persiste la mutación en la tabla "usuarios", registra un evento inmutable en la bitácora "audit_rbac_eventos" con el ID del administrador y el motivo,
+  Y si un usuario pasa a estado "SUSPENDIDO", invalida su sesión activa e impide que tome donaciones o ejecute mutaciones.
 
-Escenario: CA-05.3 Transparencia de métricas sin datos inventados (Prueba de Gobierno)
-  Dada la visualización del acumulado de impacto institucional,
-  Cuando la coordinadora consulta el total de kilogramos rescatados en el periodo,
-  Entonces el sistema calcula el total estrictamente mediante la sumatoria de donaciones en estado "ENTREGADA",
-  Y garantiza que ninguna cifra de impacto proviene de valores prefabricados o constantes sin origen en base de datos.
+Escenario: CA-05.3 Persistencia y validación segura de sesión y permisos RBAC en modo Offline
+  Dado que un usuario autenticado ha iniciado sesión previamente con conexión y su perfil RBAC fue almacenado en el store "sesion_rbac" de IndexedDB junto con un sello de integridad firmado (HMAC-SHA256) y tiempo de expiración (TTL 24 horas),
+  Cuando la PWA se abre, recarga o navega sin conexión a Internet (navigator.onLine = false),
+  Entonces el motor de autorización local verifica la firma criptográfica y la vigencia del TTL de la sesión almacenada,
+  Mantiene activos únicamente los permisos correspondientes a su rol (permitiendo al "VOLUNTARIO" consultar el catálogo cacheado y encolar entregas en el Outbox, pero bloqueando el acceso a "/admin/usuarios"),
+  Y si detecta manipulación manual del rol en almacenamiento local o expiración del TTL, revoca el acceso a rutas protegidas hasta revalidar credenciales en línea.
+
+Escenario: CA-05.4 Línea de tiempo auditada por código (DON-XXX) y métricas de impacto con Cero Datos Inventados
+  Dada una donación consultada en "/rastreo" mediante su código único (ej. "DON-101") o la vista de impacto institucional en "/impacto",
+  Cuando la coordinadora general o el donante consulta la trazabilidad o el acumulado de impacto,
+  Entonces el sistema exhibe la línea de tiempo inmutable de 3 hitos verificables (1. Registro por donante, 2. Asignación a voluntario, 3. Cierre y recepción en comedor comunitario),
+  Y calcula el total de kilogramos rescatados, raciones servidas y CO2 evitado estrictamente mediante la sumatoria en base de datos de donaciones en estado "ENTREGADA",
+  Garantizando que ninguna cifra provenga de valores prefabricados o constantes simuladas (retornando 0 si no existen entregas completadas).
 ```
 
-* **Se prueba como:** `coordinadora general` · `escritorio (computador)` / `donante` · `teléfono`
+* **Se prueba como:** `administrador del sistema / coordinadora general` · `escritorio (computador)` / `voluntario / donante` · `teléfono`
 
 ### Definición de Terminado (DoD Específico):
 
-- [ ] Cumple todos sus criterios de aceptación (`CA-05.1` a `CA-05.3`).
-- [ ] El código está revisado y aprobado por otro integrante (Peer review / QA).
-- [ ] Tiene pruebas automatizadas y todas pasan.
-- [ ] Está integrada en `main` sin romper la compilación.
+- [ ] Cumple todos sus criterios de aceptación (`CA-05.1` a `CA-05.4`).
+- [ ] El código está revisado y aprobado por otro integrante (Peer review / QA por Eduard Criollo Yule y Felipe Charria Caicedo).
+- [ ] Tiene pruebas automatizadas y todas pasan (`cmp-05-trazabilidad-impacto.test.ts` y `cmp-05-rbac-usuarios.test.ts`).
+- [ ] Está integrada en `main` sin romper la compilación (`npm run build` en verde).
 - [ ] La documentación afectada está actualizada en `docs/spec/`.
-- [ ] Pasan las dos pruebas de gobierno (cifras 100% calculadas desde registros reales).
-- [ ] Se probó entrando con el rol real de coordinadora en dispositivo de escritorio.
+- [ ] Pasan las dos pruebas de gobierno (cifras 100% calculadas desde registros reales y confinamiento RBAC verificado).
+- [ ] Se probó entrando con los roles reales (`ADMIN`, `COORDINADOR`, `VOLUNTARIO`) en dispositivos de escritorio y móvil.
+
+---
+
+## CMP-PWA (TRANSVERSAL) · Arquitectura PWA Offline-First Estricta y Sostenibilidad DevOps
+
+* **Historia (US-PWA.1):** Como actor operativo de la Red de Rescate (Donante en plaza de mercado, Voluntario en ruta o Coordinador), quiero que la aplicación web progresiva (PWA) abra en frío, se recargue (`F5` / pull-to-refresh), permita navegar por todas las rutas y modificar datos con una cola de sincronización auditable aun sin conexión a Internet, manteniendo las compuertas de calidad CI/CD y el costo operativo de `\$0.00 USD/mes`.
+* **Comportamiento:** `TRANSVERSAL` (`CMP-PWA`) en `comportamientos.md` · **Origen:** `RNF-001` | `RNF-002` (Offline-First) | `RNF-005` (`\$0 USD/mes`) | `RF-018` (Purga 30 días)
+
+### Criterios de Aceptación (Gherkin):
+
+```gherkin
+Escenario: CA-PWA.1 Apertura en frío y recarga resiliente (App Shell Pre-caching)
+  Dado que el usuario ha accedido al menos una vez a la plataforma y el Service Worker ("public/sw.js") ha completado su ciclo de instalación y activación,
+  Cuando el dispositivo pierde totalmente la conexión a Internet (Modo Avión o caída de red móvil en plaza de mercado) y el usuario abre la PWA desde el ícono de inicio o ejecuta una recarga forzada (F5 / pull-to-refresh) en cualquier ruta ("/", "/donar", "/donaciones", "/ruta-activa", "/rastreo"),
+  Entonces el Service Worker intercepta la petición de documento y responde desde la caché local del App Shell en menos de 500 ms,
+  Y el navegador jamás muestra la pantalla de error nativa de desconexión ("Sin conexión" / dinosaurio).
+
+Escenario: CA-PWA.2 Estrategia multicapa del Service Worker por tipo de recurso
+  Dado el Service Worker activo controlando el alcance ("scope: '/'") de la aplicación,
+  Cuando el cliente solicita recursos estáticos inmutables ("/_next/static/*", iconos, fuentes), documentos HTML/RSC o datos de negocio,
+  Entonces aplica "Cache-First" para activos estáticos inmutables, "Stale-While-Revalidate" para documentos y vistas del App Shell, y "Network-First" con timeout de 3000 ms y fallback a IndexedDB para consultas de datos.
+
+Escenario: CA-PWA.3 Navegación Client-Side (SPA Routing) sin fugas de red en modo Offline
+  Dado que el usuario navega entre vistas de la aplicación mientras navigator.onLine es false,
+  Cuando transiciona entre "/", "/donar", "/donaciones", "/ruta-activa", "/entregas/[id]" y "/rastreo",
+  Entonces el enrutador resuelve las vistas localmente desde el App Shell pre-cacheado o el fallback offline ("/~offline"),
+  Y ninguna transición de ruta provoca excepciones no controladas ni pantallas en blanco.
+
+Escenario: CA-PWA.4 Modificación local y Cola de Sincronización Auditable (Outbox Pattern)
+  Dado que un usuario autenticado realiza una creación o mutación de datos sin conexión (publicar donación, tomar donación o registrar acta de entrega),
+  Cuando confirma la operación en modo offline,
+  Entonces el sistema persiste el cambio en la tabla "outbox_mutations" de IndexedDB (Dexie v2) con metadatos de auditoría (idempotencyKey, tipoOperacion, payload, syncStatus, retryCount),
+  Y expone un Inspector Visual de Cola Offline donde el usuario puede auditar los ítems pendientes, ver su estado y disparar reintentos al recuperar red.
+
+Escenario: CA-PWA.5 Catálogo de productos y donaciones offline con sincronización delta
+  Dado que el dispositivo descargó el catálogo de productos estandarizados ("catalogo_productos") y las donaciones activas ("donaciones_cache") en IndexedDB,
+  Cuando el usuario opera sin conexión en "/donar" o "/donaciones",
+  Entonces puede consultar, buscar y filtrar categorías, productos y donaciones por zona y cadena de frío directamente desde IndexedDB,
+  Y al recuperar conexión el sistema ejecuta una sincronización delta trayendo únicamente los registros cuyo "updated_at" sea posterior a "last_sync_timestamp".
+```
+
+* **Se prueba como:** `todos los roles` · `teléfono (Modo Avión / Offline en DevTools) y escritorio`
+
+### Definición de Terminado (DoD Específico):
+
+- [ ] Cumple todos sus criterios de aceptación (`CA-PWA.1` a `CA-PWA.5`) y las compuertas DevOps (`TASK-15` / `TASK-31`).
+- [ ] El código está revisado y aprobado en GitHub mediante Pull Request por el Product Owner (Eduard Criollo Yule) y QA (Felipe Charria Caicedo).
+- [ ] `next.config.mjs` compila limpio sin `ignoreBuildErrors` ni `ignoreDuringBuilds`.
+- [ ] Todas las suites de Vitest pasan al 100% en verde y el presupuesto se mantiene en `\$0.00 USD/mes`.

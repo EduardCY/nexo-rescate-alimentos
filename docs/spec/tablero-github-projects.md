@@ -53,9 +53,9 @@ Comportamiento: CMP-01 en comportamientos.md · Origen: RF-001 - US1.1
 Criterios de aceptación
 - CA-01.1 Dado un comercio con sesión iniciada, cuando registra el tipo de alimento, la cantidad, la ventana de recogida y la ubicación, y acepta la exoneración de la Ley 1990 de 2019, entonces la donación queda en estado DISPONIBLE y aparece en la lista de los voluntarios.
 - CA-01.2 Dada una ventana cuya hora límite es anterior o igual a la hora de publicación, cuando el comercio intenta publicar, entonces se rechaza y se le dice que la hora límite debe ser posterior.
-- CA-01.3 Dado que el comercio diligencia los datos pero omite la casilla de exención legal sanitaria (Ley 1990 de 2019), cuando intenta enviar, el sistema deshabilita el envío y resalta la advertencia legal de obligatoriedad.
-- CA-01.4 Dado que el alimento requiere refrigeración, cuando se publica, entonces la donación queda marcada con la etiqueta destacada "Requiere Refrigeración" y solo la pueden reservar comedores con refrigeración funcional (ver CMP-02).
-- CA-01.5 Dado que el comercio se encuentra sin señal en la plaza de mercado, cuando envía la oferta, el sistema la guarda localmente en IndexedDB y la sincroniza al recuperar red.
+- CA-01.3 Dado que el comercio diligencia los datos en /donar, el sistema resalta visualmente la advertencia legal obligatoria sobre la normativa colombiana aplicable (Ley 1990 de 2019, Resolución 2674 de 2013 INVIMA y Ley 1581 de 2012) y bloquea el envío si omite marcar la casilla.
+- CA-01.4 Dado que el alimento requiere refrigeración, se etiqueta como "Requiere Refrigeración (0°C - 4°C)" y solo lo reservan comedores con frío funcional; cuando no requiere refrigeración (requiereFrio = false), se etiqueta explícitamente como "Temperatura Ambiente" (erradicando "No (amb)" / "NO (AMB.)").
+- CA-01.5 Dado que el comercio se encuentra sin señal en la plaza de mercado, cuando envía la oferta, el sistema le asigna un código único determinista OFFLINE-DON-<YYMMDD>-<DEV4>-<SEQ3>-<ENT4> + idempotency_key UUID v4 en IndexedDB y lo reconcilia sin colisiones al recuperar red.
 
 Se prueba como: comercio · teléfono
 
@@ -178,44 +178,69 @@ Definición de Terminado
 
 ---
 
-### Issue 5: CMP-05 · Consulta del estado y trazabilidad de una donación
+### Issue 5: CMP-05 · Control de acceso RBAC, gestión de usuarios, trazabilidad e impacto real
 
-* **Título:** `CMP-05 · Consulta del estado y trazabilidad de una donación`
-* **Labels:** `historia`, `mvp`, `cmp-05`
+* **Título:** `CMP-05 · Control de acceso RBAC, gestión de usuarios, trazabilidad e impacto real`
+* **Labels:** `historia`, `mvp`, `cmp-05`, `rbac`
 * **Campos del Tablero:**
   * **Status:** `Por hacer`
   * **CMP:** `CMP-05`
-  * **Origen:** `RF-002 · US5.1`
-  * **Estimación:** `3`
-  * **Assignee:** Eduard Criollo Yule / Juan Sebastián Delgado
+  * **Origen:** `RF-002 / RF-006 / RF-007 / RNF-003 · US5.1`
+  * **Estimación:** `4`
+  * **Assignee:** Eduard Criollo Yule / Juan Sebastián Delgado / Alejandro Rodríguez Cortés / Santiago Valencia Sandoval / Felipe Charria Caicedo / Juan Camilo Peña Sandoval
 
 ```markdown
-Historia (US5.1): Como coordinadora general (Marcela Ocampo) o donante, quiero consultar en cualquier momento la línea de tiempo y el estado actual de una donación mediante su código de seguimiento, para verificar la trazabilidad completa y generar soporte auditado para los cooperantes.
+Historia (US5.1 / US5.2): Como Administrador del Sistema (ADMIN) o Coordinadora General (COORDINADOR), quiero aplicar un control de acceso estricto basado en roles (RBAC) con persistencia segura de sesión offline, administrar usuarios corporativos, consultar la línea de tiempo inmutable por código (DON-XXX) y consolidar métricas de impacto 100% reales derivadas de base de datos, mientras que el rol VOLUNTARIO permanece confinado a sus operaciones delegadas en campo.
 
-Comportamiento: CMP-05 en comportamientos.md · Origen: RF-002 / RF-006 / RF-007 - US5.1
+Comportamiento: CMP-05 en comportamientos.md · Origen: RF-002 / RF-006 / RF-007 / RNF-003 - US5.1
 
 Criterios de aceptación
-- CA-05.1 Dada una donación registrada con código DON-101, cuando cualquier usuario con el código consulta su detalle, entonces el sistema retorna su estado vigente y datos públicos del lote.
-- CA-05.2 Dada una donación en estado ENTREGADA, cuando la coordinadora consulta su historial, entonces el sistema presenta la línea de tiempo completa: fecha/hora de publicación por donante, asignación al voluntario y entrega final en comedor.
-- CA-05.3 Dada la visualización del resumen de impacto, cuando la coordinadora consulta los kilogramos rescatados, entonces el sistema calcula el total estrictamente mediante la sumatoria de donaciones entregadas, garantizando que ninguna cifra provenga de datos inventados.
+- CA-05.1 Separación estricta de roles: el rol VOLUNTARIO queda estrictamente confinado a operaciones de campo (/donaciones, /ruta-activa, /entregas/[id]) y recibe HTTP 403 Forbidden si intenta acceder a configuración, reportes globales (/impacto) o administración (/admin/usuarios).
+- CA-05.2 Módulo de Administración exclusivo para ADMIN (/admin/usuarios): creación, suspensión (SUSPENDIDO) y edición de usuarios, asignación granular de permisos y bitácora audit_rbac_eventos.
+- CA-05.3 Persistencia de sesión offline: validación segura del perfil RBAC en IndexedDB (sesion_rbac) con firma de integridad HMAC-SHA256 y TTL de 24h cuando la PWA opera sin conexión.
+- CA-05.4 Línea de tiempo auditada por código (DON-XXX) en /rastreo y métricas de impacto en /impacto calculadas 100% desde donaciones en estado ENTREGADA (cero datos inventados).
 
-Se prueba como: coordinadora general · escritorio (computador) / donante · teléfono
+Se prueba como: administrador / coordinadora general · escritorio / voluntario / donante · teléfono
 
 Definición de Terminado
-- [ ] Cumple todos sus criterios de aceptación
-- [ ] El código está revisado y aprobado por otro integrante
+- [ ] Cumple todos sus criterios de aceptación (CA-05.1 a CA-05.4)
+- [ ] El código está revisado y aprobado en GitHub PR por Product Owner (Eduard Criollo) y QA (Felipe Charria)
 - [ ] Tiene pruebas automatizadas y todas pasan
 - [ ] Está integrada en main sin romper la compilación
 - [ ] La documentación afectada está actualizada en docs/spec/
-- [ ] Pasan las dos pruebas de gobierno (cifras 100% calculadas desde base de datos real)
-- [ ] Se probó entrando con el rol real de coordinadora en dispositivo de escritorio
+- [ ] Pasan las dos pruebas de gobierno (cifras 100% calculadas desde base de datos real y confinamiento RBAC)
+- [ ] Se probó entrando con los roles reales en escritorio y móvil
 ```
 
 ---
 
-## 3. Desglose de Tareas Atómicas por Criterio para Sprints 1 y 2 (Asignaciones Individuales)
+### Issue 6: TRANSVERSAL (CMP-PWA) · Arquitectura PWA Offline-First Estricta, Ajustes CMP-01 y Cierre DevOps/QA
 
-Cumpliendo con la regla de oro del Módulo 3 (**cada tarea atómica apunta a un único criterio de aceptación y se ejecuta en ≤ 4 horas por una persona asignada**), a continuación se presentan las tareas del tablero:
+* **Título:** `TRANSVERSAL · Arquitectura PWA Offline-First Estricta, Ajustes CMP-01 y Cierre DevOps/QA`
+* **Labels:** `historia`, `mvp`, `transversal`, `pwa`, `devops`
+* **Campos del Tablero:**
+  * **Status:** `Por hacer`
+  * **CMP:** `TRANSVERSAL`
+  * **Origen:** `RNF-002 / RNF-005 / RF-018 / CMP-01`
+  * **Estimación:** `4`
+  * **Assignee:** Equipo Completo (6 Colaboradores)
+
+```markdown
+Historia (US-PWA.1): Como actor operativo en terreno sin señal móvil, quiero que la PWA abra en frío, se recargue (F5) y navegue sin conexión sin mostrar pantallas de error del navegador, permita encolar mutaciones en un Outbox auditable y consultar el catálogo offline con sincronización delta, cumpliendo los ajustes normativos de CMP-01 y manteniendo $0 USD/mes en producción.
+
+Criterios de aceptación
+- CA-PWA.1 Apertura en frío y recarga (F5) resiliente mediante App Shell Pre-caching en Service Worker (public/sw.js).
+- CA-PWA.2 Estrategias Cache-First (estáticos), Stale-While-Revalidate (HTML/App Shell) y Network-First con fallback a IndexedDB (datos).
+- CA-PWA.3 Navegación Client-Side (SPA Routing) resuelta localmente con fallback a /~offline.
+- CA-PWA.4 Modificación local y Cola de Sincronización Auditable (Outbox Pattern en IndexedDB + Inspector Visual).
+- CA-PWA.5 Catálogo de productos y donaciones offline con sincronización delta + ajustes CA-01.3, CA-01.4 ("Temperatura Ambiente") y CA-01.5 (código determinista OFFLINE-DON-<YYMMDD>-<DEV4>-<SEQ3>-<ENT4>).
+```
+
+---
+
+## 3. Desglose de Tareas Atómicas por Criterio para Sprints 1, 2 y 3 (Asignaciones Individuales)
+
+Cumpliendo con la regla de oro del Módulo 3 (**cada tarea atómica apunta a un criterio de aceptación acotado, se ejecuta en ≤ 4 horas por una persona asignada desde su propia cuenta de GitHub y requiere Pull Request aprobado por Product Owner + QA**), a continuación se presentan las tareas del tablero:
 
 | ID Tarea | Título Atómico | Criterio de Aceptación Asociado | Responsable Asignado | Rol en el Equipo | Estimación | Estado |
 | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
@@ -231,17 +256,27 @@ Cumpliendo con la regla de oro del Módulo 3 (**cada tarea atómica apunta a un 
 | **`TASK-10`** | Diseñar y ejecutar suite de pruebas automatizadas de concurrencia y estrés para `CMP-03` | `CA-03.2` (Prueba de gobierno concurrencia) | **Felipe Charria Caicedo** | QA Engineer | 4h | `Terminado` |
 | **`TASK-11`** | Construir flujo móvil de confirmación de entrega física en comedor con registro de receptor | `CA-04.1`, `CA-04.2` (Cierre entrega) | **Alejandro Rodríguez Cortés** | Full-Stack Developer | 3h | `Terminado` |
 | **`TASK-12`** | Auditar y verificar que no se capturen datos personales sensibles de beneficiarios (Ley 1581) | `CA-04.3` (Habeas Data) | **Felipe Charria Caicedo** | QA Engineer | 2h | `Terminado` |
-| **`TASK-13`** | Implementar pantalla de consulta pública y línea de tiempo por código único (`DON-XXX`) | `CA-05.1`, `CA-05.2` (Trazabilidad) | **Santiago Valencia Sandoval** | UX / Frontend Support | 3h | `Por hacer` |
-| **`TASK-14`** | Construir agregador de métricas de kilogramos rescatados garantizando cero datos inventados | `CA-05.3` (Cifras reales auditadas) | **Eduard Criollo Yule** | Product Owner / Lead | 3h | `Por hacer` |
-| **`TASK-15`** | Configurar pipeline de CI en GitHub Actions y monitoreo de cuotas de capa gratuita ($0 USD/mes) | Transversal (`RNF-005`) | **Juan Camilo Peña Sandoval** | DevOps Engineer | 4h | `Terminado` |
+| **`TASK-13`** | Implementar pantalla de consulta pública (`/rastreo`), línea de tiempo (`TimelineTracker`) y bloqueo visual RBAC | `CA-05.1`, `CA-05.4` (`CMP-05`) | **Santiago Valencia Sandoval** | UX / Frontend Support | 3h | `Por hacer` |
+| **`TASK-14`** | Construir agregador de métricas de kilos reales (Cero Datos Inventados) y matriz de gobernanza RBAC | `CA-05.1`, `CA-05.4` (`CMP-05`) | **Eduard Criollo Yule** | Product Owner / Lead | 3h | `Por hacer` |
+| **`TASK-15`** | Configurar pipeline de CI en GitHub Actions y monitoreo de cuotas de capa gratuita (\$0 USD/mes) | Transversal (`RNF-005`) | **Juan Camilo Peña Sandoval** | DevOps Engineer | 4h | `Terminado` |
 | **`TASK-16`** | Implementar temporizador reactivo `useCountdown` y ocultamiento automático de donaciones expiradas | `CA-02.4` (Expiración automática) | **Juan Sebastián Delgado** | Backend / Full-Stack | 3h | `Terminado` |
 | **`TASK-17`** | Construir suite automatizada de pruebas unitarias para `CMP-02` (Catálogo, Filtros y Cadena de Frío) | `CA-02.1` a `CA-02.4` (Cobertura QA) | **Felipe Charria Caicedo** | QA Engineer | 3h | `Terminado` |
 | **`TASK-18`** | Implementar tarjeta y pantalla de Ruta Activa del voluntario (`RutaActivaCard.tsx` y `/ruta-activa`) | `CA-03.1` (Datos de recogida en ruta) | **Eduard Criollo Yule** | Product Owner / Lead | 3h | `Terminado` |
 | **`TASK-19`** | Integrar mapa cartográfico interactivo OpenStreetMap / Leaflet con arquitectura escalable multi-región | `CA-02.1`, `CA-02.3` (Mapa y zonas) | **Alejandro Rodríguez Cortés** | Full-Stack Developer | 4h | `Terminado` |
-| **`TASK-20`** | Integrar selector cartográfico interactivo OpenStreetMap en `/donar` con Leaflet, pin arrastrable, presets de plazas y captura de puesto y teléfono | `CA-01.1`, `RNF-001` (Georreferenciación $0 USD) | **Alejandro Rodríguez Cortés** | Full-Stack Developer | 3h | `Terminado` |
+| **`TASK-20`** | Integrar selector cartográfico interactivo OpenStreetMap en `/donar` con Leaflet, pin arrastrable, presets de plazas y captura de puesto y teléfono | `CA-01.1`, `RNF-001` (Georreferenciación \$0 USD) | **Alejandro Rodríguez Cortés** | Full-Stack Developer | 3h | `Terminado` |
 | **`TASK-21`** | Desarrollar coordinador centralizado de sincronización offline reactiva (`offline-sync.ts`), normalización temporal de horas vencidas y suite de integración | `CA-01.5`, `RNF-002` (Offline-First) | **Juan Sebastián Delgado** | Backend Developer | 4h | `Terminado` |
 | **`TASK-22`** | Implementar soporte multivoluntario en `RadarMap.tsx` con gestión dinámica de flota, ciclado secuencial `map.fitBounds()` y trazado de rutas concurrentes | `CA-02.3` (Radar logístico de flota) | **Alejandro Rodríguez Cortés** | Full-Stack Developer | 3h | `Terminado` |
 | **`TASK-23`** | Georreferenciar excedentes disponibles en el mapa interactivo con pines de producto/kg y fallback automático por zona de Cali | `CA-02.1`, `CA-02.3` (Excedentes en mapa) | **Eduard Criollo Yule** | Product Owner / Lead | 2h | `Terminado` |
+| **`TASK-24`** | Implementar modelo RBAC en PostgreSQL/RLS, Server Actions de Administración de Usuarios y sesión offline firmada (`sesion_rbac`) | `CA-05.1`, `CA-05.2`, `CA-05.3` (`CMP-05`) | **Juan Sebastián Delgado** | Backend Developer | 4h | `Por hacer` |
+| **`TASK-25`** | Implementar Panel de Impacto (`/impacto`), Módulo Admin de Usuarios (`/admin/usuarios`), exportación CSV y middleware RBAC | `CA-05.1`, `CA-05.2`, `CA-05.4` (`CMP-05`) | **Alejandro Rodríguez Cortés** | Full-Stack Developer | 4h | `Por hacer` |
+| **`TASK-26`** | Diseñar suite BDD de pruebas para `CMP-05`: Trazabilidad, Cero Datos Inventados, confinamiento RBAC y sesión offline | `CA-05.1` a `CA-05.4` (`CMP-05`) | **Felipe Charria Caicedo** | QA Engineer | 3h | `Por hacer` |
+| **`TASK-27`** | Configurar políticas de seguridad RBAC en despliegue, auditoría de rutas protegidas en CI y verificación de cabeceras | `CA-05.1`, `RNF-003` (`CMP-05`) | **Juan Camilo Peña Sandoval** | DevOps Engineer | 3h | `Por hacer` |
+| **`TASK-28`** | Implementar Service Worker Offline-First (`public/sw.js`), App Shell Pre-caching, ruta `/~offline` y registro resiliente | `CA-PWA.1`, `CA-PWA.2`, `CA-PWA.3` (`TRANSVERSAL`) | **Alejandro Rodríguez Cortés** | Full-Stack Developer | 4h | `Por hacer` |
+| **`TASK-29`** | Evolucionar IndexedDB (Dexie v2) con Patrón Outbox auditable, Catálogo Offline con delta sync y código determinista `OFFLINE-DON` | `CA-PWA.4`, `CA-PWA.5`, `CA-01.5` (`TRANSVERSAL`) | **Juan Sebastián Delgado** | Backend Developer | 4h | `Por hacer` |
+| **`TASK-30`** | Aplicar ajustes UI/UX de `CMP-01` (Advertencia legal colombiana, etiqueta *"Temperatura Ambiente"*) e Inspector de Cola Outbox | `CA-01.3`, `CA-01.4`, `CA-PWA.4` (`TRANSVERSAL`) | **Santiago Valencia Sandoval** | UX / Frontend Support | 3h | `Por hacer` |
+| **`TASK-31`** | Endurecer `next.config.mjs` (eliminar `ignoreBuildErrors`), generar iconos PWA reales y actualizar compuertas CI/CD y Free Tier | `CA-PWA.1`, `RNF-005`, `RF-018` (`TRANSVERSAL`) | **Juan Camilo Peña Sandoval** | DevOps Engineer | 3h | `Por hacer` |
+| **`TASK-32`** | Ejecutar suite de pruebas transversales PWA Offline-First, algoritmo determinista C1 y Co-Revisión QA de PRs | `CA-PWA.1` a `CA-PWA.5`, `CA-01.3` a `CA-01.5` (`TRANSVERSAL`) | **Felipe Charria Caicedo** | QA Engineer | 3h | `Por hacer` |
+| **`TASK-33`** | Ejecutar Revisión Transversal Final 360°, auditoría y merge de PRs junto a QA, validación de Gobierno y cierre DoD en `main` | Gobernanza Total (`CMP-01` a `CMP-05` + `TRANSVERSAL`) | **Eduard Criollo Yule** | Product Owner / Lead | 3h | `Por hacer` |
 
 ---
 
@@ -854,6 +889,244 @@ Como voluntario en campo, quiero que los excedentes de comida disponibles del ca
 
 ### Criterios de Aceptación BDD
 - `CA-02.1`: Visualización cartográfica de ofertas vigentes y excedentes en mapa.
+```
+
+---
+
+#### Issue TASK-24: Modelo RBAC en PostgreSQL/RLS, Server Actions Admin y Sesión Offline Firmada
+* **Título:** `[TASK-24] Implementar modelo RBAC en PostgreSQL/RLS, Server Actions de Administración de Usuarios y sesión offline firmada (sesion_rbac)`
+* **Campos del Tablero:**
+  * **Status:** `Por hacer`
+  * **CMP:** `CMP-05`
+  * **Origen:** `RNF-003`, `RNF-002`
+  * **Estimación:** `4`
+  * **Assignee:** Juan Sebastián Delgado (`Backend Developer`)
+  * **Labels:** `tarea`, `sprint-3`, `backend`, `rbac`, `cmp-05`
+
+```markdown
+### Contexto y Descripción Técnica
+Como Backend Developer, debo implementar en PostgreSQL/Supabase y en el cliente la separación estricta de roles (`ADMIN`, `COORDINADOR`, `VOLUNTARIO`, `DONANTE`, `RECEPTOR`), las Server Actions exclusivas del Administrador para gestión de usuarios y la persistencia segura de sesión offline en IndexedDB (`sesion_rbac`) con firma de integridad y TTL.
+
+### Entregables
+- Migración SQL `supabase/migrations/20261101000000_cmp05_rbac_usuarios.sql` con rol `ADMIN`, columna `estado_cuenta`, tabla `audit_rbac_eventos` y políticas RLS.
+- Server Actions en `src/actions/usuarios-admin.ts` (`crearUsuarioCorporativo`, `actualizarRolYPermisos`, `cambiarEstadoCuentaUsuario`) con validación de permiso `admin:users:write`.
+- Módulo `src/lib/auth/offline-session.ts` para guardar y verificar `sesion_rbac` en IndexedDB con firma HMAC-SHA256 y TTL de 24h.
+
+### Criterios de Aceptación BDD
+- `CA-05.1`: Confinamiento del rol `VOLUNTARIO` (`403 Forbidden` en endpoints administrativos).
+- `CA-05.2`: Capacidades exclusivas del `ADMIN` con auditoría inmutable.
+- `CA-05.3`: Persistencia y validación segura de sesión RBAC en modo offline.
+```
+
+---
+
+#### Issue TASK-25: Panel de Impacto, Módulo de Administración de Usuarios, Exportación CSV y Guardas RBAC
+* **Título:** `[TASK-25] Implementar Panel de Impacto (/impacto), Módulo Admin de Usuarios (/admin/usuarios), exportación CSV y middleware RBAC`
+* **Campos del Tablero:**
+  * **Status:** `Por hacer`
+  * **CMP:** `CMP-05`
+  * **Origen:** `RF-007`, `RNF-003`
+  * **Estimación:** `4`
+  * **Assignee:** Alejandro Rodríguez Cortés (`Full-Stack Developer`)
+  * **Labels:** `tarea`, `sprint-3`, `frontend`, `rbac`, `cmp-05`
+
+```markdown
+### Contexto y Descripción Técnica
+Como Full-Stack Developer, debo construir las vistas corporativas `/impacto` (con exportación CSV auditada) y `/admin/usuarios` (exclusiva para `ADMIN`), junto con el guardián de rutas `src/middleware.ts` que confina estrictamente al rol `VOLUNTARIO` a sus vistas operativas delegadas.
+
+### Entregables
+- Vistas `src/app/impacto/page.tsx`, `src/components/admin/MetricasDashboard.tsx` y `src/components/admin/ExportarReporteCSV.tsx`.
+- Vista `src/app/admin/usuarios/page.tsx` y tabla `src/components/admin/UsuariosAdminTable.tsx` para alta, edición y suspensión de cuentas.
+- Guardián de rutas `src/middleware.ts` con respuesta `403 Forbidden` / redirección protegida para `VOLUNTARIO`.
+
+### Criterios de Aceptación BDD
+- `CA-05.1`, `CA-05.2`, `CA-05.4`.
+```
+
+---
+
+#### Issue TASK-26: Suite BDD de Pruebas para CMP-05 (Trazabilidad, Impacto Real y RBAC)
+* **Título:** `[TASK-26] Diseñar suite BDD de pruebas para CMP-05: Trazabilidad, Cero Datos Inventados, confinamiento RBAC y sesión offline`
+* **Campos del Tablero:**
+  * **Status:** `Por hacer`
+  * **CMP:** `CMP-05`
+  * **Origen:** `RF-006`, `RF-007`, `RNF-003`
+  * **Estimación:** `3`
+  * **Assignee:** Felipe Charria Caicedo (`QA Engineer`)
+  * **Labels:** `tarea`, `sprint-3`, `qa`, `testing`, `cmp-05`
+
+```markdown
+### Contexto y Descripción Técnica
+Como QA Engineer, debo certificar matemáticamente que las métricas de impacto sumen exclusivamente donaciones `ENTREGADA` (cero datos inventados), que la línea de tiempo sea coherente y que el rol `VOLUNTARIO` o un usuario `SUSPENDIDO` reciban rechazo `403 Forbidden` tanto online como offline.
+
+### Entregables
+- Suites `tests/unit/cmp-05-trazabilidad-impacto.test.ts` y `tests/unit/cmp-05-rbac-usuarios.test.ts`.
+
+### Criterios de Aceptación BDD
+- `CA-05.1`, `CA-05.2`, `CA-05.3`, `CA-05.4`.
+```
+
+---
+
+#### Issue TASK-27: Auditoría de Rutas Protegidas RBAC en CI y Cabeceras de Seguridad
+* **Título:** `[TASK-27] Configurar políticas de seguridad RBAC en despliegue, auditoría de rutas protegidas en CI y verificación de cabeceras`
+* **Campos del Tablero:**
+  * **Status:** `Por hacer`
+  * **CMP:** `CMP-05`
+  * **Origen:** `RNF-003`
+  * **Estimación:** `3`
+  * **Assignee:** Juan Camilo Peña Sandoval (`DevOps Engineer`)
+  * **Labels:** `tarea`, `sprint-3`, `devops`, `security`, `cmp-05`
+
+```markdown
+### Contexto y Descripción Técnica
+Como DevOps Engineer, debo asegurar que las cabeceras HTTP de seguridad y la protección de rutas corporativas (`/admin/usuarios`, `/impacto`) se verifiquen automáticamente en el pipeline de integración continua antes de cada despliegue.
+
+### Entregables
+- Script de verificación `scripts/verify-rbac-routes.mjs` integrado en CI.
+- Cabeceras de seguridad (`X-Frame-Options`, `X-Content-Type-Options`, `Service-Worker-Allowed`) en `next.config.mjs`.
+
+### Criterios de Aceptación BDD
+- `CA-05.1`, `RNF-003`.
+```
+
+---
+
+#### Issue TASK-28: Service Worker Offline-First, App Shell Pre-caching y Navegación SPA sin Red
+* **Título:** `[TASK-28] Implementar Service Worker Offline-First (public/sw.js), App Shell Pre-caching, ruta /~offline y registro resiliente`
+* **Campos del Tablero:**
+  * **Status:** `Por hacer`
+  * **CMP:** `TRANSVERSAL`
+  * **Origen:** `RNF-002`
+  * **Estimación:** `4`
+  * **Assignee:** Alejandro Rodríguez Cortés (`Full-Stack Developer`)
+  * **Labels:** `tarea`, `sprint-3`, `frontend`, `pwa`, `offline`
+
+```markdown
+### Contexto y Descripción Técnica
+Como Full-Stack Developer, debo implementar el Service Worker con pre-caching del App Shell y manejo de rutas SPA para que la aplicación abra en frío, soporte `F5` y permita navegar por todas las vistas sin conexión sin mostrar jamás el dinosaurio del navegador.
+
+### Entregables
+- Service Worker `public/sw.js` con estrategias `Cache-First` (estáticos), `Stale-While-Revalidate` (App Shell/HTML) y `Network-First` (datos).
+- Registrador `src/lib/pwa/register-sw.ts` invocado en `src/app/layout.tsx` y vista fallback `src/app/~offline/page.tsx`.
+
+### Criterios de Aceptación BDD
+- `CA-PWA.1`, `CA-PWA.2`, `CA-PWA.3`.
+```
+
+---
+
+#### Issue TASK-29: IndexedDB Dexie v2 con Outbox Auditable, Catálogo Offline y Código Determinista C1
+* **Título:** `[TASK-29] Evolucionar IndexedDB (Dexie v2) con Patrón Outbox auditable, Catálogo Offline con delta sync y código determinista OFFLINE-DON`
+* **Campos del Tablero:**
+  * **Status:** `Por hacer`
+  * **CMP:** `TRANSVERSAL`
+  * **Origen:** `RNF-002`, `RF-001`
+  * **Estimación:** `4`
+  * **Assignee:** Juan Sebastián Delgado (`Backend Developer`)
+  * **Labels:** `tarea`, `sprint-3`, `backend`, `indexeddb`, `offline`
+
+```markdown
+### Contexto y Descripción Técnica
+Como Backend Developer, debo evolucionar `src/lib/db.ts` a Dexie v2 incorporando `outbox_mutations`, `catalogo_productos` y `donaciones_cache` con sincronización delta, además del generador determinista de código único offline (`OFFLINE-DON-<YYMMDD>-<DEV4>-<SEQ3>-<ENT4>`) con `idempotency_key`.
+
+### Entregables
+- Esquema Dexie v2 en `src/lib/db.ts` y procesador en `src/lib/sync/offline-sync.ts`.
+- Algoritmo determinista en `src/lib/utils/offline-code.ts` y reconciliación idempotente en `src/actions/donaciones.ts`.
+
+### Criterios de Aceptación BDD
+- `CA-PWA.4`, `CA-PWA.5`, `CA-01.5`.
+```
+
+---
+
+#### Issue TASK-30: Ajustes UI/UX CMP-01 (Advertencia Legal, "Temperatura Ambiente") e Inspector Outbox
+* **Título:** `[TASK-30] Aplicar ajustes UI/UX de CMP-01 (Advertencia legal colombiana, etiqueta "Temperatura Ambiente") e Inspector de Cola Outbox`
+* **Campos del Tablero:**
+  * **Status:** `Por hacer`
+  * **CMP:** `TRANSVERSAL`
+  * **Origen:** `RF-014`, `RF-017`, `RNF-001`, `RNF-002`
+  * **Estimación:** `3`
+  * **Assignee:** Santiago Valencia Sandoval (`UX Designer / Frontend Support`)
+  * **Labels:** `tarea`, `sprint-3`, `ux`, `frontend`, `cmp-01`, `pwa`
+
+```markdown
+### Contexto y Descripción Técnica
+Como UX Designer, debo incorporar y resaltar la advertencia legal explícita sobre la normativa colombiana (Ley 1990/2019, Res. 2674/2013 INVIMA y Ley 1581/2012), unificar la etiqueta canónica `"Temperatura Ambiente"` en reemplazo de `No (amb)` / `NO (AMB.)`, y construir el Inspector Visual de la Cola Outbox para que el usuario audite sus mutaciones offline.
+
+### Entregables
+- Bloque legal resaltado y etiqueta `"Temperatura Ambiente"` en `DonacionWizard.tsx`, `DonacionCard.tsx`, `MatchingView.tsx` y `DonateView.tsx`.
+- Componente `src/components/nexo/OutboxInspectorModal.tsx` enlazado desde `OfflineStatusBadge.tsx`.
+
+### Criterios de Aceptación BDD
+- `CA-01.3`, `CA-01.4`, `CA-PWA.4`.
+```
+
+---
+
+#### Issue TASK-31: Endurecimiento de Build, Iconos PWA Instalables y Compuertas CI/CD Free Tier
+* **Título:** `[TASK-31] Endurecer next.config.mjs (eliminar ignoreBuildErrors), generar iconos PWA reales y actualizar compuertas CI/CD y Free Tier`
+* **Campos del Tablero:**
+  * **Status:** `Por hacer`
+  * **CMP:** `TRANSVERSAL`
+  * **Origen:** `RNF-002`, `RNF-005`, `RF-018`
+  * **Estimación:** `3`
+  * **Assignee:** Juan Camilo Peña Sandoval (`DevOps Engineer`)
+  * **Labels:** `tarea`, `sprint-3`, `devops`, `pwa`, `ci-cd`
+
+```markdown
+### Contexto y Descripción Técnica
+Como DevOps Engineer, debo remover `ignoreBuildErrors: true` e `ignoreDuringBuilds: true` de `next.config.mjs`, generar los iconos reales `192x192` y `512x512` exigidos por `public/manifest.json` para que la PWA sea instalable y auditar que el pipeline `.github/workflows/ci.yml` verifique el Service Worker y el presupuesto `\$0.00 USD/mes`.
+
+### Entregables
+- `next.config.mjs` estricto, iconos PNG en `public/icons/` y compuerta PWA en `.github/workflows/ci.yml`.
+
+### Criterios de Aceptación BDD
+- `CA-PWA.1`, `RNF-005`, `RF-018`.
+```
+
+---
+
+#### Issue TASK-32: Suite de Pruebas Transversales PWA Offline-First, Algoritmo C1 y Co-Revisión QA
+* **Título:** `[TASK-32] Ejecutar suite de pruebas transversales PWA Offline-First, algoritmo determinista C1 y Co-Revisión QA de PRs`
+* **Campos del Tablero:**
+  * **Status:** `Por hacer`
+  * **CMP:** `TRANSVERSAL`
+  * **Origen:** `RNF-002`, `RF-001`, `RF-017`
+  * **Estimación:** `3`
+  * **Assignee:** Felipe Charria Caicedo (`QA Engineer`)
+  * **Labels:** `tarea`, `sprint-3`, `qa`, `testing`, `pwa`
+
+```markdown
+### Contexto y Descripción Técnica
+Como QA Engineer, debo construir la suite de pruebas transversales que valide la cola Outbox, el catálogo offline con delta sync, la etiqueta `"Temperatura Ambiente"` y la unicidad de 1.000 códigos `OFFLINE-DON-<YYMMDD>-<DEV4>-<SEQ3>-<ENT4>`, además de actuar como Co-Revisor técnico junto al Product Owner en los Pull Requests del equipo.
+
+### Entregables
+- Suite `tests/integration/offline-pwa-outbox.test.ts` y actualización de `tests/unit/cmp-01-validacion-donacion.test.ts`.
+
+### Criterios de Aceptación BDD
+- `CA-PWA.1` a `CA-PWA.5`, `CA-01.3` a `CA-01.5`.
+```
+
+---
+
+#### Issue TASK-33: Revisión Transversal Final 360°, Aprobación de PRs en GitHub y Cierre de DoD en Main
+* **Título:** `[TASK-33] Ejecutar Revisión Transversal Final 360°, auditoría y merge de PRs junto a QA, validación de Gobierno y cierre DoD en main`
+* **Campos del Tablero:**
+  * **Status:** `Por hacer`
+  * **CMP:** `TRANSVERSAL`
+  * **Origen:** `Gobernanza Módulo 3`
+  * **Estimación:** `3`
+  * **Assignee:** Eduard Criollo Yule (`Product Owner / Lead`)
+  * **Labels:** `tarea`, `sprint-3`, `po`, `gobierno`, `release`
+
+```markdown
+### Contexto y Descripción Técnica
+Como Product Owner, debo liderar junto a QA (Felipe Charria) la revisión cruzada formal de todos los Pull Requests enviados desde las cuentas individuales de GitHub de los 6 colaboradores, certificar las 2 Pruebas de Gobierno de la UAO (Cero Datos Inventados y Habeas Data Ley 1581/2012) y consolidar el merge final hacia `main`.
+
+### Entregables
+- Historial de Pull Requests revisados, aprobados y fusionados en GitHub con trazabilidad individual por autor.
+- Checklist de Definición de Terminado (DoD) al 100% en `docs/spec/comportamientos.md` y `docs/spec/tablero-github-projects.md`.
 ```
 
 ---

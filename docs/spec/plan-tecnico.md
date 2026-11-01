@@ -56,22 +56,24 @@ graph TD
 ### Entidades Principales:
 1. **`organizaciones`**: Entidades donantes, comedores y fundación central.
    - `id`, `nombre`, `tipo` (DONANTE, RECEPTOR, FUNDACION), `direccion`, `zona`, `telefono`, `tiene_refrigeracion` (BOOLEAN), `capacidad_raciones_dia`.
-2. **`usuarios`**: Donantes, voluntarios, coordinadoras.
-   - `id`, `nombre`, `email`, `rol` (COORDINADOR, VOLUNTARIO, DONANTE, RECEPTOR), `telefono`, `vehiculo_tipo`, `disponible`.
+2. **`usuarios`**: Administradores del sistema, coordinadoras, voluntarios, donantes y receptores.
+   - `id`, `nombre`, `email`, `rol` (`ADMIN`, `COORDINADOR`, `VOLUNTARIO`, `DONANTE`, `RECEPTOR`), `estado_cuenta` (`ACTIVO`, `SUSPENDIDO`, `PENDIENTE_AUTORIZACION`), `permisos_granulares` (JSONB), `telefono`, `vehiculo_tipo`, `disponible`.
 3. **`donaciones`**: Núcleo transaccional del sistema.
-   - `id`, `codigo` (ej. DON-101), `donante_id` (FK), `donante_nombre`, `tipo_alimento`, `requiere_frio` (BOOLEAN), `cantidad_estimada`, `unidad_medida` (kg, bultos, canastillas, unidades), `direccion_recogida`, `indicaciones_puesto`, `telefono_donante`, `coordenadas` (JSONB / CoordenadaGeo: lat, lng), `zona` (NORTE, CENTRO, SUR, ORIENTE, LADERA), `hora_limite`, `estado` (DISPONIBLE, ASIGNADA, ENTREGADA, EXPIRADA, CANCELADA), `voluntario_id` (FK nullable), `voluntario_nombre`, `comedor_id` (FK nullable), `comedor_nombre`, `exencion_sanitaria_aceptada` (BOOLEAN), `created_at`, `asignada_at`, `entregada_at`.
-4. **`trazabilidad_eventos`**: Auditoría inmutable de cada transición.
-   - `id`, `donacion_id` (FK), `estado_anterior`, `estado_nuevo`, `usuario_id` (FK), `usuario_nombre`, `timestamp`, `observaciones`.
-5. **`donaciones_offline` (IndexedDB / Dexie.js en Cliente)**: Almacenamiento local tolerante a caídas de red en plazas.
-   - `id`, `codigoLocal` (ej. `OFFLINE-DON-1`), `datos` (payload serializado de `DonacionInput`), `timestamp`, `syncStatus` (`pending`, `synced`, `error`).
+   - `id`, `codigo` (ej. `DON-101`), `idempotency_key` (UUID v4 único para reconciliación offline sin colisiones), `codigo_origen_offline` (VARCHAR nullable, preserva el código determinista `OFFLINE-DON-<YYMMDD>-<DEV4>-<SEQ3>-<ENT4>`), `donante_id` (FK), `donante_nombre`, `tipo_alimento`, `requiere_frio` (BOOLEAN — `true`: *"Requiere Refrigeración"*, `false`: *"Temperatura Ambiente"*), `cantidad_estimada`, `unidad_medida` (kg, bultos, canastillas, unidades), `direccion_recogida`, `indicaciones_puesto`, `telefono_donante`, `coordenadas` (JSONB / CoordenadaGeo: lat, lng), `zona` (NORTE, CENTRO, SUR, ORIENTE, LADERA), `hora_limite`, `estado` (DISPONIBLE, ASIGNADA, ENTREGADA, EXPIRADA, CANCELADA), `voluntario_id` (FK nullable), `voluntario_nombre`, `comedor_id` (FK nullable), `comedor_nombre`, `exencion_sanitaria_aceptada` (BOOLEAN — Ley 1990/2019, Res. 2674/2013 INVIMA y Ley 1581/2012), `created_at`, `asignada_at`, `entregada_at`, `updated_at`.
+4. **`trazabilidad_eventos`** y **`audit_rbac_eventos`**: Auditoría inmutable de cada transición logística y de administración de permisos.
+   - `trazabilidad_eventos`: `id`, `donacion_id` (FK), `estado_anterior`, `estado_nuevo`, `usuario_id` (FK), `usuario_nombre`, `timestamp`, `observaciones`.
+   - `audit_rbac_eventos`: `id`, `admin_id`, `usuario_afectado_id`, `accion` (`CREAR`, `EDITAR_ROL`, `SUSPENDER`, `REACTIVAR`), `rol_anterior`, `rol_nuevo`, `motivo`, `timestamp`.
+5. **Almacenamiento Local Estructurado en Cliente (IndexedDB / Dexie.js v2 — `CMP-PWA` y `CMP-05`)**:
+   - `donaciones_offline`: `id`, `codigoLocal` (`OFFLINE-DON-<YYMMDD>-<DEV4>-<SEQ3>-<ENT4>`), `idempotencyKey`, `datos` (`DonacionInput`), `timestamp`, `syncStatus` (`pending`, `synced`, `error`).
+   - `outbox_mutations`: Cola general de mutaciones offline (`CREATE_DONACION`, `TAKE_DONACION`, `CONFIRM_ENTREGA`) con `idempotencyKey`, `payload`, `syncStatus`, `retryCount`, `lastError` e inspector visual de auditoría.
+   - `catalogo_productos` y `donaciones_cache`: Catálogo local de productos y donaciones con sincronización delta (`updated_at > last_sync_timestamp`) para consulta y filtrado sin red.
+   - `sesion_rbac`: Persistencia de sesión offline (`userId`, `rol`, `permisos`, `estadoCuenta`, `issuedAt`, `expiresAt`, `signatureHash` HMAC-SHA256) para garantizar que el confinamiento RBAC se cumpla aun sin conexión.
 
-### Módulos y Helpers Clave del Frontend/Backend (`CMP-01` a `CMP-04`):
-- **Validación y Reglas Puras:** `src/lib/validations/donacion.ts` (con soporte para coordenadas, puesto y teléfono), `src/lib/validations/entrega.ts`, `src/lib/utils/donaciones-helper.ts` (`filtrarDonacionesDisponibles`, `evaluarVigenciaDonacion`, `normalizarFechaHoraLimite`, `inferirZonaCali`) y `src/lib/nexo/impact.ts` (`scoreMatch` con restricción de cadena de frío `CA-02.2`, `calcularDistanciaKm` con fórmula de Haversine).
-- **Georreferenciación y Cartografía OpenStreetMap ($0 USD/mes):** `src/components/donaciones/LocationPickerMap.tsx` (selector dinámico con Leaflet, pin arrastrable, presets de plazas de Cali y geolocalización GPS) y `src/components/nexo/RadarMap.tsx` (radar logístico con soporte multivoluntario, encuadre panorámico `fitBounds` y proyección de excedentes disponibles).
-- **Persistencia Offline-First y Sincronización Reactiva (`CA-01.5` / `RNF-002`):** `src/lib/db.ts` (Dexie.js / IndexedDB), `src/lib/sync/offline-sync.ts` (coordinador centralizado de cola con mutex en vuelo, normalización preventiva de horas vencidas y eventos reactivos `nexo:offline-synced` / `nexo:offline-queue-changed`), integrado reactivamente en `OfflineStatusBadge.tsx`, `MenuBar.tsx` y `DonacionWizard.tsx`.
-- **Desacoplamiento Autónomo de Contexto:** `src/components/nexo/NexoContext.tsx` con hook seguro `useNexoOptional()`, permitiendo que `RadarMap` funcione autónomamente tanto en el dashboard principal como en la página independiente `/donaciones`.
-- **Reserva Única y Ruta Activa (`CMP-03`):** `src/actions/donaciones.ts` (`tomarDonacion`, `marcarDonacionExpirada`), `src/components/donaciones/ConflictoTomaModal.tsx`, `src/components/donaciones/RutaActivaCard.tsx` y `src/app/ruta-activa/page.tsx`.
-- **Confirmación de Entrega y Habeas Data (`CMP-04`):** `src/actions/entregas.ts`, `src/app/entregas/[id]/page.tsx` con bloqueo defensivo en estado `DISPONIBLE` y formulario activo de acta inmutable en estado `ASIGNADA`.
+### Módulos y Helpers Clave del Frontend/Backend (`CMP-01` a `CMP-05` y `CMP-PWA`):
+- **Validación y Reglas Puras:** `src/lib/validations/donacion.ts` (con soporte para coordenadas, puesto, teléfono y exención sanitaria obligatoria), `src/lib/validations/entrega.ts`, `src/lib/utils/donaciones-helper.ts` (`filtrarDonacionesDisponibles`, `evaluarVigenciaDonacion`, `normalizarFechaHoraLimite`, `inferirZonaCali`), `src/lib/utils/offline-code.ts` (generador determinista `OFFLINE-DON-<YYMMDD>-<DEV4>-<SEQ3>-<ENT4>`) y `src/lib/nexo/impact.ts` (`scoreMatch` con restricción de cadena de frío `CA-02.2`, `calcularDistanciaKm` con fórmula de Haversine).
+- **Georreferenciación y Cartografía OpenStreetMap (\$0 USD/mes):** `src/components/donaciones/LocationPickerMap.tsx` (selector dinámico con Leaflet, pin arrastrable, presets de plazas de Cali y geolocalización GPS) y `src/components/nexo/RadarMap.tsx` (radar logístico con soporte multivoluntario, encuadre panorámico `fitBounds` y proyección de excedentes disponibles).
+- **Arquitectura PWA Offline-First Estricta (`CMP-PWA` / `RNF-002`):** `public/sw.js` (Service Worker con App Shell Pre-caching, `Cache-First` para estáticos, `Stale-While-Revalidate` para vistas HTML/RSC y fallback a `/~offline`), `src/lib/pwa/register-sw.ts`, `src/lib/db.ts` (Dexie.js v2), `src/lib/sync/offline-sync.ts` y `src/components/nexo/OutboxInspectorModal.tsx`.
+- **RBAC Corporativo, Trazabilidad e Impacto Real (`CMP-05`):** `src/lib/rbac/permisos.ts`, `src/lib/auth/offline-session.ts`, `src/middleware.ts` (confinamiento estricto del rol `VOLUNTARIO`), `src/app/admin/usuarios/page.tsx` (exclusivo para `ADMIN`), `src/app/rastreo/page.tsx` (`TimelineTracker.tsx`) y `src/actions/metricas.ts` (`obtenerMetricasImpactoReal` con Cero Datos Inventados en `/impacto`).
 
 ---
 
@@ -122,6 +124,10 @@ Verificación: `tests/db/tomar-donacion.test.ts` (PostgreSQL real, ver cabecera 
     - Catálogo reactivo y Radar Multivoluntario (`CMP-02`, `CMP-03`): `/donaciones`
     - Hoja de ruta móvil con navegación GPS (`CMP-03`): `/ruta-activa`
     - Acta digital de entrega en comedor comunitario (`CMP-04`): `/entregas/[id]`
+    - Consulta pública de estado y línea de tiempo inmutable (`CMP-05`): `/rastreo`
+    - Panel de impacto real auditado y exportación CSV (`CMP-05` — roles `COORDINADOR` / `ADMIN`): `/impacto`
+    - Módulo de administración corporativa de usuarios y permisos RBAC (`CMP-05` — exclusivo rol `ADMIN`): `/admin/usuarios`
+    - Vista de respaldo del App Shell Offline (`CMP-PWA` / `TRANSVERSAL`): `/~offline`
 - **Despliegue Continuo (CI/CD) y Vercel CLI:**
   - Repositorio en GitHub enlazado a Vercel con validación previa en GitHub Actions (`.github/workflows/ci.yml`).
   - Despliegue directo a producción mediante CLI: `npx vercel deploy --prod --yes` (utilizado para superar incidencias de importación git del portal).

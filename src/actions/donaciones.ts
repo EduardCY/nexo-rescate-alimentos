@@ -3,6 +3,7 @@
 import { DonacionInputSchema, type DonacionInput } from '@/lib/validations/donacion';
 import { createClient, esSupabaseConfigurado } from '@/lib/supabase/server';
 import type { Donacion, ZonaCali } from '@/types';
+import type { DonacionCache, ProductoCatalogo } from '@/lib/db';
 import {
   normalizarFechaHoraLimite,
   inferirZonaCali,
@@ -15,11 +16,20 @@ import {
 } from '@/lib/utils/uuid-helper';
 
 export type PublicarDonacionResultado =
-  | { exito: true; codigo: string }
+  /** `duplicada: true` indica que la idempotencyKey ya había sido procesada y no se creó otro registro. */
+  | { exito: true; codigo: string; duplicada?: boolean }
   | { exito: false; error: string };
 
+/** Metadatos de reconciliación offline (CA-01.5 / TASK-29). */
+export interface MetaIdempotencia {
+  /** UUID v4 generado en el dispositivo; el servidor lo usa para descartar reintentos duplicados. */
+  idempotencyKey?: string;
+  /** Código determinista OFFLINE-DON-<YYMMDD>-<DEV4>-<SEQ3>-<ENT4>, se conserva en codigo_origen_offline. */
+  codigoOrigenOffline?: string;
+}
+
 export type TomarDonacionResultado =
-  | { exito: true; codigo: 200; mensaje: string; donacion: Donacion }
+  | { exito: true; codigo: 200; mensaje: string; donacion: Donacion; duplicado?: boolean }
   | { exito: false; codigo: 409; mensaje: string; donacionId: string }
   | { exito: false; codigo: 410; mensaje: string; donacionId: string }
   | { exito: false; codigo: 500; mensaje: string; donacionId: string };
@@ -29,6 +39,100 @@ declare global {
   var __NEXO_CATALOGO_VOLATIL: Map<string, Donacion> | undefined;
   // eslint-disable-next-line no-var
   var __NEXO_DONACIONES_VOLATILES: Map<string, Donacion> | undefined;
+}
+
+interface RegistroIdempotencia {
+  codigo: string;
+  donacionId: string;
+  donacion?: Donacion;
+  registradoAt: number;
+}
+
+declare global {
+  // eslint-disable-next-line no-var
+  var __NEXO_IDEMPOTENCIA_REGISTRO: Map<string, RegistroIdempotencia> | undefined;
+}
+
+const MAX_REGISTROS_IDEMPOTENCIA = 2000;
+
+/**
+ * Registro en memoria de llaves de idempotencia ya procesadas (`CREATE:<uuid>`, `TAKE:<uuid>`).
+ *
+ * Limitación conocida: en Vercel cada lambda tiene su propia memoria, así que este registro solo
+ * evita duplicados dentro de una misma instancia. La garantía entre instancias la da la base de datos
+ * (columna única `idempotency_key` para CREATE y el estado de la fila para TAKE).
+ */
+function registroIdempotencia(): Map<string, RegistroIdempotencia> {
+  if (!globalThis.__NEXO_IDEMPOTENCIA_REGISTRO) {
+    globalThis.__NEXO_IDEMPOTENCIA_REGISTRO = new Map<string, RegistroIdempotencia>();
+  }
+  return globalThis.__NEXO_IDEMPOTENCIA_REGISTRO;
+}
+
+function registrarIdempotencia(
+  tipo: 'CREATE' | 'TAKE',
+  llave: string,
+  registro: Omit<RegistroIdempotencia, 'registradoAt'>
+): void {
+  const mapa = registroIdempotencia();
+  mapa.set(`${tipo}:${llave}`, { ...registro, registradoAt: Date.now() });
+  while (mapa.size > MAX_REGISTROS_IDEMPOTENCIA) {
+    const masAntigua = mapa.keys().next().value;
+    if (masAntigua === undefined) break;
+    mapa.delete(masAntigua);
+  }
+}
+
+/** Errores de PostgREST/Postgres cuando la columna idempotency_key aún no existe en la tabla. */
+function esColumnaIdempotenciaInexistente(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  const msg = (error.message || '').toLowerCase();
+  return (
+    error.code === '42703' ||
+    error.code === 'PGRST204' ||
+    msg.includes('idempotency_key') ||
+    msg.includes('codigo_origen_offline')
+  );
+}
+
+/** Violación de unicidad sobre idempotency_key: otro reintento ganó la carrera. */
+function esConflictoIdempotencia(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false;
+  return error.code === '23505' && (error.message || '').toLowerCase().includes('idempotency');
+}
+
+/**
+ * Busca si una llave de idempotencia ya fue procesada: primero en memoria y luego, para CREATE,
+ * en la columna `idempotency_key` de Supabase (si existe).
+ */
+async function buscarRegistroPorIdempotencyKey(
+  tipo: 'CREATE' | 'TAKE',
+  llave: string
+): Promise<RegistroIdempotencia | null> {
+  const enMemoria = registroIdempotencia().get(`${tipo}:${llave}`);
+  if (enMemoria) return enMemoria;
+
+  if (tipo !== 'CREATE' || !esSupabaseConfigurado()) return null;
+
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('donaciones')
+      .select('id, codigo')
+      .eq('idempotency_key', llave)
+      .maybeSingle();
+    if (!error && data?.codigo) {
+      const registro: Omit<RegistroIdempotencia, 'registradoAt'> = {
+        codigo: data.codigo,
+        donacionId: data.id,
+      };
+      registrarIdempotencia(tipo, llave, registro);
+      return { ...registro, registradoAt: Date.now() };
+    }
+  } catch {
+    // Columna inexistente o red caída: se continúa sin verificación en base de datos.
+  }
+  return null;
 }
 
 /** Candados en vuelo para exclusión mutua atómica en memoria */
@@ -222,8 +326,15 @@ export async function marcarDonacionExpirada(
 
 /**
  * Publica una oferta de donación de alimentos en la plataforma.
+ *
+ * Idempotencia (CA-01.5 / TASK-29): si se recibe `meta.idempotencyKey` y esa llave ya fue procesada,
+ * se devuelve el código original con `duplicada: true` sin crear un segundo registro. La llave y el
+ * código determinista offline se guardan en `idempotency_key` y `codigo_origen_offline`.
  */
-export async function publicarDonacion(input: DonacionInput): Promise<PublicarDonacionResultado> {
+export async function publicarDonacion(
+  input: DonacionInput,
+  meta: MetaIdempotencia = {}
+): Promise<PublicarDonacionResultado> {
   const parseResult = DonacionInputSchema.safeParse(input);
 
   if (!parseResult.success) {
@@ -236,6 +347,23 @@ export async function publicarDonacion(input: DonacionInput): Promise<PublicarDo
       exito: false,
       error: errorMensaje,
     };
+  }
+
+  const idempotencyKey = meta.idempotencyKey?.trim() || undefined;
+  if (idempotencyKey && !UUID_REGEX.test(idempotencyKey)) {
+    return {
+      exito: false,
+      error: 'La llave de idempotencia (idempotencyKey) debe ser un UUID válido.',
+    };
+  }
+  const codigoOrigenOffline = meta.codigoOrigenOffline?.trim().slice(0, 64) || undefined;
+
+  // Reintento de red: si la llave ya fue procesada, se devuelve el resultado original.
+  if (idempotencyKey) {
+    const previo = await buscarRegistroPorIdempotencyKey('CREATE', idempotencyKey);
+    if (previo) {
+      return { exito: true, codigo: previo.codigo, duplicada: true };
+    }
   }
 
   const data = parseResult.data;
@@ -258,12 +386,67 @@ export async function publicarDonacion(input: DonacionInput): Promise<PublicarDo
     zona: zonaDetectada,
   };
 
+  const construirDonacion = (id: string, codigo: string): Donacion => ({
+    id,
+    codigo,
+    donanteId: payload.donante_id,
+    donanteNombre: payload.donante_nombre,
+    tipoAlimento: payload.tipo_alimento,
+    requiereFrio: payload.requiere_frio,
+    cantidadEstimada: payload.cantidad_estimada,
+    unidadMedida: payload.unidad_medida,
+    direccionRecogida: payload.direccion_recogida,
+    indicacionesPuesto: data.indicacionesPuesto,
+    telefonoDonante: data.telefonoDonante,
+    coordenadas: data.coordenadas,
+    zona: zonaDetectada,
+    horaLimite: horaIsoNormalizada,
+    estado: 'DISPONIBLE',
+    exencionSanitariaAceptada: true,
+    createdAt: new Date().toISOString(),
+  });
+
+  const registrarEnMemoria = (nueva: Donacion) => {
+    DONACIONES_ESTADO_VOLATIL.set(nueva.id, nueva);
+    DONACIONES_ESTADO_VOLATIL.set(nueva.codigo, nueva);
+    globalThis.__NEXO_DONACIONES_VOLATILES?.set(nueva.id, { ...nueva });
+    globalThis.__NEXO_DONACIONES_VOLATILES?.set(nueva.codigo, { ...nueva });
+    if (idempotencyKey) {
+      registrarIdempotencia('CREATE', idempotencyKey, { codigo: nueva.codigo, donacionId: nueva.id });
+    }
+  };
+
   try {
-    const { data: donacion, error } = await supabase
+    const payloadConIdempotencia = idempotencyKey
+      ? {
+          ...payload,
+          idempotency_key: idempotencyKey,
+          codigo_origen_offline: codigoOrigenOffline ?? null,
+        }
+      : payload;
+
+    let { data: donacion, error } = await supabase
       .from('donaciones')
-      .insert([payload])
+      .insert([payloadConIdempotencia])
       .select('id, codigo')
       .single();
+
+    if (error && idempotencyKey) {
+      if (esConflictoIdempotencia(error)) {
+        // Dos reintentos simultáneos: gana el primero, el segundo recibe el mismo código.
+        const existente = await buscarRegistroPorIdempotencyKey('CREATE', idempotencyKey);
+        if (existente) {
+          return { exito: true, codigo: existente.codigo, duplicada: true };
+        }
+      } else if (esColumnaIdempotenciaInexistente(error)) {
+        // La migración de idempotencia aún no está aplicada: se publica sin las columnas nuevas.
+        ({ data: donacion, error } = await supabase
+          .from('donaciones')
+          .insert([payload])
+          .select('id, codigo')
+          .single());
+      }
+    }
 
     if (error) {
       return {
@@ -274,30 +457,7 @@ export async function publicarDonacion(input: DonacionInput): Promise<PublicarDo
 
     const codigoFinal = donacion?.codigo || `DON-${Date.now().toString().slice(-4)}`;
     const idFinal = donacion?.id || codigoFinal;
-    const nuevaDonacion: Donacion = {
-      id: idFinal,
-      codigo: codigoFinal,
-      donanteId: payload.donante_id,
-      donanteNombre: payload.donante_nombre,
-      tipoAlimento: payload.tipo_alimento,
-      requiereFrio: payload.requiere_frio,
-      cantidadEstimada: payload.cantidad_estimada,
-      unidadMedida: payload.unidad_medida,
-      direccionRecogida: payload.direccion_recogida,
-      indicacionesPuesto: data.indicacionesPuesto,
-      telefonoDonante: data.telefonoDonante,
-      coordenadas: data.coordenadas,
-      zona: zonaDetectada,
-      horaLimite: horaIsoNormalizada,
-      estado: 'DISPONIBLE',
-      exencionSanitariaAceptada: true,
-      createdAt: new Date().toISOString(),
-    };
-
-    DONACIONES_ESTADO_VOLATIL.set(nuevaDonacion.id, nuevaDonacion);
-    DONACIONES_ESTADO_VOLATIL.set(nuevaDonacion.codigo, nuevaDonacion);
-    globalThis.__NEXO_DONACIONES_VOLATILES?.set(nuevaDonacion.id, { ...nuevaDonacion });
-    globalThis.__NEXO_DONACIONES_VOLATILES?.set(nuevaDonacion.codigo, { ...nuevaDonacion });
+    registrarEnMemoria(construirDonacion(idFinal, codigoFinal));
 
     return {
       exito: true,
@@ -306,30 +466,7 @@ export async function publicarDonacion(input: DonacionInput): Promise<PublicarDo
   } catch {
     // Modo offline / pruebas en memoria sin base de datos
     const codigoFinal = `DON-${Date.now().toString().slice(-4)}`;
-    const nuevaDonacion: Donacion = {
-      id: codigoFinal,
-      codigo: codigoFinal,
-      donanteId: payload.donante_id,
-      donanteNombre: payload.donante_nombre,
-      tipoAlimento: payload.tipo_alimento,
-      requiereFrio: payload.requiere_frio,
-      cantidadEstimada: payload.cantidad_estimada,
-      unidadMedida: payload.unidad_medida,
-      direccionRecogida: payload.direccion_recogida,
-      indicacionesPuesto: data.indicacionesPuesto,
-      telefonoDonante: data.telefonoDonante,
-      coordenadas: data.coordenadas,
-      zona: zonaDetectada,
-      horaLimite: horaIsoNormalizada,
-      estado: 'DISPONIBLE',
-      exencionSanitariaAceptada: true,
-      createdAt: new Date().toISOString(),
-    };
-
-    DONACIONES_ESTADO_VOLATIL.set(nuevaDonacion.id, nuevaDonacion);
-    DONACIONES_ESTADO_VOLATIL.set(nuevaDonacion.codigo, nuevaDonacion);
-    globalThis.__NEXO_DONACIONES_VOLATILES?.set(nuevaDonacion.id, { ...nuevaDonacion });
-    globalThis.__NEXO_DONACIONES_VOLATILES?.set(nuevaDonacion.codigo, { ...nuevaDonacion });
+    registrarEnMemoria(construirDonacion(codigoFinal, codigoFinal));
 
     return {
       exito: true,
@@ -400,7 +537,7 @@ export async function obtenerDonacionesDisponibles(zona?: ZonaCali | 'TODAS'): P
  *
  * Busca la oferta tanto por identificador UUID (`id`) como por código de negocio (`codigo`, ej. 'DON-CONCURRENT-01').
  */
-export async function tomarDonacion(
+async function tomarDonacionInterno(
   donacionId: string,
   voluntarioId = 'vol-001',
   voluntarioNombre = 'Voluntario Mesa Común'
@@ -665,4 +802,306 @@ export async function tomarDonacion(
   } finally {
     CANDADOS_EN_VUELO.delete(lockKey);
   }
+}
+
+/** Dos identificadores de voluntario son equivalentes si coinciden o resuelven al mismo UUID canónico. */
+function esMismoVoluntario(a?: string, b?: string): boolean {
+  if (!a || !b) return false;
+  return a === b || resolverUuidVoluntario(a) === resolverUuidVoluntario(b);
+}
+
+/** Convierte una fila de Supabase (snake_case) a la entidad de dominio. */
+function mapearFilaDonacion(d: Record<string, any>): Donacion {
+  return {
+    id: d.id,
+    codigo: d.codigo,
+    donanteId: d.donante_id,
+    donanteNombre: d.donante_nombre || 'Comercio Donante',
+    tipoAlimento: d.tipo_alimento,
+    requiereFrio: !!d.requiere_frio,
+    cantidadEstimada: Number(d.cantidad_estimada),
+    unidadMedida: d.unidad_medida,
+    direccionRecogida: d.direccion_recogida,
+    indicacionesPuesto: d.indicaciones_puesto || undefined,
+    telefonoDonante: d.telefono_donante || undefined,
+    coordenadas:
+      d.latitud != null && d.longitud != null
+        ? { lat: Number(d.latitud), lng: Number(d.longitud) }
+        : undefined,
+    zona: (d.zona as ZonaCali) || inferirZonaCali(d.direccion_recogida || ''),
+    horaLimite: d.hora_limite,
+    estado: d.estado,
+    exencionSanitariaAceptada: !!d.exencion_sanitaria_aceptada,
+    createdAt: d.created_at,
+    voluntarioId: d.voluntario_id || undefined,
+    voluntarioNombre: d.voluntario_nombre || undefined,
+    comedorId: d.comedor_id || undefined,
+    comedorNombre: d.comedor_nombre || undefined,
+    asignadaAt: d.asignada_at || undefined,
+    entregadaAt: d.entregada_at || undefined,
+  };
+}
+
+/** Lee el estado vigente de una donación (Supabase si está configurado; memoria como respaldo). */
+async function leerDonacionActual(donacionId: string): Promise<Donacion | null> {
+  if (esSupabaseConfigurado()) {
+    try {
+      const supabase = createClient();
+      const uuid = resolverUuidDonacion(donacionId);
+      let query = supabase.from('donaciones').select('*');
+      if (uuid) {
+        query = query.eq('id', uuid);
+      } else if (donacionId.startsWith('DON-')) {
+        query = query.eq('codigo', donacionId);
+      } else {
+        query = query.eq('id', donacionId);
+      }
+      const { data } = await query.maybeSingle();
+      if (data) return mapearFilaDonacion(data);
+    } catch {
+      // Respaldo en memoria
+    }
+  }
+
+  const directo = DONACIONES_ESTADO_VOLATIL.get(donacionId);
+  if (directo) return { ...directo };
+  for (const item of Array.from(DONACIONES_ESTADO_VOLATIL.values())) {
+    if (item.id === donacionId || item.codigo === donacionId) return { ...item };
+  }
+  return null;
+}
+
+/**
+ * Server Action de toma de donación (CMP-03). Con `idempotencyKey` es segura ante reintentos de red
+ * desde el outbox offline (TASK-29): si la llave ya se procesó, o si la donación ya quedó asignada
+ * al mismo voluntario, responde éxito con `duplicado: true` en lugar de un falso conflicto 409.
+ * Sin `idempotencyKey` el comportamiento es idéntico al original (reserva única, 409/410).
+ */
+export async function tomarDonacion(
+  donacionId: string,
+  voluntarioId = 'vol-001',
+  voluntarioNombre = 'Voluntario Mesa Común',
+  idempotencyKey?: string
+): Promise<TomarDonacionResultado> {
+  const llave = idempotencyKey && UUID_REGEX.test(idempotencyKey) ? idempotencyKey : undefined;
+  if (!llave) {
+    return tomarDonacionInterno(donacionId, voluntarioId, voluntarioNombre);
+  }
+
+  const previo = await buscarRegistroPorIdempotencyKey('TAKE', llave);
+  if (previo?.donacion) {
+    return {
+      exito: true,
+      codigo: 200,
+      mensaje: 'Reserva registrada previamente (reintento idempotente).',
+      donacion: { ...previo.donacion },
+      duplicado: true,
+    };
+  }
+
+  const resultado = await tomarDonacionInterno(donacionId, voluntarioId, voluntarioNombre);
+
+  if (resultado.exito) {
+    registrarIdempotencia('TAKE', llave, {
+      codigo: resultado.donacion.codigo,
+      donacionId: resultado.donacion.id,
+      donacion: resultado.donacion,
+    });
+    return resultado;
+  }
+
+  if (resultado.codigo === 409) {
+    // Reintento tras corte de red: la primera petición sí llegó y la reserva ya es de este voluntario.
+    const actual = await leerDonacionActual(donacionId);
+    if (
+      actual &&
+      actual.estado === 'ASIGNADA' &&
+      esMismoVoluntario(actual.voluntarioId, voluntarioId)
+    ) {
+      registrarIdempotencia('TAKE', llave, {
+        codigo: actual.codigo,
+        donacionId: actual.id,
+        donacion: actual,
+      });
+      return {
+        exito: true,
+        codigo: 200,
+        mensaje: 'La donación ya estaba reservada a tu nombre (reintento tras corte de red).',
+        donacion: actual,
+        duplicado: true,
+      };
+    }
+  }
+
+  return resultado;
+}
+
+// ---------------------------------------------------------------------------
+// Sincronización delta de catálogo y donaciones (CA-PWA.5 / TASK-29)
+// ---------------------------------------------------------------------------
+
+/** `last_sync_timestamp` por recurso; null = primera sincronización (trae todo). */
+export interface DesdeDelta {
+  catalogoProductos?: string | null;
+  donacionesCache?: string | null;
+}
+
+export interface CambiosDelta {
+  /** Solo productos con updated_at > desde.catalogoProductos. */
+  productos: ProductoCatalogo[];
+  /** Solo donaciones con updated_at > desde.donacionesCache (sin datos de contacto). */
+  donaciones: DonacionCache[];
+  /** Hora del servidor al responder (informativa). */
+  serverTimestamp: string;
+}
+
+/** Máximo de registros por recurso en una respuesta delta (volumen del piloto: 8-15 rescates/semana). */
+const LIMITE_REGISTROS_DELTA = 1000;
+
+const CATEGORIAS_PRODUCTO = ['fruta', 'panaderia', 'lacteos', 'viandas', 'proteina', 'granos'];
+const UNIDADES_PRODUCTO = ['kg', 'canastillas', 'bultos', 'unidades'];
+
+/** Acepta solo fechas válidas y las re-serializa a ISO: evita inyectar texto en filtros de PostgREST. */
+function normalizarDesde(valor?: string | null): string | null {
+  if (!valor) return null;
+  const t = new Date(valor).getTime();
+  return Number.isNaN(t) ? null : new Date(t).toISOString();
+}
+
+/** Marca temporal de última modificación: updated_at si existe; si no, la mayor entre created/asignada/entregada. */
+function marcaTemporalDonacion(d: {
+  updatedAt?: string;
+  createdAt?: string;
+  asignadaAt?: string;
+  entregadaAt?: string;
+}): string {
+  const candidatas = [d.updatedAt, d.createdAt, d.asignadaAt, d.entregadaAt]
+    .map((v) => (v ? new Date(v).getTime() : NaN))
+    .filter((t) => !Number.isNaN(t));
+  return new Date(candidatas.length ? Math.max(...candidatas) : 0).toISOString();
+}
+
+/** Proyección para caché: elimina contacto del donante y datos del voluntario (se revelan solo a quien reserva). */
+function aDonacionCache(d: Donacion, updatedAt: string): DonacionCache {
+  const copia: Partial<Donacion> = { ...d };
+  delete copia.telefonoDonante;
+  delete copia.indicacionesPuesto;
+  delete copia.voluntarioId;
+  delete copia.voluntarioNombre;
+  return { ...(copia as Omit<Donacion, 'telefonoDonante' | 'indicacionesPuesto' | 'voluntarioId' | 'voluntarioNombre'>), updatedAt };
+}
+
+async function leerDonacionesDeltaSupabase(desde: string | null): Promise<DonacionCache[]> {
+  const supabase = createClient();
+
+  // 1) Con columna updated_at (esquema del plan técnico).
+  let q1 = supabase.from('donaciones').select('*');
+  if (desde) q1 = q1.gt('updated_at', desde);
+  const r1 = await q1.order('updated_at', { ascending: true }).limit(LIMITE_REGISTROS_DELTA);
+
+  let filas: Record<string, any>[] | null = r1.error ? null : r1.data;
+
+  // 2) Esquema sin updated_at: se deriva de created_at / asignada_at / entregada_at.
+  if (!filas) {
+    let q2 = supabase.from('donaciones').select('*');
+    if (desde) {
+      q2 = q2.or(`created_at.gt.${desde},asignada_at.gt.${desde},entregada_at.gt.${desde}`);
+    }
+    const r2 = await q2.order('created_at', { ascending: true }).limit(LIMITE_REGISTROS_DELTA);
+    if (r2.error) throw new Error(r2.error.message);
+    filas = r2.data;
+  }
+
+  return (filas || []).map((fila) => {
+    const donacion = mapearFilaDonacion(fila);
+    return aDonacionCache(
+      donacion,
+      marcaTemporalDonacion({
+        updatedAt: fila.updated_at,
+        createdAt: donacion.createdAt,
+        asignadaAt: donacion.asignadaAt,
+        entregadaAt: donacion.entregadaAt,
+      })
+    );
+  });
+}
+
+function leerDonacionesDeltaMemoria(desde: string | null): DonacionCache[] {
+  const desdeMs = desde ? new Date(desde).getTime() : -Infinity;
+  const porId = new Map<string, { donacion: Donacion; marca: string }>();
+
+  const fuentes: Array<Map<string, Donacion> | undefined> = [
+    DONACIONES_ESTADO_VOLATIL,
+    globalThis.__NEXO_DONACIONES_VOLATILES,
+  ];
+  for (const fuente of fuentes) {
+    fuente?.forEach((donacion) => {
+      const marca = marcaTemporalDonacion(donacion);
+      const previo = porId.get(donacion.id);
+      if (!previo || new Date(marca).getTime() > new Date(previo.marca).getTime()) {
+        porId.set(donacion.id, { donacion, marca });
+      }
+    });
+  }
+
+  return Array.from(porId.values())
+    .filter(({ marca }) => new Date(marca).getTime() > desdeMs)
+    .sort((a, b) => new Date(a.marca).getTime() - new Date(b.marca).getTime())
+    .slice(0, LIMITE_REGISTROS_DELTA)
+    .map(({ donacion, marca }) => aDonacionCache(donacion, marca));
+}
+
+async function leerProductosDelta(desde: string | null): Promise<ProductoCatalogo[]> {
+  // El catálogo base viaja sembrado en el dispositivo; el servidor solo aporta cambios si existe la tabla.
+  if (!esSupabaseConfigurado()) return [];
+  try {
+    const supabase = createClient();
+    let query = supabase.from('catalogo_productos').select('*');
+    if (desde) query = query.gt('updated_at', desde);
+    const { data, error } = await query
+      .order('updated_at', { ascending: true })
+      .limit(LIMITE_REGISTROS_DELTA);
+    if (error || !data) return [];
+
+    return data
+      .filter((p: Record<string, any>) => p.id && p.nombre && p.updated_at)
+      .map((p: Record<string, any>) => ({
+        id: String(p.id),
+        nombre: String(p.nombre),
+        categoria: (CATEGORIAS_PRODUCTO.includes(p.categoria) ? p.categoria : 'granos') as ProductoCatalogo['categoria'],
+        requiereFrio: !!p.requiere_frio,
+        unidadSugerida: (UNIDADES_PRODUCTO.includes(p.unidad_sugerida) ? p.unidad_sugerida : 'kg') as ProductoCatalogo['unidadSugerida'],
+        updatedAt: new Date(p.updated_at).toISOString(),
+      }));
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Devuelve únicamente los registros modificados después de `last_sync_timestamp` (updated_at > desde)
+ * para `catalogo_productos` y `donaciones_cache`. El cliente (`sincronizarCatalogoDelta`) los aplica
+ * en IndexedDB y avanza su marca. Cero costo extra: una sola consulta por recurso (RNF-005).
+ */
+export async function obtenerCambiosDelta(desde: DesdeDelta = {}): Promise<CambiosDelta> {
+  const desdeProductos = normalizarDesde(desde.catalogoProductos);
+  const desdeDonaciones = normalizarDesde(desde.donacionesCache);
+
+  let donaciones: DonacionCache[] | null = null;
+  if (esSupabaseConfigurado()) {
+    try {
+      donaciones = await leerDonacionesDeltaSupabase(desdeDonaciones);
+    } catch {
+      donaciones = null;
+    }
+  }
+  if (!donaciones) {
+    donaciones = leerDonacionesDeltaMemoria(desdeDonaciones);
+  }
+
+  return {
+    productos: await leerProductosDelta(desdeProductos),
+    donaciones,
+    serverTimestamp: new Date().toISOString(),
+  };
 }

@@ -124,3 +124,62 @@ export function validarDefinitionOfDone(checklist: DoDChecklist): {
     bloqueos,
   };
 }
+
+/**
+ * Política de gobernanza de datos estricta: prohibición terminante de constantes ficticias.
+ *
+ * ¿Por qué?: Requisito no negociable de la UAO para superar la prueba de gobierno institucional.
+ */
+export const ZERO_INVENTED_METRICS_POLICY = true as const;
+
+export interface ImpactoEntregadas {
+  totalKg: number;
+  totalRaciones: number;
+  co2EvitadoKg: number;
+  donacionesEntregadas: number;
+}
+
+/**
+ * Calcula las métricas de impacto derivadas exclusivamente de donaciones con entrega culminada (estado = 'ENTREGADA').
+ *
+ * ¿Por qué?: CA-05.4 y el mandato de auditoría UAO prohíben computar impacto sobre ofertas en tránsito o no reclamadas.
+ *
+ * @param donaciones Colección completa o filtrada de donaciones.
+ * @returns Métricas calculadas únicamente sobre los lotes efectivamente entregados.
+ */
+export function calcularImpactoEntregadas(donaciones: Donacion[]): ImpactoEntregadas {
+  if (!donaciones || donaciones.length === 0) {
+    return {
+      totalKg: 0,
+      totalRaciones: 0,
+      co2EvitadoKg: 0,
+      donacionesEntregadas: 0,
+    };
+  }
+
+  const entregadas = donaciones.filter((d) => d.estado === 'ENTREGADA');
+  if (entregadas.length === 0) {
+    return {
+      totalKg: 0,
+      totalRaciones: 0,
+      co2EvitadoKg: 0,
+      donacionesEntregadas: 0,
+    };
+  }
+
+  let totalKg = 0;
+  for (const d of entregadas) {
+    totalKg += Number(d.cantidadEstimada) || 0;
+  }
+
+  const raciones = Math.floor(totalKg / KG_PER_RATION);
+  // Factor FAO estándar: 2.5 kg CO2e / kg de alimento salvado
+  const co2Evitado = Math.round(totalKg * 2.5 * 10) / 10;
+
+  return {
+    totalKg: Math.round(totalKg * 10) / 10,
+    totalRaciones: raciones,
+    co2EvitadoKg: co2Evitado,
+    donacionesEntregadas: entregadas.length,
+  };
+}

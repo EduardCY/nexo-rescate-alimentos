@@ -105,18 +105,15 @@ Si una vez evaluado el proyecto el equipo desea apagar o desmantelar los servici
 
 ## Documentación
 
-La especificación completa del sistema y las decisiones de diseño se encuentran versionadas dentro del repositorio:
+La especificación completa del sistema, su gobernanza ágil y las decisiones de diseño se encuentran versionadas dentro del repositorio:
 
-- **Documento Maestro Consolidado (Entrega 3A):** [`docs/spec/entrega-3a-especificacion-y-plan.md`](docs/spec/entrega-3a-especificacion-y-plan.md)*Versión canónica en Markdown del documento oficial de entrega (Portada, Constitución, 5 Comportamientos en Gherkin, Plan Técnico, Backlog de 15 Tareas Atómicas y Habilitadores).*
-- **Constitución del Proyecto:** [`docs/spec/constitucion.md`](docs/spec/constitucion.md)*Roles del equipo, convenciones de trabajo, política de IA, Definición de Listo (DoR) y Definición de Terminado (DoD).*
-- **Especificación de Requisitos (SRS):** [`docs/spec/requisitos.md`](docs/spec/requisitos.md)*Catálogo consolidado de Requisitos Funcionales (RF-001 a RF-018) y No Funcionales (RNF-001 a RNF-006 - ISO/IEC 25010), trazados con comportamientos y marco legal.*
-- **Especificación de Comportamientos (MVP):** [`docs/spec/comportamientos.md`](docs/spec/comportamientos.md)*Especificación BDD/Gherkin de los 5 comportamientos clave del núcleo trazados a los requerimientos del Módulo 1.*
-- **Tablero y Catálogo de Issues (GitHub Projects):** [`docs/spec/tablero-github-projects.md`](docs/spec/tablero-github-projects.md)*Configuración de estados, plantilla oficial de issues y catálogo de historias y tareas atómicas para el tablero del proyecto.*
-- **Plan Técnico:** [`docs/spec/plan-tecnico.md`](docs/spec/plan-tecnico.md)*Arquitectura PWA Serverless, modelo de datos relacional en PostgreSQL/Supabase, sincronización offline y despliegue en Vercel.*
-- **Planificación e Implementación Sesión 8:** [`docs/plan-habilitadores-sesion8.md`](docs/plan-habilitadores-sesion8.md)*Memoria técnica de las tareas ejecutadas para los 5 habilitadores del Módulo 3.*
-- **Guía y Checklist de Habilitadores:** [`docs/guia-habilitadores.md`](docs/guia-habilitadores.md)*Síntesis normativa de habilitadores del Módulo 3, estados del tablero y definiciones de calidad.*
-- **Registro de Decisiones de Arquitectura (ADRs):** [`docs/decisiones/`](docs/decisiones/)
-  *Historial de decisiones técnicas de fondo, alternativas evaluadas y consecuencias.*
+- **Constitución del Proyecto:** [`docs/spec/constitucion.md`](docs/spec/constitucion.md) — *Roles del equipo (Equipo 3), convenciones de trabajo, política de IA, Definición de Listo (DoR) y Definición de Terminado (DoD).*
+- **Especificación de Requisitos (SRS):** [`docs/spec/requisitos.md`](docs/spec/requisitos.md) — *Catálogo consolidado de Requisitos Funcionales (RF-001 a RF-018) y No Funcionales (RNF-001 a RNF-006 - ISO/IEC 25010), trazados con comportamientos y marco legal colombiano.*
+- **Especificación de Comportamientos (MVP):** [`docs/spec/comportamientos.md`](docs/spec/comportamientos.md) — *Especificación formal BDD/Gherkin de los 5 comportamientos clave del núcleo (CMP-01 a CMP-05) y comportamiento transversal PWA.*
+- **Tablero y Catálogo de Issues (GitHub Projects):** [`docs/spec/tablero-github-projects.md`](docs/spec/tablero-github-projects.md) — *Configuración de estados, jerarquía nativa de Issues Principales y 33 Sub-issues, trazabilidad 1:1 con GitHub Projects #6.*
+- **Plan Técnico:** [`docs/spec/plan-tecnico.md`](docs/spec/plan-tecnico.md) — *Arquitectura PWA Serverless, modelo relacional en PostgreSQL/Supabase, políticas RLS, Dexie v2 (Patrón Outbox y sincronización delta) y Service Worker.*
+- **Registro de Decisiones de Arquitectura (ADRs):** [`docs/decisiones/ADR-001-bloqueo-atomico-segunda-toma.md`](docs/decisiones/ADR-001-bloqueo-atomico-segunda-toma.md) — *Decisión técnica de concurrencia y bloqueo atómico con SELECT FOR UPDATE contra segunda toma simultánea.*
+- **Guía de Ejecución por Olas y Prompts:** [`planeacion_sprints/prompts/README.md`](planeacion_sprints/prompts/README.md) — *Manual operativo del Product Owner y cuadernos de prompts de ejecución técnica para las Olas de desarrollo.*
 
 ---
 

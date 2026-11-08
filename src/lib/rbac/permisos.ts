@@ -39,7 +39,7 @@ export type PermisoSistema =
  * escaladas de privilegios no autorizadas en tiempo de ejecución tanto en línea como fuera de línea.
  */
 export const RBAC_PERMISOS: Readonly<Record<RolCorporativo, readonly PermisoSistema[]>> = Object.freeze({
-  ADMIN: Object.freeze([
+  ADMIN: ([
     'admin:users:read',
     'admin:users:write',
     'admin:users:suspend',
@@ -51,29 +51,29 @@ export const RBAC_PERMISOS: Readonly<Record<RolCorporativo, readonly PermisoSist
     'donaciones:take',
     'entregas:confirm',
     'rastreo:public:read',
-  ]),
-  COORDINADOR: Object.freeze([
+  ] as const),
+  COORDINADOR: ([
     'reports:impact:read',
     'reports:impact:export',
     'donaciones:read',
     'rastreo:public:read',
-  ]),
-  VOLUNTARIO: Object.freeze([
+  ] as const),
+  VOLUNTARIO: ([
     'donaciones:read',
     'donaciones:take',
     'entregas:confirm',
     'rastreo:public:read',
-  ]),
-  DONANTE: Object.freeze([
+  ] as const),
+  DONANTE: ([
     'donaciones:create',
     'donaciones:read',
     'rastreo:public:read',
-  ]),
-  RECEPTOR: Object.freeze([
+  ] as const),
+  RECEPTOR: ([
     'donaciones:read',
     'entregas:confirm',
     'rastreo:public:read',
-  ]),
+  ] as const),
 });
 
 /**

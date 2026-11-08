@@ -1,28 +1,15 @@
-"use client";
+'use client';
 
-import { useEffect } from "react";
+import { useEffect } from 'react';
+import { registrarServiceWorkerPWA } from '@/lib/pwa/register-sw';
 
 /**
- * Componente cliente para registrar el Service Worker de la PWA en el navegador.
- * Requisito indispensable para habilitar el banner de instalación en móviles (Android/iOS).
+ * Componente cliente para registrar el Service Worker de la PWA y activar
+ * la sincronización reactiva Outbox/Delta en el ciclo de vida del navegador (`TASK-28`).
  */
 export function ServiceWorkerRegister(): null {
   useEffect(() => {
-    if (typeof window !== "undefined" && "serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator.serviceWorker
-          .register("/sw.js")
-          .then((registration) => {
-            // Registro exitoso del Service Worker
-            if (process.env.NODE_ENV === "development") {
-              // En desarrollo solo verificamos que no arroje errores
-            }
-          })
-          .catch((error) => {
-            console.error("Error al registrar el Service Worker PWA:", error);
-          });
-      });
-    }
+    return registrarServiceWorkerPWA();
   }, []);
 
   return null;

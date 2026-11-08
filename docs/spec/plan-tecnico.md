@@ -118,10 +118,11 @@ Verificación: `tests/db/tomar-donacion.test.ts` (PostgreSQL real, ver cabecera 
   - `NEXT_PUBLIC_APP_NAME`
 - **Entorno en Producción (Vercel Live):**
   - **Dominio Canónico Oficial:** [https://nexo-rescate-alimentos.vercel.app](https://nexo-rescate-alimentos.vercel.app)
-  - **Rutas Operativas:**
-    - Portal y Dashboard SCADA: `/`
+  - **Rutas Operativas y Portales Especializados por Rol:**
+    - Autenticación y Registro Diferenciado por Rol (`DONANTE`, `VOLUNTARIO`, `RECEPTOR`, `COORDINADOR`, `ADMIN`): `/login`
+    - Portal y Dashboard SCADA Adaptativo por Rol (5 Experiencias Independientes con 0 Datos Mock): `/`
     - Publicación con OpenStreetMap y Offline-First (`CMP-01`): `/donar`
-    - Catálogo reactivo y Radar Multivoluntario (`CMP-02`, `CMP-03`): `/donaciones`
+    - Catálogo reactivo, Pestaña de Donaciones Expiradas (`ADMIN`/`COORDINADOR`) y Radar Multivoluntario (`CMP-02`, `CMP-03`): `/donaciones`
     - Hoja de ruta móvil con navegación GPS (`CMP-03`): `/ruta-activa`
     - Acta digital de entrega en comedor comunitario (`CMP-04`): `/entregas/[id]`
     - Consulta pública de estado y línea de tiempo inmutable (`CMP-05`): `/rastreo`

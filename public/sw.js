@@ -1,110 +1,148 @@
 /**
- * Service Worker - Nexo Rescate de Alimentos Cali
- * Estrategias de caché:
- * - Cache First: Activos estáticos (imágenes, fuentes, estilos, manifest).
- * - Network First con degradación graceful: Páginas y navegación.
- * - Network Only: Llamadas API externas (Supabase) para evitar respuestas desactualizadas.
+ * Service Worker PWA - Nexo Rescate de Alimentos Cali (TASK-28 / RNF-002 / CA-PWA.2 / CA-PWA.3)
+ *
+ * Estrategias diferenciadas de caché:
+ * 1. Pre-cache del App Shell en `install`: '/', '/donaciones', '/rastreo', '/~offline', '/manifest.json'.
+ * 2. Cache-First para activos estáticos inmutables (`/_next/static/*`, `/icons/*`, `.png`, `.svg`, `.woff2`, `.css`).
+ * 3. Stale-While-Revalidate para navegaciones HTML (`request.mode === 'navigate'`) con degradación a `/~offline`.
+ * 4. Network-First para consultas dinámicas.
  */
 
-const CACHE_NAME = 'nexo-pwa-v1';
-const PRECACHE_ASSETS = [
+const CACHE_NAME = 'nexo-pwa-v2';
+
+const APP_SHELL_ROUTES = [
   '/',
+  '/donaciones',
+  '/rastreo',
+  '/~offline',
   '/manifest.json',
-  '/icon-192x192.png',
-  '/icon-512x512.png',
-  '/apple-touch-icon.png',
-  '/favicon.png',
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png',
+  '/icons/icon-maskable-512x512.png',
+  '/icons/apple-touch-icon.png',
 ];
 
-// Evento de instalación
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(PRECACHE_ASSETS);
-    }).then(() => self.skipWaiting())
+    caches
+      .open(CACHE_NAME)
+      .then(async (cache) => {
+        for (const asset of APP_SHELL_ROUTES) {
+          try {
+            await cache.add(asset);
+          } catch {
+            // Continuar pre-cacheo incluso si una ruta opcional aún no está compilada
+          }
+        }
+      })
+      .then(() => self.skipWaiting())
   );
 });
 
-// Evento de activación: limpieza de cachés anteriores
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames
-          .filter((name) => name !== CACHE_NAME)
-          .map((name) => caches.delete(name))
-      );
-    }).then(() => self.clients.claim())
+    caches
+      .keys()
+      .then((cacheNames) =>
+        Promise.all(
+          cacheNames
+            .filter((name) => name !== CACHE_NAME)
+            .map((name) => caches.delete(name))
+        )
+      )
+      .then(() => self.clients.claim())
   );
 });
 
-// Evento de intercepción de red (Fetch)
+function esActivoEstatico(url, request) {
+  const pathname = url.pathname;
+  return (
+    pathname.startsWith('/_next/static/') ||
+    pathname.startsWith('/icons/') ||
+    pathname.endsWith('.png') ||
+    pathname.endsWith('.svg') ||
+    pathname.endsWith('.ico') ||
+    pathname.endsWith('.woff2') ||
+    pathname.endsWith('.css') ||
+    request.destination === 'style' ||
+    request.destination === 'script' ||
+    request.destination === 'image' ||
+    request.destination === 'font'
+  );
+}
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
+  if (request.method !== 'GET') return;
+
   const url = new URL(request.url);
-
-  // Ignorar esquemas que no sean http/https (e.g. chrome-extension://)
   if (!url.protocol.startsWith('http')) return;
+  if (url.hostname.includes('supabase.co')) return;
 
-  // Ignorar llamadas a Supabase API y WebSockets (deben ser siempre en red viva)
-  if (url.hostname.includes('supabase.co')) {
-    return;
-  }
-
-  // Para peticiones de navegación (HTML)
-  if (request.mode === 'navigate') {
+  // 1. Estrategia Cache-First para activos estáticos
+  if (esActivoEstatico(url, request)) {
     event.respondWith(
-      fetch(request).catch(() => {
-        return caches.match(request).then((cachedResponse) => {
-          if (cachedResponse) return cachedResponse;
-          return caches.match('/');
-        });
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request)
+          .then((response) => {
+            if (response && response.status === 200) {
+              const clone = response.clone();
+              caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+            }
+            return response;
+          })
+          .catch(() => caches.match('/~offline'));
       })
     );
     return;
   }
 
-  // Para activos estáticos locales (imágenes, scripts, fuentes)
-  if (
-    request.destination === 'image' ||
-    request.destination === 'style' ||
-    request.destination === 'script' ||
-    request.destination === 'font'
-  ) {
+  // 2. Estrategia Stale-While-Revalidate para navegaciones HTML con fallback a /~offline (CA-PWA.2 / CA-PWA.3)
+  if (request.mode === 'navigate') {
     event.respondWith(
-      caches.match(request).then((cachedResponse) => {
-        if (cachedResponse) {
-          // Devolver de caché y revalidar en segundo plano (Stale While Revalidate)
-          fetch(request).then((networkResponse) => {
+      caches.open(CACHE_NAME).then(async (cache) => {
+        const cachedResponse = await cache.match(request);
+        const networkFetch = fetch(request)
+          .then((networkResponse) => {
             if (networkResponse && networkResponse.status === 200) {
-              const responseToCache = networkResponse.clone();
-              caches.open(CACHE_NAME).then((cache) => {
-                cache.put(request, responseToCache);
-              });
+              cache.put(request, networkResponse.clone());
             }
-          }).catch(() => {});
+            return networkResponse;
+          })
+          .catch(() => null);
+
+        if (cachedResponse) {
+          void networkFetch;
           return cachedResponse;
         }
 
-        return fetch(request).then((networkResponse) => {
-          if (!networkResponse || networkResponse.status !== 200) {
-            return networkResponse;
-          }
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(request, responseToCache);
-          });
-          return networkResponse;
-        });
+        const liveResponse = await networkFetch;
+        if (liveResponse) return liveResponse;
+
+        const offlineFallback = await cache.match('/~offline');
+        if (offlineFallback) return offlineFallback;
+
+        return (await cache.match('/')) || Response.error();
       })
     );
     return;
   }
 
-  // Por defecto: Red primero
+  // 3. Estrategia Network-First para datos y rutas restantes
   event.respondWith(
-    fetch(request).catch(() => {
-      return caches.match(request);
-    })
+    fetch(request)
+      .then((response) => {
+        if (response && response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+        }
+        return response;
+      })
+      .catch(async () => {
+        const cached = await caches.match(request);
+        if (cached) return cached;
+        return (await caches.match('/~offline')) || Response.error();
+      })
   );
 });

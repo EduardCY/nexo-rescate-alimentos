@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useTransition } from 'react';
+import React, { useState, useEffect, useMemo, useTransition, useCallback } from 'react';
 import Link from 'next/link';
 import {
   ArrowLeft,
@@ -10,18 +10,24 @@ import {
   Truck,
   Snowflake,
   MapPin,
+  Clock,
+  Utensils,
 } from 'lucide-react';
 import type { Donacion, ZonaFiltro } from '@/types';
 import {
   obtenerDonacionesDisponibles,
+  obtenerDonacionesExpiradas,
   tomarDonacion,
   marcarDonacionExpirada,
+  asignarDonacionAComedor,
 } from '@/actions/donaciones';
+import { listarOrganizaciones, type OrganizacionRegistrada } from '@/actions/organizaciones';
 import dynamic from 'next/dynamic';
 import { filtrarDonacionesDisponibles } from '@/lib/utils/donaciones-helper';
 import { DonacionCard } from '@/components/donaciones/DonacionCard';
 import { ZonasFilter } from '@/components/donaciones/ZonasFilter';
 import { ConflictoTomaModal } from '@/components/donaciones/ConflictoTomaModal';
+import { useSession } from '@/lib/auth/session-context';
 
 // Carga dinámica segura de RadarMap con Leaflet sin renderizado en servidor (SSR)
 const RadarMap = dynamic(() => import('@/components/nexo/RadarMap'), {
@@ -37,39 +43,60 @@ const RadarMap = dynamic(() => import('@/components/nexo/RadarMap'), {
 /**
  * Catálogo reactivo de donaciones disponibles (CMP-02 / TASK-06, TASK-07, TASK-16, TASK-17, TASK-19)
  * con filtro determinístico por zonas de Cali, filtro de cadena de frío, mapa interactivo
- * OpenStreetMap integrado y manejo de colisión de toma concurrente HTTP 409 (CMP-03 / TASK-09).
+ * OpenStreetMap integrado, vista de auditoría de Donaciones Expiradas para ADMIN y COORDINADOR,
+ * y manejo de colisión de toma concurrente HTTP 409 (CMP-03 / TASK-09).
  */
 export default function CatalogoDonacionesPage() {
+  const { sesion } = useSession();
+
   const [donaciones, setDonaciones] = useState<Donacion[]>([]);
+  const [donacionesExpiradas, setDonacionesExpiradas] = useState<Donacion[]>([]);
+  const [comedores, setComedores] = useState<OrganizacionRegistrada[]>([]);
+  const [comedorSeleccionadoPorDonacion, setComedorSeleccionadoPorDonacion] = useState<Record<string, string>>({});
+  const [vistaCatalogo, setVistaCatalogo] = useState<'vigentes' | 'expiradas'>('vigentes');
   const [cargando, setCargando] = useState(true);
   const [tomandoId, setTomandoId] = useState<string | null>(null);
   const [zonaSeleccionada, setZonaSeleccionada] = useState<ZonaFiltro>('TODAS');
   const [soloSinFrio, setSoloSinFrio] = useState(false);
   const [mostrarMapa, setMostrarMapa] = useState(false);
   const [modalColisionAbierto, setModalColisionAbierto] = useState(false);
+  const [errorAccion, setErrorAccion] = useState<string | null>(null);
   const [mensajeExito, setMensajeExito] = useState<{
     id: string;
     codigo: string;
     producto: string;
+    comedorNombre?: string;
   } | null>(null);
   const [, startTransition] = useTransition();
 
-  // Carga de ofertas activas
-  const cargarOfertas = async () => {
+  const esSupervisor =
+    !sesion || sesion.rol === 'ADMIN' || sesion.rol === 'COORDINADOR';
+  const puedePublicar =
+    !sesion || sesion.rol === 'DONANTE' || sesion.rol === 'ADMIN' || sesion.rol === 'COORDINADOR';
+  const puedeVerRutaActiva =
+    !sesion || sesion.rol === 'VOLUNTARIO' || sesion.rol === 'COORDINADOR' || sesion.rol === 'ADMIN';
+
+  const cargarOfertas = useCallback(async () => {
     setCargando(true);
     try {
-      const data = await obtenerDonacionesDisponibles('TODAS');
-      setDonaciones(data);
+      const [vigentes, expiradas, listaComedores] = await Promise.all([
+        obtenerDonacionesDisponibles('TODAS'),
+        obtenerDonacionesExpiradas(),
+        listarOrganizaciones('RECEPTOR'),
+      ]);
+      setDonaciones(vigentes);
+      setDonacionesExpiradas(expiradas);
+      setComedores(listaComedores);
     } catch {
       // Fallback seguro
     } finally {
       setCargando(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    cargarOfertas();
-  }, []);
+    void cargarOfertas();
+  }, [cargarOfertas]);
 
   // Cambio reactivo de zona (< 100 ms DoD)
   const handleCambioZona = (nuevaZona: ZonaFiltro) => {
@@ -108,10 +135,47 @@ export default function CatalogoDonacionesPage() {
     });
   }, [donaciones, zonaSeleccionada, soloSinFrio]);
 
+  const expiradasFiltradas = useMemo(() => {
+    return donacionesExpiradas.filter((d) => {
+      if (zonaSeleccionada !== 'TODAS' && d.zona !== zonaSeleccionada) return false;
+      if (soloSinFrio && d.requiereFrio) return false;
+      return true;
+    });
+  }, [donacionesExpiradas, zonaSeleccionada, soloSinFrio]);
+
   // Manejador cuando una oferta expira en vivo (CA-02.4 / CA-03.3 / TASK-16)
-  const handleOfertaExpirada = (id: string) => {
+  const handleOfertaExpirada = async (id: string) => {
     setDonaciones((prev) => prev.filter((d) => d.id !== id));
-    void marcarDonacionExpirada(id);
+    await marcarDonacionExpirada(id);
+    const exp = await obtenerDonacionesExpiradas();
+    setDonacionesExpiradas(exp);
+  };
+
+  // Asignación previa de Comedor Comunitario (para COORDINADOR / ADMIN)
+  const handlePreasignarComedor = async (donacion: Donacion, comedorId: string) => {
+    setComedorSeleccionadoPorDonacion((prev) => ({ ...prev, [donacion.id]: comedorId }));
+    const com = comedores.find((c) => c.id === comedorId);
+    if (!com) return;
+
+    const res = await asignarDonacionAComedor({
+      donacionId: donacion.id,
+      comedorId: com.id,
+      comedorNombre: com.nombre,
+      comedorTieneFrio: Boolean(com.tieneRefrigeracion),
+    });
+
+    if (res.exito) {
+      setDonaciones((prev) =>
+        prev.map((d) =>
+          d.id === donacion.id
+            ? { ...d, comedorId: com.id, comedorNombre: com.nombre }
+            : d
+        )
+      );
+      setErrorAccion(null);
+    } else {
+      setErrorAccion(res.error);
+    }
   };
 
   // Acción de reserva con captura de colisión concurrente HTTP 409 (TASK-09)
@@ -119,9 +183,19 @@ export default function CatalogoDonacionesPage() {
     if (tomandoId) return;
     setTomandoId(id);
     setMensajeExito(null);
+    setErrorAccion(null);
 
     try {
-      const res = await tomarDonacion(id);
+      const comId = comedorSeleccionadoPorDonacion[id];
+      const comObj = comedores.find((c) => c.id === comId);
+
+      const res = await tomarDonacion(
+        id,
+        sesion?.userId,
+        sesion?.nombre,
+        undefined,
+        comObj ? { comedorId: comObj.id, comedorNombre: comObj.nombre } : undefined
+      );
 
       if (res.exito && res.codigo === 200) {
         setDonaciones((prev) => prev.filter((d) => d.id !== id));
@@ -129,14 +203,15 @@ export default function CatalogoDonacionesPage() {
           id: res.donacion.id,
           codigo: res.donacion.codigo,
           producto: `${res.donacion.tipoAlimento} (${res.donacion.cantidadEstimada} ${res.donacion.unidadMedida})`,
+          comedorNombre: res.donacion.comedorNombre,
         });
       } else if (res.codigo === 409) {
-        // Colisión concurrente (CA-03.2): remoción automática y modal empático
         setDonaciones((prev) => prev.filter((d) => d.id !== id));
         setModalColisionAbierto(true);
       } else if (res.codigo === 410) {
-        // Oferta expirada o cancelada (CA-03.3): remover de la vista
         setDonaciones((prev) => prev.filter((d) => d.id !== id));
+      } else if (!res.exito) {
+        setErrorAccion(res.mensaje);
       }
     } catch {
       // Manejo seguro
@@ -145,10 +220,12 @@ export default function CatalogoDonacionesPage() {
     }
   };
 
+  const listaActiva = vistaCatalogo === 'vigentes' ? donacionesFiltradas : expiradasFiltradas;
+
   return (
     <main className="min-h-screen p-2 sm:p-4 lg:p-6 bg-[#0b1020] text-black">
       <div className="bevel-out mx-auto max-w-6xl p-[3px] bg-[#d4d0c8] shadow-[8px_8px_0_rgba(0,0,0,0.55)]">
-        {/* Barra de título Windows 98 */}
+        {/* Barra de título Windows 98 adaptada al Rol */}
         <header className="titlebar flex flex-wrap items-center justify-between gap-2 px-2 py-1">
           <div className="flex items-center gap-2 min-w-0">
             <span className="w-3 h-3 bg-white text-black font-extrabold text-[10px] flex items-center justify-center">
@@ -158,26 +235,30 @@ export default function CatalogoDonacionesPage() {
               CATÁLOGO DE DONACIONES ACTIVAS — SANTIAGO DE CALI
             </h1>
           </div>
-          <div className="flex items-center gap-2">
-            <Link
-              href="/ruta-activa"
-              className="btn-98 !py-0.5 !px-2 text-[11px] font-mono flex items-center gap-1 shrink-0 text-[#000080] font-bold"
-            >
-              <Truck className="w-3 h-3" />
-              <span>Ruta Activa</span>
-            </Link>
-            <Link
-              href="/donar"
-              className="btn-98 !py-0.5 !px-2 text-[11px] font-mono flex items-center gap-1 shrink-0 text-[#000080] font-bold"
-            >
-              <span>+ Publicar Donación</span>
-            </Link>
+          <div className="flex flex-wrap items-center gap-2">
+            {puedeVerRutaActiva && (
+              <Link
+                href="/ruta-activa"
+                className="btn-98 !py-0.5 !px-2 text-[11px] font-mono flex items-center gap-1 shrink-0 text-[#000080] font-bold"
+              >
+                <Truck className="w-3 h-3" />
+                <span>Ruta Activa</span>
+              </Link>
+            )}
+            {puedePublicar && (
+              <Link
+                href="/donar"
+                className="btn-98 !py-0.5 !px-2 text-[11px] font-mono flex items-center gap-1 shrink-0 text-[#000080] font-bold"
+              >
+                <span>+ Publicar Donación</span>
+              </Link>
+            )}
             <Link
               href="/"
               className="btn-98 !py-0.5 !px-2 text-[11px] font-mono flex items-center gap-1 shrink-0"
             >
               <ArrowLeft className="w-3 h-3" />
-              <span>Inicio</span>
+              <span>Mi Portal ({sesion?.rol || 'Inicio'})</span>
             </Link>
           </div>
         </header>
@@ -195,6 +276,7 @@ export default function CatalogoDonacionesPage() {
                     {mensajeExito.codigo}
                   </b>{' '}
                   • Lote: {mensajeExito.producto}
+                  {mensajeExito.comedorNombre ? ` • Destino: ${mensajeExito.comedorNombre}` : ''}
                 </p>
               </div>
             </div>
@@ -223,19 +305,56 @@ export default function CatalogoDonacionesPage() {
           </div>
         )}
 
-        {/* Barra de información y estado */}
+        {errorAccion && (
+          <div className="m-2 bevel-in bg-red-100 border border-red-600 p-2.5 text-red-900 font-mono text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{errorAccion}</span>
+          </div>
+        )}
+
+        {/* Barra de información, estado y Pestaña de Expiradas para ADMIN y COORDINADOR */}
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#808080] bg-[#e0ded8] px-3 py-2 font-mono text-xs">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-[#000080]">
-              {donacionesFiltradas.length}{' '}
-              {donacionesFiltradas.length === 1
-                ? 'oferta disponible'
-                : 'ofertas disponibles'}
-            </span>
-            <span className="text-slate-500">•</span>
-            <span className="text-slate-700">
-              Ordenadas por urgencia de recogida
-            </span>
+          <div className="flex flex-wrap items-center gap-2">
+            {esSupervisor ? (
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setVistaCatalogo('vigentes')}
+                  className={`px-2.5 py-1 font-bold text-[11px] ${
+                    vistaCatalogo === 'vigentes'
+                      ? 'bg-[#000080] text-white bevel-in'
+                      : 'btn-98 text-black'
+                  }`}
+                >
+                  Ofertas Vigentes ({donacionesFiltradas.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVistaCatalogo('expiradas')}
+                  className={`px-2.5 py-1 font-bold text-[11px] flex items-center gap-1 ${
+                    vistaCatalogo === 'expiradas'
+                      ? 'bg-red-800 text-white bevel-in'
+                      : 'btn-98 text-red-900'
+                  }`}
+                >
+                  <Clock className="w-3 h-3" />
+                  <span>Donaciones Expiradas / Histórico ({expiradasFiltradas.length})</span>
+                </button>
+              </div>
+            ) : (
+              <>
+                <span className="font-bold text-[#000080]">
+                  {donacionesFiltradas.length}{' '}
+                  {donacionesFiltradas.length === 1
+                    ? 'oferta disponible'
+                    : 'ofertas disponibles'}
+                </span>
+                <span className="text-slate-500">•</span>
+                <span className="text-slate-700">
+                  Ordenadas por urgencia de recogida
+                </span>
+              </>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -307,40 +426,94 @@ export default function CatalogoDonacionesPage() {
           {cargando ? (
             <div className="bevel-in bg-white p-8 text-center font-mono text-xs text-slate-700">
               <RefreshCw className="w-6 h-6 mx-auto mb-2 animate-spin text-[#000080]" />
-              <p>Consultando ofertas activas en la red de Cali...</p>
+              <p>Consultando ofertas en la red de Cali...</p>
             </div>
-          ) : donacionesFiltradas.length === 0 ? (
+          ) : listaActiva.length === 0 ? (
             <div className="bevel-in bg-[#ffffe1] p-8 text-center font-mono text-xs text-slate-800 max-w-md mx-auto">
               <AlertCircle className="w-8 h-8 mx-auto mb-2 text-amber-700" />
               <p className="font-bold text-sm mb-1">
-                No hay donaciones activas en la zona {zonaSeleccionada}.
+                {vistaCatalogo === 'expiradas'
+                  ? `No hay donaciones expiradas registradas en la zona ${zonaSeleccionada}.`
+                  : `No hay donaciones activas en la zona ${zonaSeleccionada}.`}
               </p>
               <p className="text-[11px] text-slate-600 mb-4">
-                Prueba seleccionando &quot;TODAS LAS ZONAS&quot; o desactivando
-                el filtro de refrigeración.
+                {vistaCatalogo === 'expiradas'
+                  ? 'Las ofertas cuya hora límite caduque sin haber sido tomadas aparecerán aquí para auditoría.'
+                  : 'Prueba seleccionando "TODAS LAS ZONAS", desactivando el filtro de refrigeración o publicando una nueva donación.'}
               </p>
-              <button
-                type="button"
-                onClick={() => {
-                  handleCambioZona('TODAS');
-                  setSoloSinFrio(false);
-                }}
-                className="btn-98 min-h-[40px] px-4 font-bold"
-              >
-                Ver todas las zonas de Cali
-              </button>
+              <div className="flex flex-wrap justify-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleCambioZona('TODAS');
+                    setSoloSinFrio(false);
+                  }}
+                  className="btn-98 min-h-[40px] px-4 font-bold"
+                >
+                  Ver todas las zonas de Cali
+                </button>
+                {puedePublicar && vistaCatalogo === 'vigentes' && (
+                  <Link href="/donar" className="btn-green min-h-[40px] px-4 font-bold flex items-center">
+                    + Publicar Donación
+                  </Link>
+                )}
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {donacionesFiltradas.map((donacion) => (
-                <DonacionCard
-                  key={donacion.id}
-                  donacion={donacion}
-                  onTomar={handleTomarDonacion}
-                  onExpirada={handleOfertaExpirada}
-                  tomando={tomandoId === donacion.id}
-                />
-              ))}
+              {listaActiva.map((donacion) => {
+                const comedoresAptos = comedores.filter(
+                  (c) => !donacion.requiereFrio || Boolean(c.tieneRefrigeracion)
+                );
+
+                return (
+                  <DonacionCard
+                    key={donacion.id}
+                    donacion={donacion}
+                    onTomar={handleTomarDonacion}
+                    onExpirada={handleOfertaExpirada}
+                    tomando={tomandoId === donacion.id}
+                    mostrarExpirada={vistaCatalogo === 'expiradas'}
+                    ocultarBotonTomar={
+                      vistaCatalogo === 'expiradas' ||
+                      sesion?.rol === 'DONANTE' ||
+                      sesion?.rol === 'RECEPTOR'
+                    }
+                    accionExtra={
+                      vistaCatalogo === 'vigentes' && comedoresAptos.length > 0 ? (
+                        <div className="font-mono text-[11px] bg-white p-1.5 bevel-in">
+                          <label
+                            htmlFor={`sel-com-${donacion.id}`}
+                            className="flex items-center gap-1 font-bold text-[#000080] mb-1"
+                          >
+                            <Utensils className="w-3 h-3" />
+                            <span>Comedor Comunitario Destino:</span>
+                          </label>
+                          <select
+                            id={`sel-com-${donacion.id}`}
+                            value={
+                              comedorSeleccionadoPorDonacion[donacion.id] ||
+                              donacion.comedorId ||
+                              ''
+                            }
+                            onChange={(e) =>
+                              handlePreasignarComedor(donacion, e.target.value)
+                            }
+                            className="retro-field !py-1 text-[11px]"
+                          >
+                            <option value="">Seleccionar comedor compatible...</option>
+                            {comedoresAptos.map((c) => (
+                              <option key={c.id} value={c.id}>
+                                {c.nombre} (Zona {c.zona})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      ) : undefined
+                    }
+                  />
+                );
+              })}
             </div>
           )}
         </div>

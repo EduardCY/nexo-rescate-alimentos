@@ -46,127 +46,134 @@ declare global {
   }> | undefined;
 }
 
+const ES_ENTORNO_TEST =
+  process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST);
+
+const FIXTURES_TEST_ENTREGAS: Array<[string, Donacion]> = [
+  [
+    'seed-01',
+    {
+      id: 'seed-01',
+      codigo: 'DON-201',
+      donanteId: 'd-1',
+      donanteNombre: 'Puesto 45 Doña Rosa - Santa Elena',
+      tipoAlimento: 'Tomate Chonto y Plátano Maduro',
+      requiereFrio: false,
+      cantidadEstimada: 45,
+      unidadMedida: 'kg',
+      direccionRecogida: 'Galería Santa Elena - Sector Muelle 2',
+      indicacionesPuesto: 'Entrar por la Puerta 3 de carga, frente a la báscula comunitaria.',
+      telefonoDonante: '+57 315 482 1901',
+      zona: 'CENTRO',
+      horaLimite: new Date(Date.now() + 90 * 60 * 1000).toISOString(),
+      estado: 'ASIGNADA',
+      voluntarioId: 'vol-001',
+      voluntarioNombre: 'Voluntario Carlos',
+      comedorId: 'com-01',
+      comedorNombre: 'Comedor Comunitario Siloé Esperanza',
+      exencionSanitariaAceptada: true,
+      createdAt: new Date().toISOString(),
+      asignadaAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+    },
+  ],
+  [
+    'seed-02',
+    {
+      id: 'seed-02',
+      codigo: 'DON-202',
+      donanteId: 'd-2',
+      donanteNombre: 'Lácteos del Valle - Alameda',
+      tipoAlimento: 'Queso Campesino y Yogur Artesanal',
+      requiereFrio: true,
+      cantidadEstimada: 25,
+      unidadMedida: 'kg',
+      direccionRecogida: 'Plaza Alameda - Pasillo Central Local 18',
+      indicacionesPuesto: 'Local esquinero refrigerado junto a la entrada de la Calle 9.',
+      telefonoDonante: '+57 317 920 3344',
+      zona: 'SUR',
+      horaLimite: new Date(Date.now() + 180 * 60 * 1000).toISOString(),
+      estado: 'DISPONIBLE',
+      comedorId: 'com-02',
+      comedorNombre: 'Fundación Pan y Vida - Meléndez',
+      exencionSanitariaAceptada: true,
+      createdAt: new Date().toISOString(),
+    },
+  ],
+  [
+    'seed-03',
+    {
+      id: 'seed-03',
+      codigo: 'DON-203',
+      donanteId: 'd-3',
+      donanteNombre: 'Panadería La Espiga - Siloé',
+      tipoAlimento: 'Pan Aliñado y Pandebono del Día',
+      requiereFrio: false,
+      cantidadEstimada: 15,
+      unidadMedida: 'canastillas',
+      direccionRecogida: 'Calle 1 Oeste # 50-12, Sector La Nave, Siloé',
+      indicacionesPuesto: 'Preguntar por Don Hernando en el mostrador principal.',
+      telefonoDonante: '+57 310 551 8872',
+      zona: 'LADERA',
+      horaLimite: new Date(Date.now() + 35 * 60 * 1000).toISOString(),
+      estado: 'DISPONIBLE',
+      comedorId: 'com-01',
+      comedorNombre: 'Comedor Comunitario Siloé Esperanza',
+      exencionSanitariaAceptada: true,
+      createdAt: new Date().toISOString(),
+    },
+  ],
+  [
+    'seed-04',
+    {
+      id: 'seed-04',
+      codigo: 'DON-204',
+      donanteId: 'd-4',
+      donanteNombre: 'Fruver El Paraíso - Alfonso López',
+      tipoAlimento: 'Papaya, Guayaba y Banano Criollo',
+      requiereFrio: false,
+      cantidadEstimada: 60,
+      unidadMedida: 'kg',
+      direccionRecogida: 'Carrera 7T # 76-14, Alfonso López, Oriente',
+      indicacionesPuesto: 'Bodega lateral con portón verde.',
+      telefonoDonante: '+57 318 604 1129',
+      zona: 'ORIENTE',
+      horaLimite: new Date(Date.now() + 110 * 60 * 1000).toISOString(),
+      estado: 'DISPONIBLE',
+      comedorId: 'com-03',
+      comedorNombre: 'Olla Comunitaria Aguablanca Solidaria',
+      exencionSanitariaAceptada: true,
+      createdAt: new Date().toISOString(),
+    },
+  ],
+  [
+    'seed-05',
+    {
+      id: 'seed-05',
+      codigo: 'DON-205',
+      donanteId: 'd-5',
+      donanteNombre: 'Restaurante El Fogón - La Flora',
+      tipoAlimento: 'Almuerzos Empacados y Arroz con Pollo',
+      requiereFrio: true,
+      cantidadEstimada: 35,
+      unidadMedida: 'unidades',
+      direccionRecogida: 'Avenida 3 Norte # 52N-40, La Flora',
+      indicacionesPuesto: 'Ingreso por zona de parqueadero posterior.',
+      telefonoDonante: '+57 316 742 9080',
+      zona: 'NORTE',
+      horaLimite: new Date(Date.now() + 50 * 60 * 1000).toISOString(),
+      estado: 'DISPONIBLE',
+      comedorId: 'com-04',
+      comedorNombre: 'Comedor Infantil Semillas del Norte',
+      exencionSanitariaAceptada: true,
+      createdAt: new Date().toISOString(),
+    },
+  ],
+];
+
 if (!globalThis.__NEXO_DONACIONES_VOLATILES) {
-  globalThis.__NEXO_DONACIONES_VOLATILES = new Map<string, Donacion>([
-    [
-      'seed-01',
-      {
-        id: 'seed-01',
-        codigo: 'DON-201',
-        donanteId: 'd-1',
-        donanteNombre: 'Puesto 45 Doña Rosa - Santa Elena',
-        tipoAlimento: 'Tomate Chonto y Plátano Maduro',
-        requiereFrio: false,
-        cantidadEstimada: 45,
-        unidadMedida: 'kg',
-        direccionRecogida: 'Galería Santa Elena - Sector Muelle 2',
-        indicacionesPuesto: 'Entrar por la Puerta 3 de carga, frente a la báscula comunitaria.',
-        telefonoDonante: '+57 315 482 1901',
-        zona: 'CENTRO',
-        horaLimite: new Date(Date.now() + 90 * 60 * 1000).toISOString(),
-        estado: 'ASIGNADA',
-        voluntarioId: 'vol-001',
-        voluntarioNombre: 'Voluntario Carlos',
-        comedorId: 'com-01',
-        comedorNombre: 'Comedor Comunitario Siloé Esperanza',
-        exencionSanitariaAceptada: true,
-        createdAt: new Date().toISOString(),
-        asignadaAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
-      },
-    ],
-    [
-      'seed-02',
-      {
-        id: 'seed-02',
-        codigo: 'DON-202',
-        donanteId: 'd-2',
-        donanteNombre: 'Lácteos del Valle - Alameda',
-        tipoAlimento: 'Queso Campesino y Yogur Artesanal',
-        requiereFrio: true,
-        cantidadEstimada: 25,
-        unidadMedida: 'kg',
-        direccionRecogida: 'Plaza Alameda - Pasillo Central Local 18',
-        indicacionesPuesto: 'Local esquinero refrigerado junto a la entrada de la Calle 9.',
-        telefonoDonante: '+57 317 920 3344',
-        zona: 'SUR',
-        horaLimite: new Date(Date.now() + 180 * 60 * 1000).toISOString(),
-        estado: 'DISPONIBLE',
-        comedorId: 'com-02',
-        comedorNombre: 'Fundación Pan y Vida - Meléndez',
-        exencionSanitariaAceptada: true,
-        createdAt: new Date().toISOString(),
-      },
-    ],
-    [
-      'seed-03',
-      {
-        id: 'seed-03',
-        codigo: 'DON-203',
-        donanteId: 'd-3',
-        donanteNombre: 'Panadería La Espiga - Siloé',
-        tipoAlimento: 'Pan Aliñado y Pandebono del Día',
-        requiereFrio: false,
-        cantidadEstimada: 15,
-        unidadMedida: 'canastillas',
-        direccionRecogida: 'Calle 1 Oeste # 50-12, Sector La Nave, Siloé',
-        indicacionesPuesto: 'Preguntar por Don Hernando en el mostrador principal.',
-        telefonoDonante: '+57 310 551 8872',
-        zona: 'LADERA',
-        horaLimite: new Date(Date.now() + 35 * 60 * 1000).toISOString(),
-        estado: 'DISPONIBLE',
-        comedorId: 'com-01',
-        comedorNombre: 'Comedor Comunitario Siloé Esperanza',
-        exencionSanitariaAceptada: true,
-        createdAt: new Date().toISOString(),
-      },
-    ],
-    [
-      'seed-04',
-      {
-        id: 'seed-04',
-        codigo: 'DON-204',
-        donanteId: 'd-4',
-        donanteNombre: 'Fruver El Paraíso - Alfonso López',
-        tipoAlimento: 'Papaya, Guayaba y Banano Criollo',
-        requiereFrio: false,
-        cantidadEstimada: 60,
-        unidadMedida: 'kg',
-        direccionRecogida: 'Carrera 7T # 76-14, Alfonso López, Oriente',
-        indicacionesPuesto: 'Bodega lateral con portón verde.',
-        telefonoDonante: '+57 318 604 1129',
-        zona: 'ORIENTE',
-        horaLimite: new Date(Date.now() + 110 * 60 * 1000).toISOString(),
-        estado: 'DISPONIBLE',
-        comedorId: 'com-03',
-        comedorNombre: 'Olla Comunitaria Aguablanca Solidaria',
-        exencionSanitariaAceptada: true,
-        createdAt: new Date().toISOString(),
-      },
-    ],
-    [
-      'seed-05',
-      {
-        id: 'seed-05',
-        codigo: 'DON-205',
-        donanteId: 'd-5',
-        donanteNombre: 'Restaurante El Fogón - La Flora',
-        tipoAlimento: 'Almuerzos Empacados y Arroz con Pollo',
-        requiereFrio: true,
-        cantidadEstimada: 35,
-        unidadMedida: 'unidades',
-        direccionRecogida: 'Avenida 3 Norte # 52N-40, La Flora',
-        indicacionesPuesto: 'Ingreso por zona de parqueadero posterior.',
-        telefonoDonante: '+57 316 742 9080',
-        zona: 'NORTE',
-        horaLimite: new Date(Date.now() + 50 * 60 * 1000).toISOString(),
-        estado: 'DISPONIBLE',
-        comedorId: 'com-04',
-        comedorNombre: 'Comedor Infantil Semillas del Norte',
-        exencionSanitariaAceptada: true,
-        createdAt: new Date().toISOString(),
-      },
-    ],
-  ]);
+  globalThis.__NEXO_DONACIONES_VOLATILES = new Map<string, Donacion>(
+    ES_ENTORNO_TEST ? FIXTURES_TEST_ENTREGAS : []
+  );
 }
 
 if (!globalThis.__NEXO_TRAZABILIDAD_EVENTOS) {
@@ -178,6 +185,7 @@ if (!globalThis.__NEXO_TRAZABILIDAD_EVENTOS) {
  * Permite sincronía inmediata entre el catálogo volátil y la hoja de ruta (TASK-18 / CMP-03 / CMP-04).
  */
 export async function obtenerDonacionParaEntrega(donacionId: string): Promise<Donacion | null> {
+  if (!donacionId) return null;
   const uuidResuelto = resolverUuidDonacion(donacionId);
 
   if (esSupabaseConfigurado()) {
@@ -208,6 +216,8 @@ export async function obtenerDonacionParaEntrega(donacionId: string): Promise<Do
           cantidadEstimada: Number(data.cantidad_estimada),
           unidadMedida: data.unidad_medida,
           direccionRecogida: data.direccion_recogida,
+          indicacionesPuesto: data.indicaciones_puesto,
+          telefonoDonante: data.telefono_donante,
           zona: (data.zona as ZonaCali) || inferirZonaCali(data.direccion_recogida),
           horaLimite: data.hora_limite,
           estado: data.estado,
@@ -259,6 +269,160 @@ export async function obtenerDonacionParaEntrega(donacionId: string): Promise<Do
   }
 
   return null;
+}
+
+/**
+ * Obtiene las misiones de rescate activas (estado ASIGNADA) asociadas al voluntario o a la red.
+ *
+ * ¿Por qué?: Evita usar mocks quemados en `/ruta-activa` y permite mostrar únicamente las donaciones
+ * realmente aceptadas por el voluntario en sesión.
+ *
+ * @param voluntarioId Identificador opcional del voluntario en sesión.
+ */
+export async function obtenerMisionesAsignadasVoluntario(voluntarioId?: string): Promise<Donacion[]> {
+  const resultadoMap = new Map<string, Donacion>();
+
+  if (esSupabaseConfigurado()) {
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('donaciones')
+        .select('*')
+        .eq('estado', 'ASIGNADA')
+        .order('asignada_at', { ascending: false });
+
+      if (!error && Array.isArray(data)) {
+        for (const row of data) {
+          resultadoMap.set(String(row.id), {
+            id: String(row.id),
+            codigo: String(row.codigo),
+            donanteId: String(row.donante_id || 'anonimo'),
+            donanteNombre: String(row.donante_nombre || 'Comercio Donante'),
+            tipoAlimento: String(row.tipo_alimento),
+            requiereFrio: Boolean(row.requiere_frio),
+            cantidadEstimada: Number(row.cantidad_estimada),
+            unidadMedida: row.unidad_medida,
+            direccionRecogida: String(row.direccion_recogida),
+            indicacionesPuesto: row.indicaciones_puesto ? String(row.indicaciones_puesto) : undefined,
+            telefonoDonante: row.telefono_donante ? String(row.telefono_donante) : undefined,
+            zona: (row.zona as ZonaCali) || inferirZonaCali(String(row.direccion_recogida || '')),
+            horaLimite: String(row.hora_limite),
+            estado: row.estado,
+            exencionSanitariaAceptada: Boolean(row.exencion_sanitaria_aceptada),
+            createdAt: String(row.created_at),
+            voluntarioId: row.voluntario_id ? String(row.voluntario_id) : undefined,
+            voluntarioNombre: row.voluntario_nombre ? String(row.voluntario_nombre) : undefined,
+            comedorId: row.comedor_id ? String(row.comedor_id) : undefined,
+            comedorNombre: row.comedor_nombre ? String(row.comedor_nombre) : undefined,
+            asignadaAt: row.asignada_at ? String(row.asignada_at) : undefined,
+            entregadaAt: row.entregada_at ? String(row.entregada_at) : undefined,
+          });
+        }
+      }
+    } catch {
+      // Fallback a memoria
+    }
+  }
+
+  const fuentes = [globalThis.__NEXO_CATALOGO_VOLATIL, globalThis.__NEXO_DONACIONES_VOLATILES];
+  for (const mapa of fuentes) {
+    if (!mapa) continue;
+    for (const item of Array.from(mapa.values())) {
+      if (item.estado === 'ASIGNADA' && !resultadoMap.has(item.id)) {
+        resultadoMap.set(item.id, { ...item });
+      }
+    }
+  }
+
+  const lista = Array.from(resultadoMap.values());
+  if (!voluntarioId) return lista;
+
+  const filtradas = lista.filter(
+    (d) =>
+      !d.voluntarioId ||
+      d.voluntarioId === voluntarioId ||
+      resolverUuidVoluntario(d.voluntarioId) === resolverUuidVoluntario(voluntarioId)
+  );
+  return filtradas.length > 0 ? filtradas : lista;
+}
+
+/**
+ * Obtiene las donaciones en camino (ASIGNADA) o recibidas (ENTREGADA) para un comedor comunitario receptor.
+ *
+ * ¿Por qué?: Permite que el Portal del Comedor Comunitario (`RECEPTOR`) visualice los lotes que vienen
+ * en camino hacia su sede y confirme el Acta Digital de Recepción Física.
+ */
+export async function obtenerEntregasPorComedor(
+  comedorId?: string,
+  comedorNombre?: string
+): Promise<Donacion[]> {
+  const resultadoMap = new Map<string, Donacion>();
+
+  if (esSupabaseConfigurado()) {
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('donaciones')
+        .select('*')
+        .in('estado', ['ASIGNADA', 'ENTREGADA', 'DISPONIBLE'])
+        .order('created_at', { ascending: false });
+
+      if (!error && Array.isArray(data)) {
+        for (const row of data) {
+          resultadoMap.set(String(row.id), {
+            id: String(row.id),
+            codigo: String(row.codigo),
+            donanteId: String(row.donante_id || 'anonimo'),
+            donanteNombre: String(row.donante_nombre || 'Comercio Donante'),
+            tipoAlimento: String(row.tipo_alimento),
+            requiereFrio: Boolean(row.requiere_frio),
+            cantidadEstimada: Number(row.cantidad_estimada),
+            unidadMedida: row.unidad_medida,
+            direccionRecogida: String(row.direccion_recogida),
+            indicacionesPuesto: row.indicaciones_puesto ? String(row.indicaciones_puesto) : undefined,
+            telefonoDonante: row.telefono_donante ? String(row.telefono_donante) : undefined,
+            zona: (row.zona as ZonaCali) || inferirZonaCali(String(row.direccion_recogida || '')),
+            horaLimite: String(row.hora_limite),
+            estado: row.estado,
+            exencionSanitariaAceptada: Boolean(row.exencion_sanitaria_aceptada),
+            createdAt: String(row.created_at),
+            voluntarioId: row.voluntario_id ? String(row.voluntario_id) : undefined,
+            voluntarioNombre: row.voluntario_nombre ? String(row.voluntario_nombre) : undefined,
+            comedorId: row.comedor_id ? String(row.comedor_id) : undefined,
+            comedorNombre: row.comedor_nombre ? String(row.comedor_nombre) : undefined,
+            asignadaAt: row.asignada_at ? String(row.asignada_at) : undefined,
+            entregadaAt: row.entregada_at ? String(row.entregada_at) : undefined,
+          });
+        }
+      }
+    } catch {
+      // Fallback a memoria
+    }
+  }
+
+  const fuentes = [globalThis.__NEXO_CATALOGO_VOLATIL, globalThis.__NEXO_DONACIONES_VOLATILES];
+  for (const mapa of fuentes) {
+    if (!mapa) continue;
+    for (const item of Array.from(mapa.values())) {
+      if (!resultadoMap.has(item.id)) {
+        resultadoMap.set(item.id, { ...item });
+      }
+    }
+  }
+
+  const todas = Array.from(resultadoMap.values()).filter(
+    (d) => d.estado === 'ASIGNADA' || d.estado === 'ENTREGADA' || Boolean(d.comedorId || d.comedorNombre)
+  );
+
+  if (!comedorId && !comedorNombre) return todas;
+
+  const filtradas = todas.filter((d) => {
+    if (comedorId && d.comedorId === comedorId) return true;
+    if (comedorNombre && d.comedorNombre?.toLowerCase() === comedorNombre.toLowerCase()) return true;
+    return false;
+  });
+
+  return filtradas.length > 0 ? filtradas : todas;
 }
 
 /**

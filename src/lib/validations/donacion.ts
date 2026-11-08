@@ -59,6 +59,8 @@ export const donacionSchema = z.object({
   ),
   donanteId: z.string().optional(),
   donanteNombre: z.string().optional(),
+  comedorId: z.string().optional(),
+  comedorNombre: z.string().optional(),
   zona: z.enum(['NORTE', 'CENTRO', 'SUR', 'ORIENTE', 'LADERA']).optional(),
   indicacionesPuesto: z.string().optional(),
   telefonoDonante: z.string().optional(),

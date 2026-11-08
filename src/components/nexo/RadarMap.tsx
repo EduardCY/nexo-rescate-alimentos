@@ -502,6 +502,19 @@ export default function RadarMap({
           </div>
         )}
 
+        {/* Overlay limpio de Empty State cuando aún no hay nodos creados */}
+        {mapaListo && nodosFiltrados.length === 0 && (
+          <div className="pointer-events-none absolute top-3 left-3 right-3 sm:right-auto sm:max-w-md z-[400] bevel-out bg-[#ffffe1]/95 p-2.5 text-black font-mono text-xs shadow-[3px_3px_0_rgba(0,0,0,0.65)]">
+            <p className="font-bold text-[#000080] flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
+              <span>Mapa listo — 0 nodos registrados en esta vista</span>
+            </p>
+            <p className="text-[11px] text-slate-700 mt-0.5 leading-snug">
+              Registra un comercio donante, un comedor comunitario o publica una donación para visualizar marcadores georreferenciados en tiempo real.
+            </p>
+          </div>
+        )}
+
         {/* Tarjeta flotante inferior si hay un nodo seleccionado */}
         {nodoSeleccionado && (
           <div className="absolute bottom-2 left-2 right-2 sm:right-auto sm:max-w-md z-[500] bevel-out p-2.5 text-black font-mono text-xs shadow-[4px_4px_0_rgba(0,0,0,0.7)]">

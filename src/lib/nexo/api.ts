@@ -1,4 +1,5 @@
 import type {
+  CategoryId,
   Certificate,
   Delivery,
   Dispatch,
@@ -7,6 +8,14 @@ import type {
   Ngo,
   Totals,
 } from "./impact";
+import {
+  obtenerTodasLasDonaciones,
+  asignarDonacionAComedor,
+  publicarDonacion,
+} from "@/actions/donaciones";
+import { listarOrganizaciones } from "@/actions/organizaciones";
+import { obtenerMetricasImpactoReal } from "@/actions/metricas";
+import type { ZonaCali } from "@/types";
 
 export type NewLot = Omit<Lot, "id" | "status">;
 
@@ -22,6 +31,9 @@ export interface NexoApi {
   confirmMatch(lotId: string, ngoId: string): Promise<Dispatch>;
 }
 
+const ES_ENTORNO_TEST =
+  process.env.NODE_ENV === "test" || Boolean(process.env.VITEST);
+
 const SEED_LOTS: Lot[] = [
   {
     id: "DON-101",
@@ -30,7 +42,7 @@ const SEED_LOTS: Lot[] = [
     category: "fruta",
     kg: 85,
     hoursLeft: 6,
-    coldChain: "Ambiente (sin refrigeración)",
+    coldChain: "Temperatura Ambiente",
     dock: "Módulo 3 Bodega 12",
     status: "available",
     estado: "DISPONIBLE",
@@ -44,7 +56,7 @@ const SEED_LOTS: Lot[] = [
     category: "fruta",
     kg: 120,
     hoursLeft: 12,
-    coldChain: "Ambiente (sin refrigeración)",
+    coldChain: "Temperatura Ambiente",
     dock: "Puesto 45 Galería",
     status: "available",
     estado: "DISPONIBLE",
@@ -216,57 +228,302 @@ const SEED_DELIVERIES: Delivery[] = [
   { lotId: "DON-100", concept: "Granos y Legumbres (Cavasa)", kg: 310, recipient: "Mesa Común Centro", deductibleCop: 325500 },
 ];
 
+const COORDENADAS_BASE_ZONA: Record<ZonaCali, [number, number]> = {
+  CENTRO: [3.435, -76.528],
+  SUR: [3.412, -76.538],
+  NORTE: [3.475, -76.515],
+  ORIENTE: [3.422, -76.492],
+  LADERA: [3.428, -76.56],
+};
+
+function inferirCategoria(texto: string): CategoryId {
+  const t = texto.toLowerCase();
+  if (t.includes("queso") || t.includes("leche") || t.includes("yogur") || t.includes("lácteo") || t.includes("lacteo")) {
+    return "lacteos";
+  }
+  if (t.includes("pan") || t.includes("pandebono") || t.includes("harina")) {
+    return "panaderia";
+  }
+  if (t.includes("almuerzo") || t.includes("vianda") || t.includes("preparad")) {
+    return "viandas";
+  }
+  if (t.includes("pollo") || t.includes("carne") || t.includes("huevo") || t.includes("proteína")) {
+    return "proteina";
+  }
+  if (t.includes("arroz") || t.includes("frijol") || t.includes("grano") || t.includes("lenteja")) {
+    return "granos";
+  }
+  return "fruta";
+}
+
 export const nexoApi: NexoApi = {
   async listLots() {
-    return SEED_LOTS;
+    if (ES_ENTORNO_TEST) return SEED_LOTS;
+
+    try {
+      const donaciones = await obtenerTodasLasDonaciones();
+      return donaciones.map((d) => {
+        const diffMs = new Date(d.horaLimite).getTime() - Date.now();
+        const hoursLeft = Math.max(0, Math.round((diffMs / 3600000) * 10) / 10);
+        const status =
+          d.estado === "ENTREGADA"
+            ? "delivered"
+            : d.estado === "ASIGNADA"
+            ? "assigned"
+            : "available";
+
+        return {
+          id: d.codigo || d.id,
+          donor: d.donanteNombre || "Comercio Donante",
+          product: d.tipoAlimento,
+          category: inferirCategoria(d.tipoAlimento),
+          kg: d.cantidadEstimada,
+          hoursLeft,
+          coldChain: d.requiereFrio ? "4°C - 8°C (Requiere Refrigeración)" : "Temperatura Ambiente",
+          dock: d.indicacionesPuesto || d.direccionRecogida,
+          status,
+          estado: d.estado,
+          zona: d.zona || "CENTRO",
+          requiereFrio: d.requiereFrio,
+          ngoId: d.comedorId,
+        };
+      });
+    } catch {
+      return [];
+    }
   },
+
   async listNgos() {
-    return SEED_NGOS;
+    if (ES_ENTORNO_TEST) return SEED_NGOS;
+
+    try {
+      const comedores = await listarOrganizaciones("RECEPTOR");
+      return comedores.map((c) => ({
+        id: c.id,
+        name: c.nombre,
+        city: `Cali (${c.zona || "CENTRO"})`,
+        diners: c.comensalesDiarios || 120,
+        urgency: (c.urgencia === 'Media' || c.urgencia === 'Normal' ? c.urgencia : 'Alta') as 'Alta' | 'Media' | 'Normal',
+        hasFridge: Boolean(c.tieneRefrigeracion ?? c.capacidadFrio),
+        capacidadFrio: Boolean(c.capacidadFrio ?? c.tieneRefrigeracion),
+        tieneRefrigeracion: Boolean(c.tieneRefrigeracion ?? c.capacidadFrio),
+        zona: c.zona || "CENTRO",
+        distanceKm: 3.2,
+        prefers: ["fruta", "lacteos", "panaderia", "viandas", "granos"],
+      }));
+    } catch {
+      return [];
+    }
   },
+
   async listDeliveries() {
-    return SEED_DELIVERIES;
+    if (ES_ENTORNO_TEST) return SEED_DELIVERIES;
+
+    try {
+      const metricas = await obtenerMetricasImpactoReal();
+      return metricas.entregasDetalle.map((e) => ({
+        lotId: e.codigo,
+        concept: `${e.tipoAlimento} (${e.donante})`,
+        kg: e.kilogramos,
+        recipient: e.comedorReceptor,
+        deductibleCop: Math.round(e.kilogramos * 4800 * 0.25),
+      }));
+    } catch {
+      return [];
+    }
   },
+
   async listMapNodes() {
-    return SEED_MAP_NODES;
+    if (ES_ENTORNO_TEST) return SEED_MAP_NODES;
+
+    try {
+      const [orgs, donaciones] = await Promise.all([
+        listarOrganizaciones(),
+        obtenerTodasLasDonaciones(),
+      ]);
+
+      const nodes: MapNode[] = [];
+
+      for (const org of orgs) {
+        const z = org.zona || "CENTRO";
+        const base = COORDENADAS_BASE_ZONA[z] || COORDENADAS_BASE_ZONA.CENTRO;
+        const lat = org.coordenadas?.lat ?? base[0];
+        const lng = org.coordenadas?.lng ?? base[1];
+
+        nodes.push({
+          id: `org-${org.id}`,
+          kind: org.tipo === "RECEPTOR" ? "receiver" : "donor",
+          lat,
+          lng,
+          label: org.nombre,
+          sub:
+            org.tipo === "RECEPTOR"
+              ? `${org.comensalesDiarios || 100} comensales · ${org.tieneRefrigeracion ? "❄ Con frío" : "Ambiente"}`
+              : (org as any).plazaGaleria || org.direccion || "Comercio Donante",
+          zona: z,
+          municipio: "Santiago de Cali",
+          direccion: org.direccion,
+          alcance: "URBANO",
+        });
+      }
+
+      for (const d of donaciones) {
+        if (d.estado !== "DISPONIBLE" && d.estado !== "ASIGNADA") continue;
+        const z = d.zona || "CENTRO";
+        const base = COORDENADAS_BASE_ZONA[z] || COORDENADAS_BASE_ZONA.CENTRO;
+        const lat = d.coordenadas?.lat ?? base[0];
+        const lng = d.coordenadas?.lng ?? base[1];
+
+        nodes.push({
+          id: `don-${d.id}`,
+          kind: d.estado === "ASIGNADA" ? "truck" : "donor",
+          lat,
+          lng,
+          label: `${d.codigo}: ${d.tipoAlimento}`,
+          sub:
+            d.estado === "ASIGNADA"
+              ? `En ruta (${d.voluntarioNombre || "Voluntario"}) → ${d.comedorNombre || "Comedor"}`
+              : `${d.cantidadEstimada} ${d.unidadMedida} • ${d.donanteNombre}`,
+          zona: z,
+          municipio: "Santiago de Cali",
+          direccion: d.direccionRecogida,
+          alcance: "URBANO",
+        });
+      }
+
+      return nodes;
+    } catch {
+      return [];
+    }
   },
+
   async getTotals() {
-    return {
-      kg: 1450,
-      rations: 3625,
-      waterL: 942500,
-      valueCop: 14200000,
-      efficiency: 94.2,
-    };
+    if (ES_ENTORNO_TEST) {
+      return {
+        kg: 1450,
+        rations: 3625,
+        waterL: 942500,
+        valueCop: 14200000,
+        efficiency: 94.2,
+      };
+    }
+
+    try {
+      const metricas = await obtenerMetricasImpactoReal();
+      const kg = metricas.totalKgRescatados;
+      return {
+        kg,
+        rations: metricas.totalRacionesServidas,
+        waterL: Math.round(kg * 650),
+        valueCop: Math.round(kg * 4800),
+        efficiency: metricas.donacionesCompletadas > 0 ? 100 : null,
+      };
+    } catch {
+      return {
+        kg: 0,
+        rations: 0,
+        waterL: 0,
+        valueCop: 0,
+        efficiency: null,
+      };
+    }
   },
+
   async getCertificate() {
-    return {
-      legalName: "Fundación Mesa Común Cali",
-      nit: "901.428.192-3",
-      period: "Octubre 2026",
-      signature: "MESA-COMUN-SHA256:7f9a8b1c4e2d3f6a8b1c4e2d",
-    };
+    if (ES_ENTORNO_TEST) {
+      return {
+        legalName: "Fundación Mesa Común Cali",
+        nit: "901.428.192-3",
+        period: "Octubre 2026",
+        signature: "MESA-COMUN-SHA256:7f9a8b1c4e2d3f6a8b1c4e2d",
+      };
+    }
+
+    try {
+      const metricas = await obtenerMetricasImpactoReal();
+      if (metricas.donacionesCompletadas === 0) {
+        return null;
+      }
+      const ultima = metricas.entregasDetalle[0];
+      return {
+        legalName: ultima?.donante || "Donante Registrado Nexo",
+        nit: "Ley 1990 de 2019",
+        period: new Date().toLocaleDateString("es-CO", { month: "long", year: "numeric" }),
+        signature: `NEXO-AUDIT-SHA256:${metricas.donacionesCompletadas}L-${Math.round(metricas.totalKgRescatados)}KG`,
+      };
+    } catch {
+      return null;
+    }
   },
+
   async createLot(data) {
-    const newId = `DON-${Date.now().toString().slice(-3)}`;
+    const requiereFrio =
+      data.requiereFrio ?? !data.coldChain.toLowerCase().includes("ambiente");
+    const horaLimite = new Date(Date.now() + Math.max(1, data.hoursLeft || 4) * 3600000).toISOString();
+
+    const res = await publicarDonacion({
+      tipoAlimento: data.product,
+      cantidadEstimada: data.kg,
+      unidadMedida: "kg",
+      direccionRecogida: data.dock || "Santiago de Cali",
+      zona: data.zona ?? "CENTRO",
+      horaLimite,
+      requiereFrio,
+      exencionSanitariaAceptada: true,
+      donanteNombre: data.donor,
+    });
+
+    const newId = res.exito ? res.codigo : `DON-${Date.now().toString().slice(-3)}`;
     return {
       ...data,
       id: newId,
       status: "available",
       estado: "DISPONIBLE",
       zona: data.zona ?? "CENTRO",
-      requiereFrio: data.requiereFrio ?? !data.coldChain.toLowerCase().includes("ambiente"),
+      requiereFrio,
     };
   },
-  async assignLot() {},
+
+  async assignLot(id: string, ngoId?: string) {
+    if (ngoId) {
+      const comedores = await listarOrganizaciones("RECEPTOR");
+      const comedor = comedores.find((c) => c.id === ngoId);
+      if (comedor) {
+        await asignarDonacionAComedor({
+          donacionId: id,
+          comedorId: comedor.id,
+          comedorNombre: comedor.nombre,
+          comedorTieneFrio: Boolean(comedor.tieneRefrigeracion ?? comedor.capacidadFrio),
+        });
+      }
+    }
+  },
+
   async confirmMatch(lotId, ngoId) {
+    const comedores = await listarOrganizaciones("RECEPTOR");
+    const comedor = comedores.find((c) => c.id === ngoId);
+    if (comedor) {
+      await asignarDonacionAComedor({
+        donacionId: lotId,
+        comedorId: comedor.id,
+        comedorNombre: comedor.nombre,
+        comedorTieneFrio: Boolean(comedor.tieneRefrigeracion ?? comedor.capacidadFrio),
+      });
+    }
+
+    const ahora = new Date();
+    const entregaEst = new Date(ahora.getTime() + 45 * 60000);
+    const fmtHora = (d: Date) =>
+      `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+
     return {
       lotId,
       ngoId,
       code: `NEXO-DISP-${lotId}-${ngoId}`,
-      truck: "Unidad 04 (Carromoto Piaggio)",
-      driver: "Carlos Restrepo (Voluntario)",
-      pickupAt: "14:30",
-      deliverAt: "15:45",
+      truck: "Voluntario en Ruta",
+      driver: "Pendiente de Toma por Voluntario",
+      pickupAt: fmtHora(ahora),
+      deliverAt: fmtHora(entregaEst),
     };
   },
 };

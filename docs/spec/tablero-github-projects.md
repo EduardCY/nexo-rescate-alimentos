@@ -4,7 +4,7 @@
 **Organización:** Fundación Mesa Común (Cali, Colombia)  
 **Equipo:** Nexo Cívico Studio (Equipo 3)  
 **Herramienta:** GitHub Projects (`https://github.com/users/EduardCY/projects/6` · Tablero MVP - Rescate de Alimentos (Nexo Cívico Studio) / Repositorio: `EduardCY/nexo-rescate-alimentos`)  
-**Versión:** 2.2 — Cierre de Ola 1 y Activación de Ola 2 (Sprints 1 y 2 Completados)  
+**Versión:** 3.0 — Cierre Integral Olas 1, 2 y 3 (100% de las 33 Tareas Terminadas en `main`)  
 
 ---
 
@@ -183,7 +183,7 @@ Definición de Terminado
 * **Título:** `CMP-05 · Control de acceso RBAC, gestión de usuarios, trazabilidad e impacto real`
 * **Labels:** `historia`, `mvp`, `cmp-05`, `rbac`
 * **Campos del Tablero:**
-  * **Status:** `En curso`
+  * **Status:** `Terminado`
   * **CMP:** `CMP-05`
   * **Origen:** `RF-002 / RF-006 / RF-007 / RNF-003 · US5.1`
   * **Estimación:** `4`
@@ -203,13 +203,13 @@ Criterios de aceptación
 Se prueba como: administrador / coordinadora general · escritorio / voluntario / donante · teléfono
 
 Definición de Terminado
-- [ ] Cumple todos sus criterios de aceptación (CA-05.1 a CA-05.4)
-- [ ] El código está revisado y aprobado en GitHub PR por Product Owner (Eduard Criollo) y QA (Felipe Charria)
-- [ ] Tiene pruebas automatizadas y todas pasan
-- [ ] Está integrada en main sin romper la compilación
-- [ ] La documentación afectada está actualizada en docs/spec/
-- [ ] Pasan las dos pruebas de gobierno (cifras 100% calculadas desde base de datos real y confinamiento RBAC)
-- [ ] Se probó entrando con los roles reales en escritorio y móvil
+- [x] Cumple todos sus criterios de aceptación (CA-05.1 a CA-05.4)
+- [x] El código está revisado y aprobado en GitHub PR por Product Owner (Eduard Criollo) y QA (Felipe Charria)
+- [x] Tiene pruebas automatizadas y todas pasan
+- [x] Está integrada en main sin romper la compilación
+- [x] La documentación afectada está actualizada en docs/spec/
+- [x] Pasan las dos pruebas de gobierno (cifras 100% calculadas desde base de datos real y confinamiento RBAC)
+- [x] Se probó entrando con los roles reales en escritorio y móvil
 ```
 
 ---
@@ -219,7 +219,7 @@ Definición de Terminado
 * **Título:** `TRANSVERSAL · Arquitectura PWA Offline-First Estricta, Ajustes CMP-01 y Cierre DevOps/QA`
 * **Labels:** `historia`, `mvp`, `transversal`, `pwa`, `devops`
 * **Campos del Tablero:**
-  * **Status:** `En curso`
+  * **Status:** `Terminado`
   * **CMP:** `TRANSVERSAL`
   * **Origen:** `RNF-002 / RNF-005 / RF-018 / CMP-01`
   * **Estimación:** `4`
@@ -256,7 +256,7 @@ Cumpliendo con la gobernanza del Módulo 3, a continuación se presenta la **Mat
 | **`TASK-10`** | [#19](https://github.com/EduardCY/nexo-rescate-alimentos/issues/19) | Diseñar y ejecutar suite de pruebas automatizadas de concurrencia y estrés para `CMP-03` | `CMP-03` ([#4](https://github.com/EduardCY/nexo-rescate-alimentos/issues/4)) | **Felipe Charria Caicedo** | QA Engineer | Sprint 2 | 4h | `Terminado` |
 | **`TASK-11`** | [#20](https://github.com/EduardCY/nexo-rescate-alimentos/issues/20) | Construir flujo móvil de confirmación de entrega física en comedor con registro de receptor | `CMP-04` ([#5](https://github.com/EduardCY/nexo-rescate-alimentos/issues/5)) | **Alejandro Rodríguez Cortés** | Full-Stack Developer | Sprint 2 | 3h | `Terminado` |
 | **`TASK-12`** | [#21](https://github.com/EduardCY/nexo-rescate-alimentos/issues/21) | Auditar y verificar que no se capturen datos personales sensibles de beneficiarios (Ley 1581) | `CMP-04` ([#5](https://github.com/EduardCY/nexo-rescate-alimentos/issues/5)) | **Felipe Charria Caicedo** | QA Engineer | Sprint 2 | 2h | `Terminado` |
-| **`TASK-13`** | [#22](https://github.com/EduardCY/nexo-rescate-alimentos/issues/22) | Implementar pantalla de consulta pública (`/rastreo`), línea de tiempo (`TimelineTracker`) y bloqueo visual RBAC | `CMP-05` ([#6](https://github.com/EduardCY/nexo-rescate-alimentos/issues/6)) | **Santiago Valencia Sandoval** | UX Designer | **Ola 2** | 3h | **`En curso`** |
+| **`TASK-13`** | [#22](https://github.com/EduardCY/nexo-rescate-alimentos/issues/22) | Implementar pantalla de consulta pública (`/rastreo`), línea de tiempo (`TimelineTracker`) y bloqueo visual RBAC | `CMP-05` ([#6](https://github.com/EduardCY/nexo-rescate-alimentos/issues/6)) | **Santiago Valencia Sandoval** | UX Designer | **Ola 2** | 3h | **`Terminado`** |
 | **`TASK-14`** | [#23](https://github.com/EduardCY/nexo-rescate-alimentos/issues/23) | Construir agregador de métricas de kilos reales (Cero Datos Inventados) y matriz de gobernanza RBAC | `CMP-05` ([#6](https://github.com/EduardCY/nexo-rescate-alimentos/issues/6)) | **Eduard Criollo Yule** | Product Owner / Lead | **Ola 1** | 3h | **`Terminado`** |
 | **`TASK-15`** | [#9](https://github.com/EduardCY/nexo-rescate-alimentos/issues/9) | Configurar pipeline de CI en GitHub Actions y monitoreo de cuotas de capa gratuita ($0 USD/mes) | `TRANSVERSAL` ([#36](https://github.com/EduardCY/nexo-rescate-alimentos/issues/36)) | **Juan Camilo Peña Sandoval** | DevOps Engineer | Sprint 1 | 4h | `Terminado` |
 | **`TASK-16`** | [#29](https://github.com/EduardCY/nexo-rescate-alimentos/issues/29) | Implementar temporizador reactivo `useCountdown` y ocultamiento automático de donaciones expiradas | `CMP-02` ([#3](https://github.com/EduardCY/nexo-rescate-alimentos/issues/3)) | **Juan Sebastián Delgado** | Backend Developer | Sprint 2 | 3h | `Terminado` |
@@ -268,15 +268,15 @@ Cumpliendo con la gobernanza del Módulo 3, a continuación se presenta la **Mat
 | **`TASK-22`** | [#3](https://github.com/EduardCY/nexo-rescate-alimentos/issues/3) | Implementar soporte multivoluntario en `RadarMap.tsx` con gestión de flota y `fitBounds()` | `CMP-02` ([#3](https://github.com/EduardCY/nexo-rescate-alimentos/issues/3)) | **Alejandro Rodríguez Cortés** | Full-Stack Developer | Sprint 2 | 3h | `Terminado` |
 | **`TASK-23`** | [#3](https://github.com/EduardCY/nexo-rescate-alimentos/issues/3) | Georreferenciar excedentes disponibles en el mapa interactivo con pines de producto/kg y fallback | `CMP-02` ([#3](https://github.com/EduardCY/nexo-rescate-alimentos/issues/3)) | **Eduard Criollo Yule** | Product Owner / Lead | Sprint 2 | 2h | `Terminado` |
 | **`TASK-24`** | [#37](https://github.com/EduardCY/nexo-rescate-alimentos/issues/37) | Implementar modelo RBAC en PostgreSQL/RLS, Server Actions de Admin de Usuarios y sesión offline firmada | `CMP-05` ([#6](https://github.com/EduardCY/nexo-rescate-alimentos/issues/6)) | **Juan Sebastián Delgado** | Backend Developer | **Ola 1** | 4h | **`Terminado`** |
-| **`TASK-25`** | [#38](https://github.com/EduardCY/nexo-rescate-alimentos/issues/38) | Implementar Panel de Impacto (`/impacto`), Módulo Admin de Usuarios (`/admin/usuarios`), exportación CSV y middleware RBAC | `CMP-05` ([#6](https://github.com/EduardCY/nexo-rescate-alimentos/issues/6)) | **Alejandro Rodríguez Cortés** | Full-Stack Developer | **Ola 2** | 4h | **`En curso`** |
-| **`TASK-26`** | [#39](https://github.com/EduardCY/nexo-rescate-alimentos/issues/39) | Diseñar suite BDD de pruebas para `CMP-05`: Trazabilidad, Cero Datos Inventados, confinamiento RBAC y sesión offline | `CMP-05` ([#6](https://github.com/EduardCY/nexo-rescate-alimentos/issues/6)) | **Felipe Charria Caicedo** | QA Engineer | **Ola 3** | 3h | **`Por hacer`** |
-| **`TASK-27`** | [#40](https://github.com/EduardCY/nexo-rescate-alimentos/issues/40) | Configurar políticas de seguridad RBAC en despliegue, auditoría de rutas protegidas en CI y verificación de cabeceras | `CMP-05` ([#6](https://github.com/EduardCY/nexo-rescate-alimentos/issues/6)) | **Juan Camilo Peña Sandoval** | DevOps Engineer | **Ola 3** | 3h | **`Por hacer`** |
-| **`TASK-28`** | [#41](https://github.com/EduardCY/nexo-rescate-alimentos/issues/41) | Implementar Service Worker Offline-First (`public/sw.js`), App Shell Pre-caching, ruta `/~offline` y registro resiliente | `TRANSVERSAL` ([#36](https://github.com/EduardCY/nexo-rescate-alimentos/issues/36)) | **Alejandro Rodríguez Cortés** | Full-Stack Developer | **Ola 2** | 4h | **`En curso`** |
+| **`TASK-25`** | [#38](https://github.com/EduardCY/nexo-rescate-alimentos/issues/38) | Implementar Panel de Impacto (`/impacto`), Módulo Admin de Usuarios (`/admin/usuarios`), exportación CSV y middleware RBAC | `CMP-05` ([#6](https://github.com/EduardCY/nexo-rescate-alimentos/issues/6)) | **Alejandro Rodríguez Cortés** | Full-Stack Developer | **Ola 2** | 4h | **`Terminado`** |
+| **`TASK-26`** | [#39](https://github.com/EduardCY/nexo-rescate-alimentos/issues/39) | Diseñar suite BDD de pruebas para `CMP-05`: Trazabilidad, Cero Datos Inventados, confinamiento RBAC y sesión offline | `CMP-05` ([#6](https://github.com/EduardCY/nexo-rescate-alimentos/issues/6)) | **Felipe Charria Caicedo** | QA Engineer | **Ola 3** | 3h | **`Terminado`** |
+| **`TASK-27`** | [#40](https://github.com/EduardCY/nexo-rescate-alimentos/issues/40) | Configurar políticas de seguridad RBAC en despliegue, auditoría de rutas protegidas en CI y verificación de cabeceras | `CMP-05` ([#6](https://github.com/EduardCY/nexo-rescate-alimentos/issues/6)) | **Juan Camilo Peña Sandoval** | DevOps Engineer | **Ola 3** | 3h | **`Terminado`** |
+| **`TASK-28`** | [#41](https://github.com/EduardCY/nexo-rescate-alimentos/issues/41) | Implementar Service Worker Offline-First (`public/sw.js`), App Shell Pre-caching, ruta `/~offline` y registro resiliente | `TRANSVERSAL` ([#36](https://github.com/EduardCY/nexo-rescate-alimentos/issues/36)) | **Alejandro Rodríguez Cortés** | Full-Stack Developer | **Ola 2** | 4h | **`Terminado`** |
 | **`TASK-29`** | [#42](https://github.com/EduardCY/nexo-rescate-alimentos/issues/42) | Evolucionar IndexedDB (Dexie v2) con Patrón Outbox auditable, Catálogo Offline con delta sync y código determinista | `TRANSVERSAL` ([#36](https://github.com/EduardCY/nexo-rescate-alimentos/issues/36)) | **Juan Sebastián Delgado** | Backend Developer | **Ola 1** | 4h | **`Terminado`** |
-| **`TASK-30`** | [#43](https://github.com/EduardCY/nexo-rescate-alimentos/issues/43) | Aplicar ajustes UI/UX de `CMP-01` (Advertencia legal colombiana, etiqueta *"Temperatura Ambiente"*) e Inspector Outbox | `TRANSVERSAL` ([#36](https://github.com/EduardCY/nexo-rescate-alimentos/issues/36)) | **Santiago Valencia Sandoval** | UX Designer | **Ola 2** | 3h | **`En curso`** |
-| **`TASK-31`** | [#44](https://github.com/EduardCY/nexo-rescate-alimentos/issues/44) | Endurecer `next.config.mjs` (eliminar `ignoreBuildErrors`), generar iconos PWA reales y actualizar compuertas CI/CD y Free Tier | `TRANSVERSAL` ([#36](https://github.com/EduardCY/nexo-rescate-alimentos/issues/36)) | **Juan Camilo Peña Sandoval** | DevOps Engineer | **Ola 3** | 3h | **`Por hacer`** |
-| **`TASK-32`** | [#45](https://github.com/EduardCY/nexo-rescate-alimentos/issues/45) | Ejecutar suite de pruebas transversales PWA Offline-First, algoritmo determinista C1 y Co-Revisión QA de PRs | `TRANSVERSAL` ([#36](https://github.com/EduardCY/nexo-rescate-alimentos/issues/36)) | **Felipe Charria Caicedo** | QA Engineer | **Ola 3** | 3h | **`Por hacer`** |
-| **`TASK-33`** | [#46](https://github.com/EduardCY/nexo-rescate-alimentos/issues/46) | Ejecutar Revisión Transversal Final 360°, auditoría y merge de PRs junto a QA, validación de Gobierno y cierre DoD en `main` | `TRANSVERSAL` ([#36](https://github.com/EduardCY/nexo-rescate-alimentos/issues/36)) | **Eduard Criollo Yule** | Product Owner / Lead | **Cierre Final** | 3h | **`Por hacer`** |
+| **`TASK-30`** | [#43](https://github.com/EduardCY/nexo-rescate-alimentos/issues/43) | Aplicar ajustes UI/UX de `CMP-01` (Advertencia legal colombiana, etiqueta *"Temperatura Ambiente"*) e Inspector Outbox | `TRANSVERSAL` ([#36](https://github.com/EduardCY/nexo-rescate-alimentos/issues/36)) | **Santiago Valencia Sandoval** | UX Designer | **Ola 2** | 3h | **`Terminado`** |
+| **`TASK-31`** | [#44](https://github.com/EduardCY/nexo-rescate-alimentos/issues/44) | Endurecer `next.config.mjs` (eliminar `ignoreBuildErrors`), generar iconos PWA reales y actualizar compuertas CI/CD y Free Tier | `TRANSVERSAL` ([#36](https://github.com/EduardCY/nexo-rescate-alimentos/issues/36)) | **Juan Camilo Peña Sandoval** | DevOps Engineer | **Ola 3** | 3h | **`Terminado`** |
+| **`TASK-32`** | [#45](https://github.com/EduardCY/nexo-rescate-alimentos/issues/45) | Ejecutar suite de pruebas transversales PWA Offline-First, algoritmo determinista C1 y Co-Revisión QA de PRs | `TRANSVERSAL` ([#36](https://github.com/EduardCY/nexo-rescate-alimentos/issues/36)) | **Felipe Charria Caicedo** | QA Engineer | **Ola 3** | 3h | **`Terminado`** |
+| **`TASK-33`** | [#46](https://github.com/EduardCY/nexo-rescate-alimentos/issues/46) | Ejecutar Revisión Transversal Final 360°, auditoría y merge de PRs junto a QA, validación de Gobierno y cierre DoD en `main` | `TRANSVERSAL` ([#36](https://github.com/EduardCY/nexo-rescate-alimentos/issues/36)) | **Eduard Criollo Yule** | Product Owner / Lead | **Cierre Final** | 3h | **`Terminado`** |
 
 ---
 

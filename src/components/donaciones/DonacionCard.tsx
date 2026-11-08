@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback } from 'react';
-import { Clock, MapPin, ShieldCheck, Check } from 'lucide-react';
+import { Clock, MapPin, ShieldCheck, Check, Utensils } from 'lucide-react';
 import type { Donacion, ZonaCali } from '@/types';
 import { ColdChainBadge } from './ColdChainBadge';
 import { useCountdown } from '@/lib/hooks/useCountdown';
@@ -12,6 +12,9 @@ interface DonacionCardProps {
   onTomarDonacion?: (donacionId: string) => Promise<void> | void;
   onExpirada?: (donacionId: string) => void;
   tomando?: boolean;
+  mostrarExpirada?: boolean;
+  ocultarBotonTomar?: boolean;
+  accionExtra?: React.ReactNode;
   className?: string;
 }
 
@@ -25,7 +28,7 @@ const ZONA_COLORES: Record<ZonaCali, { bg: string; text: string; border: string 
 
 /**
  * Tarjeta de donación reactiva con cuenta regresiva en vivo (TASK-06 & TASK-16 / CA-02.1, CA-02.4)
- * e insignia destacada de cadena de frío (TASK-07 / CA-02.2).
+ * e insignia destacada de cadena de frío o "Temperatura Ambiente" (TASK-07 & TASK-30 / CA-01.4, CA-02.2).
  * Implementa accesibilidad táctil para dispositivos móviles (min-h-[48px]).
  */
 export function DonacionCard({
@@ -34,11 +37,16 @@ export function DonacionCard({
   onTomarDonacion,
   onExpirada,
   tomando = false,
+  mostrarExpirada = false,
+  ocultarBotonTomar = false,
+  accionExtra,
   className = '',
 }: DonacionCardProps) {
   const handleExpire = useCallback(() => {
-    onExpirada?.(donacion.id);
-  }, [onExpirada, donacion.id]);
+    if (!mostrarExpirada) {
+      onExpirada?.(donacion.id);
+    }
+  }, [onExpirada, donacion.id, mostrarExpirada]);
 
   const {
     tiempoFormateado: textoTiempo,
@@ -47,8 +55,8 @@ export function DonacionCard({
     esUrgenciaMedia,
   } = useCountdown(donacion.horaLimite, handleExpire);
 
-  // Si ya expiró, no se renderiza (CA-02.4)
-  if (expirado) {
+  // Si ya expiró y no estamos en la vista de auditoría de expiradas, no se renderiza (CA-02.4)
+  if (expirado && !mostrarExpirada) {
     return null;
   }
 
@@ -103,9 +111,15 @@ export function DonacionCard({
             <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0 text-[#000080]" />
             <span className="leading-tight">{donacion.direccionRecogida}</span>
           </div>
+          {donacion.comedorNombre && (
+            <div className="flex items-center gap-1 text-[11px] text-sky-900 font-bold bg-sky-100 px-1.5 py-0.5 border border-sky-300 mt-0.5">
+              <Utensils className="w-3 h-3 text-sky-700 shrink-0" />
+              <span className="truncate">Destino: {donacion.comedorNombre}</span>
+            </div>
+          )}
         </div>
 
-        {/* Badges de Estado: Cadena de Frío (TASK-07) y Ley 1990 */}
+        {/* Badges de Estado: Cadena de Frío (TASK-07) o Temperatura Ambiente (TASK-30 / CA-01.4) y Ley 1990 */}
         <div className="flex flex-wrap items-center gap-1.5 mb-3 text-[10px] font-mono">
           {donacion.requiereFrio ? (
             <ColdChainBadge
@@ -114,8 +128,8 @@ export function DonacionCard({
               size="sm"
             />
           ) : (
-            <span className="bevel-in bg-[#f1f5f9] text-slate-700 px-2 py-0.5 font-semibold">
-              Ambiente (sin frío)
+            <span className="bevel-in bg-[#f1f5f9] text-slate-800 px-2 py-0.5 font-bold">
+              Temperatura Ambiente
             </span>
           )}
 
@@ -131,10 +145,14 @@ export function DonacionCard({
       {/* Pie de tarjeta: Temporizador reactivo y Botón de acción */}
       <div className="pt-2 border-t border-[#808080] flex flex-col gap-2">
         <div className="flex items-center justify-between font-mono text-xs">
-          <span className="text-slate-600 text-[11px]">Tiempo restante:</span>
+          <span className="text-slate-600 text-[11px]">
+            {expirado || donacion.estado === 'EXPIRADA' ? 'Estado de vigencia:' : 'Tiempo restante:'}
+          </span>
           <div
             className={`flex items-center gap-1 px-2 py-0.5 font-extrabold bevel-in ${
-              esMuyUrgente
+              expirado || donacion.estado === 'EXPIRADA'
+                ? 'bg-red-100 text-red-900 border border-red-500'
+                : esMuyUrgente
                 ? 'bg-red-100 text-red-700 animate-pulse border border-red-400'
                 : esUrgenciaMedia
                 ? 'bg-amber-100 text-amber-900'
@@ -142,26 +160,32 @@ export function DonacionCard({
             }`}
           >
             <Clock className="w-3.5 h-3.5" />
-            <span>{textoTiempo}</span>
+            <span>
+              {expirado || donacion.estado === 'EXPIRADA' ? 'EXPIRADA' : textoTiempo}
+            </span>
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => handleAccionTomar?.(donacion.id)}
-          disabled={tomando}
-          className="btn-green w-full min-h-[48px] font-mono text-xs sm:text-sm font-bold flex items-center justify-center gap-2"
-          aria-label={`Tomar donación ${donacion.codigo}`}
-        >
-          {tomando ? (
-            <span>RESERVANDO...</span>
-          ) : (
-            <>
-              <Check className="w-4 h-4" />
-              <span>TOMAR DONACIÓN</span>
-            </>
-          )}
-        </button>
+        {accionExtra}
+
+        {!ocultarBotonTomar && !expirado && donacion.estado === 'DISPONIBLE' && (
+          <button
+            type="button"
+            onClick={() => handleAccionTomar?.(donacion.id)}
+            disabled={tomando}
+            className="btn-green w-full min-h-[48px] font-mono text-xs sm:text-sm font-bold flex items-center justify-center gap-2"
+            aria-label={`Tomar donación ${donacion.codigo}`}
+          >
+            {tomando ? (
+              <span>RESERVANDO...</span>
+            ) : (
+              <>
+                <Check className="w-4 h-4" />
+                <span>TOMAR DONACIÓN</span>
+              </>
+            )}
+          </button>
+        )}
       </div>
     </article>
   );

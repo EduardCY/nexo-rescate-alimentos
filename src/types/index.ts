@@ -54,6 +54,9 @@ export interface Organizacion {
   telefono?: string;
   tieneRefrigeracion: boolean;
   capacidadRacionesDia?: number;
+  comensalesDiarios?: number;
+  urgencia?: string;
+  capacidadFrio?: boolean;
 }
 
 export interface Usuario {

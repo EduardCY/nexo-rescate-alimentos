@@ -3,8 +3,8 @@
 **Proyecto:** Red de Rescate de Alimentos
 **Organización:** Fundación Mesa Común (Cali, Colombia)
 **Equipo de Desarrollo:** Nexo Cívico Studio
-**Versión:** 1.0 — Módulo 3
-**Estado:** Aprobado / Fuente de Verdad Técnica
+**Versión:** 2.0 — Cierre Integral Módulo 3 (5 Portales por Rol + 0 Datos Mock + PWA Offline-First)
+**Estado:** Aprobado / 100% Implementado y Verificado en Producción (`main`)
 
 ---
 

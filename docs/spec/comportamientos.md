@@ -273,13 +273,13 @@ Escenario: CA-05.4 Línea de tiempo auditada por código (DON-XXX) y métricas d
 
 ### Definición de Terminado (DoD Específico):
 
-- [ ] Cumple todos sus criterios de aceptación (`CA-05.1` a `CA-05.4`).
-- [ ] El código está revisado y aprobado por otro integrante (Peer review / QA por Eduard Criollo Yule y Felipe Charria Caicedo).
-- [ ] Tiene pruebas automatizadas y todas pasan (`cmp-05-trazabilidad-impacto.test.ts` y `cmp-05-rbac-usuarios.test.ts`).
-- [ ] Está integrada en `main` sin romper la compilación (`npm run build` en verde).
-- [ ] La documentación afectada está actualizada en `docs/spec/`.
-- [ ] Pasan las dos pruebas de gobierno (cifras 100% calculadas desde registros reales y confinamiento RBAC verificado).
-- [ ] Se probó entrando con los roles reales (`ADMIN`, `COORDINADOR`, `VOLUNTARIO`) en dispositivos de escritorio y móvil.
+- [x] Cumple todos sus criterios de aceptación (`CA-05.1` a `CA-05.4`).
+- [x] El código está revisado y aprobado por otro integrante (Peer review / QA por Eduard Criollo Yule y Felipe Charria Caicedo).
+- [x] Tiene pruebas automatizadas y todas pasan (`cmp-05-trazabilidad-impacto.test.ts` y `cmp-05-rbac-usuarios.test.ts`).
+- [x] Está integrada en `main` sin romper la compilación (`npm run build` en verde).
+- [x] La documentación afectada está actualizada en `docs/spec/`.
+- [x] Pasan las dos pruebas de gobierno (cifras 100% calculadas desde registros reales y confinamiento RBAC verificado).
+- [x] Se probó entrando con los roles reales (`ADMIN`, `COORDINADOR`, `VOLUNTARIO`, `DONANTE`, `RECEPTOR`) en dispositivos de escritorio y móvil desde `/login`.
 
 ---
 
@@ -325,7 +325,7 @@ Escenario: CA-PWA.5 Catálogo de productos y donaciones offline con sincronizaci
 
 ### Definición de Terminado (DoD Específico):
 
-- [ ] Cumple todos sus criterios de aceptación (`CA-PWA.1` a `CA-PWA.5`) y las compuertas DevOps (`TASK-15` / `TASK-31`).
-- [ ] El código está revisado y aprobado en GitHub mediante Pull Request por el Product Owner (Eduard Criollo Yule) y QA (Felipe Charria Caicedo).
-- [ ] `next.config.mjs` compila limpio sin `ignoreBuildErrors` ni `ignoreDuringBuilds`.
-- [ ] Todas las suites de Vitest pasan al 100% en verde y el presupuesto se mantiene en `\$0.00 USD/mes`.
+- [x] Cumple todos sus criterios de aceptación (`CA-PWA.1` a `CA-PWA.5`) y las compuertas DevOps (`TASK-15` / `TASK-31`).
+- [x] El código está revisado y aprobado en GitHub mediante Pull Request por el Product Owner (Eduard Criollo Yule) y QA (Felipe Charria Caicedo).
+- [x] `next.config.mjs` compila limpio sin `ignoreBuildErrors` ni `ignoreDuringBuilds`.
+- [x] Todas las suites de Vitest pasan al 100% en verde y el presupuesto se mantiene en `\$0.00 USD/mes`.

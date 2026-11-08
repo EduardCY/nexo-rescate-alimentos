@@ -59,7 +59,27 @@ npm run lint
 
 # Ejecutar suite de pruebas unitarias y de integración
 npm run test
+
+# Verificar compuerta estática de rutas y permisos RBAC
+node scripts/verify-rbac-routes.mjs
+
+# Compilar build de producción con TypeScript estricto
+npm run build
 ```
+
+---
+
+## Portales Especializados por Rol (`/login`) y Cero Datos Mock
+
+La plataforma opera con **Cero Datos Inventados (`0` semillas mock en ejecución de usuario)** y cuenta con una pantalla de autenticación y registro diferenciado en `/login` que separa la interfaz en **5 portales independientes**:
+
+| Rol | Portal / Experiencia Dedicada | Rutas Habilitadas |
+| :--- | :--- | :--- |
+| **`DONANTE`** | Publicación express de alimentos (`CMP-01`), historial propio de ofertas y trazabilidad de recogida. | `/`, `/donar`, `/rastreo`, `/login` |
+| **`VOLUNTARIO`** | Catálogo de ofertas disponibles, radar cartográfico de misiones, hoja de ruta GPS y firma de actas (`CA-05.1`). | `/`, `/donaciones`, `/ruta-activa`, `/entregas/[id]`, `/rastreo`, `/login` |
+| **`RECEPTOR`** | Ficha técnica del comedor comunitario (capacidad, refrigeración funcional) y confirmación de recepción (`CMP-04`). | `/`, `/entregas/[id]`, `/rastreo`, `/login` |
+| **`COORDINADOR`** | Consola logística (Donantes, Comedores, Asignación compatible con frío, Expiradas) y Panel de Impacto CSV. | `/`, `/donaciones`, `/impacto`, `/rastreo`, `/login` |
+| **`ADMIN`** | Gobernanza integral RBAC (`/admin/usuarios`), auditoría inmutable `audit_rbac_eventos`, impacto y operación completa. | Todas las rutas (`/admin/usuarios`, `/impacto`, `/donaciones`, `/donar`, `/ruta-activa`, `/rastreo`) |
 
 ---
 

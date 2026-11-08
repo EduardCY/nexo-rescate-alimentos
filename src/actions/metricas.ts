@@ -1,4 +1,4 @@
-'use server';
+// Módulo híbrido de cálculo auditado de métricas de impacto (CMP-05 / TASK-14 / CA-05.4)
 
 import { createClient, esSupabaseConfigurado } from '@/lib/supabase/server';
 import type { MetricasImpactoDTO, DonacionEntregadaResumenDTO } from '@/types/metricas';
@@ -11,6 +11,8 @@ import { KG_PER_RATION } from '@/lib/nexo/impact';
  */
 export const FACTOR_CO2_FAO = 2.5;
 
+export type RegistroEntradaImpacto = Partial<Donacion> | Record<string, unknown>;
+
 /**
  * Reduce un conjunto de registros de donaciones para obtener indicadores de impacto real.
  *
@@ -22,11 +24,11 @@ export const FACTOR_CO2_FAO = 2.5;
  * @returns DTO estructurado con las métricas consolidadas.
  */
 export function procesarMetricasImpacto(
-  donaciones: Array<Partial<Donacion> & Record<string, unknown>>,
+  donaciones: RegistroEntradaImpacto[],
   fuente: 'SUPABASE_POSTGRES' | 'MEMORIA_VOLATIL' | 'DATASET_PRUEBA' = 'MEMORIA_VOLATIL'
 ): MetricasImpactoDTO {
   // Filtrar estrictamente por estado ENTREGADA (Criterio CA-05.4 / Prueba de Gobierno UAO)
-  const entregadas = donaciones.filter((d) => d.estado === 'ENTREGADA');
+  const entregadas = donaciones.filter((d) => (d as Record<string, unknown>).estado === 'ENTREGADA');
 
   if (entregadas.length === 0) {
     return {
@@ -47,12 +49,13 @@ export function procesarMetricasImpacto(
   const entregasDetalle: DonacionEntregadaResumenDTO[] = [];
 
   for (const item of entregadas) {
-    const rawKg = item.cantidad_estimada ?? item.cantidadEstimada ?? 0;
+    const raw = item as Record<string, unknown>;
+    const rawKg = raw.cantidad_estimada ?? raw.cantidadEstimada ?? 0;
     const kg = Number(rawKg) > 0 ? Number(rawKg) : 0;
     totalKg += kg;
 
     // Si la donación o el acta registra raciones explícitas se usan; de lo contrario se calcula por porción estándar
-    const rawRaciones = item.raciones_estimadas ?? item.racionesEstimadas;
+    const rawRaciones = raw.raciones_estimadas ?? raw.racionesEstimadas;
     const raciones =
       rawRaciones !== undefined && Number(rawRaciones) > 0
         ? Math.floor(Number(rawRaciones))
@@ -60,22 +63,22 @@ export function procesarMetricasImpacto(
     totalRaciones += raciones;
 
     const comedor = String(
-      item.comedor_nombre ?? item.comedorNombre ?? item.comedor_id ?? item.comedorId ?? 'Comedor Comunitario'
+      raw.comedor_nombre ?? raw.comedorNombre ?? raw.comedor_id ?? raw.comedorId ?? 'Comedor Comunitario'
     ).trim();
     if (comedor) {
       comedoresUnicos.add(comedor);
     }
 
     entregasDetalle.push({
-      id: String(item.id ?? ''),
-      codigo: String(item.codigo ?? 'DON-000'),
-      fechaRegistro: String(item.created_at ?? item.createdAt ?? ''),
-      fechaEntrega: String(item.entregada_at ?? item.entregadaAt ?? new Date().toISOString()),
-      donante: String(item.donante_nombre ?? item.donanteNombre ?? 'Donante Anónimo'),
+      id: String(raw.id ?? ''),
+      codigo: String(raw.codigo ?? 'DON-000'),
+      fechaRegistro: String(raw.created_at ?? raw.createdAt ?? ''),
+      fechaEntrega: String(raw.entregada_at ?? raw.entregadaAt ?? new Date().toISOString()),
+      donante: String(raw.donante_nombre ?? raw.donanteNombre ?? 'Donante Anónimo'),
       comedorReceptor: comedor,
       kilogramos: Math.round(kg * 10) / 10,
       racionesEstimadas: raciones,
-      tipoAlimento: String(item.tipo_alimento ?? item.tipoAlimento ?? 'Alimentos varios'),
+      tipoAlimento: String(raw.tipo_alimento ?? raw.tipoAlimento ?? 'Alimentos varios'),
     });
   }
 
@@ -95,17 +98,17 @@ export function procesarMetricasImpacto(
 }
 
 /**
- * Server Action para consultar las métricas consolidadas de impacto social y ambiental.
+ * Función para consultar las métricas consolidadas de impacto social y ambiental.
  *
  * ¿Por qué?: RNF-006, RF-007 y CMP-05 (CA-05.4) ordenan transparencia absoluta en las cifras de impacto.
- * Esta Server Action garantiza cero datos simulados o constantes artificiales, calculando todo
+ * Esta función garantiza cero datos simulados o constantes artificiales, calculando todo
  * exclusivamente a partir de donaciones efectivamente entregadas.
  *
  * @param datasetOpcional Permite inyectar fixtures durante pruebas unitarias o de integración.
  * @returns Promesa con el consolidado auditado de impacto.
  */
 export async function obtenerMetricasImpactoReal(
-  datasetOpcional?: Array<Partial<Donacion> & Record<string, unknown>>
+  datasetOpcional?: RegistroEntradaImpacto[]
 ): Promise<MetricasImpactoDTO> {
   // 1. Si se provee dataset explícito (pruebas automatizadas aisladas)
   if (datasetOpcional) {
@@ -131,9 +134,9 @@ export async function obtenerMetricasImpactoReal(
   }
 
   // 3. Fallback al almacén volátil en memoria (desarrollo local / entorno de pruebas sin BD externa)
-  const itemsVolatiles: Array<Partial<Donacion> & Record<string, unknown>> = [];
+  const itemsVolatiles: RegistroEntradaImpacto[] = [];
   if (globalThis.__NEXO_DONACIONES_VOLATILES) {
-    for (const donacion of globalThis.__NEXO_DONACIONES_VOLATILES.values()) {
+    for (const donacion of Array.from(globalThis.__NEXO_DONACIONES_VOLATILES.values())) {
       itemsVolatiles.push(donacion);
     }
   }

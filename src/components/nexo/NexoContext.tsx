@@ -41,6 +41,7 @@ interface NexoStore {
   addLot: (lot: NewLot) => Promise<Lot | null>;
   assignLot: (id: string) => Promise<void>;
   validateMatch: (lotId: string, ngoId: string) => Promise<void>;
+  refreshData: () => Promise<void>;
 }
 
 const Ctx = createContext<NexoStore | null>(null);
@@ -79,36 +80,36 @@ export function NexoProvider({
     setLogs((l) => [...l.slice(-60), entry]);
   }, []);
 
-  useEffect(() => {
-    let alive = true;
-    Promise.all([
-      nexoApi.listLots(),
-      nexoApi.listNgos(),
-      nexoApi.listDeliveries(),
-      nexoApi.listMapNodes(),
-      nexoApi.getTotals(),
-      nexoApi.getCertificate(),
-    ])
-      .then(([l, n, d, m, t, c]) => {
-        if (!alive) return;
-        setLots(l);
-        setNgos(n);
-        setDeliveries(d);
-        setMapNodes(m);
-        setBaseTotals(t);
-        setCertificate(c);
-      })
-      .catch(() => alive && pushLog("warn", "No se pudieron cargar los datos del servidor."));
-    return () => {
-      alive = false;
-    };
+  const refreshData = useCallback(async () => {
+    try {
+      const [l, n, d, m, t, c] = await Promise.all([
+        nexoApi.listLots(),
+        nexoApi.listNgos(),
+        nexoApi.listDeliveries(),
+        nexoApi.listMapNodes(),
+        nexoApi.getTotals(),
+        nexoApi.getCertificate(),
+      ]);
+      setLots(l);
+      setNgos(n);
+      setDeliveries(d);
+      setMapNodes(m);
+      setBaseTotals(t);
+      setCertificate(c);
+    } catch {
+      pushLog("warn", "No se pudieron cargar los datos del servidor.");
+    }
   }, [pushLog]);
+
+  useEffect(() => {
+    void refreshData();
+  }, [refreshData]);
 
   const addLot = useCallback(
     async (data: NewLot) => {
       try {
         const lot = await nexoApi.createLot(data);
-        setLots((l) => [lot, ...l]);
+        await refreshData();
         pushLog("ok", `Lote ${lot.id} publicado: ${lot.product} (${lot.kg} kg) - ${lot.donor}.`);
         return lot;
       } catch {
@@ -116,7 +117,7 @@ export function NexoProvider({
         return null;
       }
     },
-    [pushLog],
+    [pushLog, refreshData],
   );
 
   const assignLot = useCallback(
@@ -127,17 +128,13 @@ export function NexoProvider({
       const m = bestMatch(lot, ngosRef.current);
       try {
         await nexoApi.assignLot(id, m?.ngo.id);
-        setLots((ls) =>
-          ls.map((l) =>
-            l.id === id ? { ...l, status: "assigned", estado: "ASIGNADA", ngoId: m?.ngo.id } : l
-          )
-        );
+        await refreshData();
         pushLog("info", `Lote ${id} asignado${m ? ` a ${m.ngo.name}` : " (sin receptor elegible)"}.`);
       } catch {
         pushLog("warn", `No se pudo asignar el lote ${id}.`);
       }
     },
-    [pushLog],
+    [pushLog, refreshData],
   );
 
   const validateMatch = useCallback(
@@ -149,24 +146,20 @@ export function NexoProvider({
       try {
         const d = await nexoApi.confirmMatch(lotId, ngoId);
         setDispatch(d);
-        setLots((ls) =>
-          ls.map((l) =>
-            l.id === lotId ? { ...l, status: "assigned", estado: "ASIGNADA", ngoId } : l
-          )
-        );
+        await refreshData();
         pushLog("ok", `Asignación confirmada: ${lot.id} → ${ngo.name}.`);
       } catch {
         pushLog("warn", `No se pudo confirmar la asignación de ${lot.id}.`);
       }
     },
-    [pushLog],
+    [pushLog, refreshData],
   );
 
   const totals = { ...baseTotals, co2Ton: (baseTotals.kg * CO2_KG_PER_KG) / 1000 };
 
   const value: NexoStore = {
     view, setView, focusNgos, setFocusNgos, lots, ngos, mapNodes, logs, dispatch, deliveries, certificate,
-    settings, setSettings, totals, pushLog, addLot, assignLot, validateMatch,
+    settings, setSettings, totals, pushLog, addLot, assignLot, validateMatch, refreshData,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

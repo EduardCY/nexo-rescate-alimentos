@@ -5,11 +5,16 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { ArrowLeft, Compass, Truck, AlertCircle, ShieldCheck } from 'lucide-react';
 import { RutaActivaCard, type MisionActiva } from '@/components/logistica/RutaActivaCard';
-import { obtenerDonacionParaEntrega } from '@/actions/entregas';
+import {
+  obtenerDonacionParaEntrega,
+  obtenerMisionesAsignadasVoluntario,
+} from '@/actions/entregas';
+import { useSession } from '@/lib/auth/session-context';
 
 function RutaActivaContenido() {
+  const { sesion } = useSession();
   const searchParams = useSearchParams();
-  const idParam = searchParams.get('id') || 'seed-01';
+  const idParam = searchParams.get('id') || '';
   const [mision, setMision] = useState<MisionActiva | null>(null);
   const [cargando, setCargando] = useState(true);
 
@@ -18,7 +23,12 @@ function RutaActivaContenido() {
     async function cargarMision() {
       setCargando(true);
       try {
-        const d = await obtenerDonacionParaEntrega(idParam);
+        let d = idParam ? await obtenerDonacionParaEntrega(idParam) : null;
+        if (!d) {
+          const asignadas = await obtenerMisionesAsignadasVoluntario(sesion?.userId);
+          d = asignadas[0] || null;
+        }
+
         if (activo && d) {
           setMision({
             id: d.id,
@@ -34,16 +44,18 @@ function RutaActivaContenido() {
             horaLimite: d.horaLimite,
             comedorNombre: d.comedorNombre,
           });
+        } else if (activo) {
+          setMision(null);
         }
       } finally {
         if (activo) setCargando(false);
       }
     }
-    cargarMision();
+    void cargarMision();
     return () => {
       activo = false;
     };
-  }, [idParam]);
+  }, [idParam, sesion?.userId]);
 
   if (cargando) {
     return (
@@ -57,13 +69,13 @@ function RutaActivaContenido() {
     return (
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center flex flex-col items-center justify-center gap-3 text-slate-400 my-auto">
         <AlertCircle className="w-10 h-10 text-slate-500" aria-hidden="true" />
-        <h2 className="text-base font-bold text-white">No tienes misiones activas</h2>
+        <h2 className="text-base font-bold text-white">No tienes misiones activas en este momento</h2>
         <p className="text-xs text-slate-400 max-w-xs">
-          Selecciona una oferta disponible en el catálogo de donaciones para iniciar una nueva ruta de rescate.
+          Selecciona una oferta disponible en el catálogo de donaciones para iniciar una nueva ruta de rescate en Cali.
         </p>
         <Link
           href="/donaciones"
-          className="mt-2 min-h-[44px] px-4 py-2.5 rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs font-mono uppercase tracking-wider flex items-center gap-2"
+          className="mt-2 min-h-[48px] px-4 py-2.5 rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs font-mono uppercase tracking-wider flex items-center gap-2"
         >
           <Compass className="w-4 h-4" aria-hidden="true" />
           <span>Ir al Catálogo de Ofertas</span>
@@ -88,7 +100,7 @@ function RutaActivaContenido() {
 
 /**
  * Vista móvil de ruta activa en campo para el voluntario asignado (CMP-03 / TASK-18).
- * Conecta con `obtenerDonacionParaEntrega` sin depender de mocks estáticos.
+ * Conecta con `obtenerDonacionParaEntrega` y `obtenerMisionesAsignadasVoluntario` sin depender de mocks estáticos.
  */
 export default function RutaActivaPage() {
   return (

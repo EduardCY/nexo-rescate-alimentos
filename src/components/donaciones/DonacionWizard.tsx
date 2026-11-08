@@ -22,11 +22,13 @@ import {
 } from 'lucide-react';
 import { DonacionInputSchema, type DonacionInput } from '@/lib/validations/donacion';
 import { publicarDonacion } from '@/actions/donaciones';
+import { listarOrganizaciones, type OrganizacionRegistrada } from '@/actions/organizaciones';
 import { normalizarFechaHoraLimite } from '@/lib/utils/donaciones-helper';
-import { guardarDonacionOffline } from '@/lib/db';
+import { db, guardarDonacionOffline } from '@/lib/db';
 import { sincronizarColaOffline } from '@/lib/sync/offline-sync';
 import { calcImpact, fmt, fmtCop, urgencyOf, type CategoryId } from '@/lib/nexo/impact';
 import LotCard from '@/components/nexo/LotCard';
+import { useSession } from '@/lib/auth/session-context';
 import type { ZonaCali } from '@/types';
 
 // Carga dinámica del mapa interactivo Leaflet para evitar errores en SSR
@@ -60,17 +62,21 @@ const ZONAS_CALI: ZonaCali[] = ['CENTRO', 'NORTE', 'SUR', 'ORIENTE', 'LADERA'];
 
 /**
  * Wizard Mobile-First en 3 pasos para el registro rápido y georreferenciado de donaciones.
- * Integra mapa interactivo Leaflet/OSM, selector de zona, captura tolerante a desconexión
- * y sincronización reactiva en tiempo real (CMP-01 / CA-01.5 / RNF-002).
+ * Integra mapa interactivo Leaflet/OSM, selector de zona, preasignación opcional de comedor,
+ * etiqueta explícita "Temperatura Ambiente" (CA-01.4), aviso normativo colombiano destacado (CA-01.3)
+ * y captura tolerante a desconexión con código determinista OFFLINE-DON-... (CA-01.5 / RNF-002).
  */
 export function DonacionWizard({
   onCompleted,
 }: {
   onCompleted?: (codigo: string, isOffline: boolean) => void;
 }) {
+  const { sesion } = useSession();
+
   const [paso, setPaso] = useState<1 | 2 | 3>(1);
   const [cargando, setCargando] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [intentoSinExencion, setIntentoSinExencion] = useState(false);
   const [confirmacion, setConfirmacion] = useState<{
     codigo: string;
     offline: boolean;
@@ -86,17 +92,23 @@ export function DonacionWizard({
   const [unidadMedida, setUnidadMedida] = useState<'kg' | 'canastillas' | 'bultos' | 'unidades'>('kg');
   const [requiereFrio, setRequiereFrio] = useState(false);
 
-  // Estado Paso 2: Dirección, Zona, Ubicación Exacta y Teléfono
-  const [donanteNombre, setDonanteNombre] = useState('Puesto 45 Galería Santa Elena');
-  const [zona, setZona] = useState<ZonaCali>('CENTRO');
-  const [direccionRecogida, setDireccionRecogida] = useState('Carrera 29 con Calle 25, Galería Santa Elena');
+  // Estado Paso 2: Dirección, Zona, Ubicación Exacta, Comedor Destino Opcional y Teléfono
+  const [donanteNombre, setDonanteNombre] = useState(
+    sesion?.organizacionNombre || sesion?.nombre || 'Puesto 45 Galería Santa Elena'
+  );
+  const [zona, setZona] = useState<ZonaCali>(sesion?.zona || 'CENTRO');
+  const [direccionRecogida, setDireccionRecogida] = useState(
+    sesion?.direccion || 'Carrera 29 con Calle 25, Galería Santa Elena'
+  );
   const [indicacionesPuesto, setIndicacionesPuesto] = useState('Pabellón Central, Puesto 45 frente al muelle 2');
-  const [telefonoDonante, setTelefonoDonante] = useState('+573154201122');
+  const [telefonoDonante, setTelefonoDonante] = useState(sesion?.telefono || '+573154201122');
   const [coordenadas, setCoordenadas] = useState<{ lat: number; lng: number } | null>({
     lat: 3.435,
     lng: -76.528,
   });
   const [mostrarMapa, setMostrarMapa] = useState(true);
+  const [comedoresRegistrados, setComedoresRegistrados] = useState<OrganizacionRegistrada[]>([]);
+  const [comedorSeleccionadoId, setComedorSeleccionadoId] = useState<string>('');
 
   // Hora Límite
   const [esParaManana, setEsParaManana] = useState(false);
@@ -110,6 +122,29 @@ export function DonacionWizard({
 
   // Estado Paso 3: Exención Sanitaria Ley 1990/2019
   const [exencionAceptada, setExencionAceptada] = useState(false);
+
+  // Sincronizar datos del donante si hay sesión activa
+  useEffect(() => {
+    if (sesion) {
+      if (sesion.organizacionNombre || sesion.nombre) {
+        setDonanteNombre(sesion.organizacionNombre || sesion.nombre);
+      }
+      if (sesion.zona) setZona(sesion.zona);
+      if (sesion.direccion) setDireccionRecogida(sesion.direccion);
+      if (sesion.telefono) setTelefonoDonante(sesion.telefono);
+    }
+  }, [sesion]);
+
+  // Cargar comedores reales registrados para preasignación opcional
+  useEffect(() => {
+    listarOrganizaciones('RECEPTOR')
+      .then((lista) => setComedoresRegistrados(lista))
+      .catch(() => {});
+  }, []);
+
+  const comedoresCompatibles = comedoresRegistrados.filter(
+    (c) => !requiereFrio || Boolean(c.tieneRefrigeracion)
+  );
 
   // Suscripción reactiva a eventos de sincronización offline (CA-01.5)
   useEffect(() => {
@@ -206,14 +241,24 @@ export function DonacionWizard({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!paso3Valido || cargando) return;
+    if (!paso3Valido) {
+      setIntentoSinExencion(true);
+      setErrorMsg(
+        'Debes aceptar expresamente la declaración de inocuidad y exención sanitaria (Ley 1990 de 2019).'
+      );
+      return;
+    }
+    if (cargando) return;
     setCargando(true);
     setErrorMsg(null);
+    setIntentoSinExencion(false);
 
     try {
       const horaIsoSegura = esParaManana
         ? new Date(new Date(normalizarFechaHoraLimite(horaLimite)).getTime() + 24 * 3600 * 1000).toISOString()
         : normalizarFechaHoraLimite(horaLimite);
+
+      const comedorElegido = comedoresCompatibles.find((c) => c.id === comedorSeleccionadoId);
 
       const payload: DonacionInput = {
         tipoAlimento: tipoAlimento.trim(),
@@ -227,7 +272,10 @@ export function DonacionWizard({
         horaLimite: horaIsoSegura,
         requiereFrio,
         exencionSanitariaAceptada: true,
+        donanteId: sesion?.userId,
         donanteNombre: donanteNombre.trim() || 'Comercio Donante',
+        comedorId: comedorElegido?.id,
+        comedorNombre: comedorElegido?.nombre,
       };
 
       const validacion = DonacionInputSchema.safeParse(payload);
@@ -249,16 +297,16 @@ export function DonacionWizard({
           setConfirmacion({ codigo: res.codigo, offline: false });
           onCompleted?.(res.codigo, false);
         } else {
-          // Respaldo Offline-First en Dexie si la red cae durante el envío
           const localId = await guardarDonacionOffline(validacion.data);
-          const codigoTemp = `OFFLINE-DON-${localId}`;
+          const reg = await db.donaciones.get(localId).catch(() => undefined);
+          const codigoTemp = reg?.codigoLocal || reg?.codigoTemporal || `OFFLINE-DON-${localId}`;
           setConfirmacion({ codigo: codigoTemp, offline: true, localId });
           onCompleted?.(codigoTemp, true);
         }
       } else {
-        // Guardado local inmediato en IndexedDB
         const localId = await guardarDonacionOffline(validacion.data);
-        const codigoTemp = `OFFLINE-DON-${localId}`;
+        const reg = await db.donaciones.get(localId).catch(() => undefined);
+        const codigoTemp = reg?.codigoLocal || reg?.codigoTemporal || `OFFLINE-DON-${localId}`;
         setConfirmacion({ codigo: codigoTemp, offline: true, localId });
         onCompleted?.(codigoTemp, true);
       }
@@ -274,6 +322,7 @@ export function DonacionWizard({
     setConfirmacion(null);
     setErrorMsg(null);
     setExencionAceptada(false);
+    setIntentoSinExencion(false);
   };
 
   if (confirmacion) {
@@ -495,7 +544,7 @@ export function DonacionWizard({
                 </div>
               </div>
 
-              {/* Switch Visual Destacado para Requiere Refrigeración */}
+              {/* Switch Visual Destacado para Requiere Refrigeración vs Temperatura Ambiente (CA-01.4) */}
               <div className="bevel-in bg-[#e8f4fd] p-3 border border-sky-700">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5">
@@ -507,7 +556,9 @@ export function DonacionWizard({
                         ¿REQUIERE REFRIGERACIÓN?
                       </p>
                       <p className="font-mono text-[11px] text-slate-700">
-                        Activar para lácteos, carnes o alimentos que exigen cadena de frío (4°C - 8°C).
+                        {requiereFrio
+                          ? 'Seleccionado: Requiere Refrigeración (4°C - 8°C).'
+                          : 'Seleccionado por defecto: Temperatura Ambiente (no requiere cadena de frío).'}
                       </p>
                     </div>
                   </div>
@@ -516,11 +567,11 @@ export function DonacionWizard({
                     role="switch"
                     aria-checked={requiereFrio}
                     onClick={() => setRequiereFrio(!requiereFrio)}
-                    className={`min-h-[48px] min-w-[96px] px-3 font-mono text-xs font-extrabold ${
+                    className={`min-h-[48px] min-w-[140px] px-3 font-mono text-xs font-extrabold ${
                       requiereFrio ? 'btn-blue' : 'btn-98'
                     }`}
                   >
-                    {requiereFrio ? '✓ SÍ (FRÍO)' : 'NO (AMB.)'}
+                    {requiereFrio ? '✓ SÍ (FRÍO)' : 'Temperatura Ambiente'}
                   </button>
                 </div>
               </div>
@@ -582,6 +633,31 @@ export function DonacionWizard({
                   Zona seleccionada: <strong className="text-[#000080]">{zona}</strong> (orienta la asignación del comedor comunitario más cercano).
                 </p>
               </div>
+
+              {/* Selector Opcional de Comedor Comunitario Destino */}
+              {comedoresCompatibles.length > 0 && (
+                <div>
+                  <label className="retro-label" htmlFor="wiz-comedor-destino">
+                    Asignar a Comedor Comunitario Receptor (Opcional)
+                  </label>
+                  <select
+                    id="wiz-comedor-destino"
+                    value={comedorSeleccionadoId}
+                    onChange={(e) => setComedorSeleccionadoId(e.target.value)}
+                    className="retro-field min-h-[44px] font-mono text-xs"
+                  >
+                    <option value="">
+                      Abierto a cualquier comedor compatible en Cali ({comedoresCompatibles.length} disponibles)
+                    </option>
+                    {comedoresCompatibles.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nombre} — Zona {c.zona} ({c.capacidadRacionesDia || c.comensalesDiarios || 100} comensales •{' '}
+                        {c.tieneRefrigeracion ? '❄ Con frío' : 'Temperatura Ambiente'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Mapa Interactivo con Leaflet y OpenStreetMap ($0 USD) */}
               <div className="bevel-in bg-slate-100 p-2 border border-slate-400">
@@ -755,33 +831,48 @@ export function DonacionWizard({
             </div>
           )}
 
-          {/* PASO 3: EXENCIÓN LEGAL LEY 1990 DE 2019 */}
+          {/* PASO 3: EXENCIÓN LEGAL LEY 1990 DE 2019 (TASK-30 / CA-01.3) */}
           {paso === 3 && (
             <div className="flex flex-col gap-3">
-              <div className="bevel-in bg-white p-3.5 border-2 border-[#000080]">
+              <div
+                className={`bevel-in bg-white p-3.5 border-2 border-[#000080] ${
+                  intentoSinExencion && !exencionAceptada ? 'ring-2 ring-red-500 bg-red-50' : ''
+                }`}
+              >
                 <div className="flex items-center gap-2 text-[#000080] font-mono font-bold text-xs mb-2">
                   <ShieldCheck className="w-5 h-5 shrink-0" />
-                  <span>DECLARACIÓN SANITARIA OBLIGATORIA (LEY 1990 DE 2019)</span>
+                  <span>
+                    DECLARACIÓN SANITARIA Y LEGAL OBLIGATORIA (LEY 1990 DE 2019 • RESOLUCIÓN 2674 DE 2013 INVIMA)
+                  </span>
                 </div>
-                <p className="font-mono text-xs text-slate-800 leading-relaxed mb-3">
-                  De conformidad con la Ley 1990 de 2019 (política contra la pérdida y el desperdicio de alimentos),
-                  el donante certifica de buena fe que los alimentos entregados se encuentran aptos para el consumo
-                  humano y cumplen las condiciones de inocuidad al momento de su retiro.
+                <p className="font-mono text-xs text-slate-800 leading-relaxed mb-2">
+                  De conformidad con la <b>Ley 1990 de 2019</b> (política contra la pérdida y el desperdicio de alimentos),
+                  la <b>Resolución 2674 de 2013 del INVIMA</b> (requisitos sanitarios de inocuidad) y la{' '}
+                  <b>Ley 1581 de 2012</b> (protección de datos personales Habeas Data), el donante certifica de buena fe
+                  que los alimentos entregados se encuentran aptos para el consumo humano al momento de su retiro.
                 </p>
 
                 <label
                   htmlFor="wiz-legal"
-                  className="bevel-out p-3 flex items-start gap-3 cursor-pointer select-none min-h-[48px]"
+                  className={`bevel-out p-3 flex items-start gap-3 cursor-pointer select-none min-h-[48px] ${
+                    intentoSinExencion && !exencionAceptada ? 'ring-2 ring-red-500' : ''
+                  }`}
                 >
                   <input
                     id="wiz-legal"
                     type="checkbox"
                     className="w-5 h-5 mt-0.5 accent-[#000080] shrink-0 cursor-pointer"
                     checked={exencionAceptada}
-                    onChange={(e) => setExencionAceptada(e.target.checked)}
+                    onChange={(e) => {
+                      setExencionAceptada(e.target.checked);
+                      if (e.target.checked) {
+                        setIntentoSinExencion(false);
+                        setErrorMsg(null);
+                      }
+                    }}
                   />
                   <span className="font-mono text-xs font-bold text-black">
-                    Acepto la declaración de inocuidad y exención de responsabilidad sanitaria (Ley 1990 de 2019). *
+                    Acepto la declaración de inocuidad y exención de responsabilidad sanitaria (Ley 1990 de 2019 / Resolución 2674 INVIMA). *
                   </span>
                 </label>
               </div>
@@ -822,13 +913,16 @@ export function DonacionWizard({
               kg: cantidadNum,
               hoursLeft: 4,
               donor: donanteNombre || direccionRecogida,
-              coldChain: requiereFrio ? '4°C - 8°C' : 'Ambiente (sin refrigeración)',
+              coldChain: requiereFrio ? '4°C - 8°C' : 'Temperatura Ambiente',
               requiereFrio,
             }}
           />
           <div className="mt-2.5 font-mono text-[11px] text-slate-300 space-y-1 bevel-in-dark bg-black/40 p-2">
             <p>
-              Zona logistica: <b className="text-nexo-cyan">{zona}</b>
+              Zona logistica: <b className="text-nexo-cyan">{zona}</b> • Condición:{' '}
+              <b className="text-white">
+                {requiereFrio ? 'Requiere Refrigeración' : 'Temperatura Ambiente'}
+              </b>
             </p>
             <p>
               Ubicación:{' '}

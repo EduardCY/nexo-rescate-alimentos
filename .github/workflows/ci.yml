@@ -34,6 +34,32 @@ jobs:
       - name: Instalar dependencias
         run: npm ci
 
+      # Compuerta RBAC: verificar guardas de rol y rutas administrativas (TASK-27 / CMP-05).
+      - name: Verificar protección de rutas RBAC (CMP-05)
+        run: node scripts/verify-rbac-routes.mjs
+
+      # Compuerta PWA: verificar manifiesto, iconos instalables y Service Worker (TASK-31).
+      - name: Verificar activos PWA y Service Worker
+        run: |
+          node -e "
+            const fs = require('fs');
+            const reqFiles = [
+              'public/manifest.json',
+              'public/sw.js',
+              'public/icons/icon-192x192.png',
+              'public/icons/icon-512x512.png',
+              'public/icons/icon-maskable-512x512.png',
+              'public/icons/apple-touch-icon.png'
+            ];
+            for (const f of reqFiles) {
+              if (!fs.existsSync(f)) {
+                console.error('Falta archivo PWA requerido:', f);
+                process.exit(1);
+              }
+            }
+            console.log('Activos PWA verificados correctamente.');
+          "
+
       # Compuerta 1: calidad del código.
       - name: Validar lint
         run: npm run lint
@@ -42,7 +68,7 @@ jobs:
       - name: Ejecutar pruebas automatizadas
         run: npm run test
 
-      # Compuerta 3: compilación de producción sin credenciales reales.
+      # Compuerta 3: compilación de producción sin credenciales reales (sin ignoreBuildErrors).
       - name: Compilar aplicación de producción
         run: npm run build
         env:

@@ -4,7 +4,7 @@ import { DonacionInputSchema, type DonacionInput } from '@/lib/validations/donac
 import { createClient, esSupabaseConfigurado } from '@/lib/supabase/server';
 import { obtenerMetricasImpactoReal } from '@/actions/metricas';
 import type { MetricasImpactoDTO } from '@/types/metricas';
-import type { Donacion, UsuarioCorporativo, ZonaCali } from '@/types';
+import type { Donacion, RolUsuario, UsuarioCorporativo, ZonaCali } from '@/types';
 import type { DonacionCache, ProductoCatalogo } from '@/lib/db';
 import {
   normalizarFechaHoraLimite,
@@ -1552,4 +1552,40 @@ export async function obtenerCambiosDelta(desde: DesdeDelta = {}): Promise<Cambi
  */
 export async function consultarMetricasImpactoReal(): Promise<MetricasImpactoDTO> {
   return obtenerMetricasImpactoReal();
+}
+
+
+/**
+ * Elimina una donación y sus eventos de trazabilidad asociados (Solo COORDINADOR y ADMIN).
+ * Permite purgar lotes de prueba o erróneos del catálogo y del mapa cartográfico.
+ */
+export async function eliminarDonacion(
+  donacionId: string,
+  actorRol?: RolUsuario
+): Promise<{ exito: true; mensaje: string } | { exito: false; error: string }> {
+  if (actorRol && actorRol !== 'ADMIN' && actorRol !== 'COORDINADOR') {
+    return {
+      exito: false,
+      error: 'Acceso denegado: Solo Coordinadores o Administradores pueden eliminar lotes de donación.',
+    };
+  }
+
+  if (esSupabaseConfigurado()) {
+    try {
+      const supabase = createClient();
+      await supabase.from('trazabilidad_eventos').delete().eq('donacion_id', donacionId);
+      const { error } = await supabase.from('donaciones').delete().eq('id', donacionId);
+      if (error) {
+        return { exito: false, error: error.message };
+      }
+    } catch (e: any) {
+      return { exito: false, error: e?.message || 'Error al eliminar donación en base de datos' };
+    }
+  }
+
+  DONACIONES_ESTADO_VOLATIL.delete(donacionId);
+  globalThis.__NEXO_CATALOGO_VOLATIL?.delete(donacionId);
+  globalThis.__NEXO_DONACIONES_VOLATILES?.delete(donacionId);
+
+  return { exito: true, mensaje: 'Lote de donación eliminado exitosamente del sistema y del mapa.' };
 }

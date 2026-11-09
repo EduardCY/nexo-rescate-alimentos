@@ -648,3 +648,48 @@ export async function listarUsuariosParaAcceso(): Promise<SesionUsuarioActiva[]>
 
   return Array.from(resultado.values());
 }
+
+
+/**
+ * Elimina un Comedor Comunitario u Organización y sus referencias asociadas (Solo COORDINADOR y ADMIN).
+ * Permite purgar comedores de prueba o erróneos del directorio y del mapa cartográfico.
+ */
+export async function eliminarOrganizacion(
+  id: string,
+  actorRol?: RolUsuario
+): Promise<{ exito: true; mensaje: string } | { exito: false; error: string }> {
+  if (actorRol && actorRol !== 'ADMIN' && actorRol !== 'COORDINADOR') {
+    return {
+      exito: false,
+      error: 'Acceso denegado: Requiere rol COORDINADOR o ADMIN para eliminar comedores.',
+    };
+  }
+
+  if (esSupabaseConfigurado()) {
+    try {
+      const supabase = createClient();
+      // 1. Desvincular de donaciones asociadas
+      await supabase
+        .from('donaciones')
+        .update({ comedor_id: null, comedor_nombre: null })
+        .eq('comedor_id', id);
+
+      // 2. Desvincular de usuarios
+      await supabase
+        .from('usuarios')
+        .update({ organizacion_id: null })
+        .eq('organizacion_id', id);
+
+      // 3. Eliminar la fila en organizaciones
+      const { error } = await supabase.from('organizaciones').delete().eq('id', id);
+      if (error) {
+        return { exito: false, error: error.message };
+      }
+    } catch (e: any) {
+      return { exito: false, error: e?.message || 'Error al eliminar organización' };
+    }
+  }
+
+  obtenerMapaOrganizaciones().delete(id);
+  return { exito: true, mensaje: 'Organización eliminada exitosamente del sistema y del mapa.' };
+}

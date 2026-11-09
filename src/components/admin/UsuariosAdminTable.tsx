@@ -63,11 +63,7 @@ export function UsuariosAdminTable({ actorAdmin }: UsuariosAdminTableProps) {
         listarEventosAuditoriaRBAC(),
       ]);
 
-      if (resUsuarios.exito) {
-        setUsuarios(resUsuarios.data);
-      } else {
-        setErrorMsg(resUsuarios.error);
-      }
+      setUsuarios(Array.isArray(resUsuarios) ? resUsuarios : []);
       setEventosAuditoria(listaEventos);
     } catch {
       setErrorMsg('No fue posible consultar el directorio RBAC.');

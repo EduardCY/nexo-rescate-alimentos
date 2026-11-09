@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { Suspense, useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Store,
   Utensils,
@@ -13,205 +13,309 @@ import {
   Snowflake,
   AlertCircle,
   CheckCircle2,
-  ArrowRight,
+  Clock,
+  Sparkles,
 } from 'lucide-react';
 import type { RolUsuario, ZonaCali } from '@/types';
 import {
-  iniciarSesionPorEmail,
-  listarUsuariosParaAcceso,
-  registrarUsuarioPorRol,
-  type SesionUsuarioActiva,
-} from '@/actions/organizaciones';
+  autenticarPorCorreoAction,
+  registrarPostulacionPublicaAction,
+} from '@/actions/usuarios-admin';
 import { useSession } from '@/lib/auth/session-context';
+import type { SesionUsuarioActiva } from '@/actions/organizaciones';
 
-const ROLES_CONFIG: Array<{
+const ROLES_EVALUACION: Array<{
   rol: RolUsuario;
   titulo: string;
   subtitulo: string;
   descripcion: string;
+  capacidades: string[];
   icono: React.ReactNode;
   colorBadge: string;
+  defaultEmail: string;
+  defaultNombre: string;
 }> = [
   {
     rol: 'DONANTE',
-    titulo: 'Comerciante Donante',
-    subtitulo: 'Puestos de Galería, Fruvers, Panaderías y Restaurantes',
-    descripcion: 'Publica excedentes de alimentos bajo la Ley 1990 de 2019 y descarga certificados tributarios DIAN.',
+    titulo: 'Comercio Donante',
+    subtitulo: 'Plazas de Mercado, Fruvers, Panaderías y Mayoristas',
+    descripcion: 'Publica excedentes perecederos bajo la Ley 1990 de 2019 y gestiona sus certificados tributarios DIAN.',
+    capacidades: [
+      'Publicar excedentes perecederos (/donar)',
+      'Ver y gestionar únicamente sus propios lotes',
+      'Descargar actas y certificados tributarios (Art. 257 E.T.)',
+      'Restricción: No ve lotes ajenos ni toma rescates ni registra comedores',
+    ],
     icono: <Store className="w-5 h-5 text-emerald-700" />,
     colorBadge: 'bg-emerald-100 text-emerald-900 border-emerald-500',
+    defaultEmail: 'donante@mesacomun.org',
+    defaultNombre: 'Comercio Donante Certificado',
+  },
+  {
+    rol: 'VOLUNTARIO',
+    titulo: 'Voluntario de Rescate',
+    subtitulo: 'Transporte de Alimentos en Moto, Carromoto o Vehículo',
+    descripcion: 'Explora el catálogo de lotes disponibles por zonas de Cali, acepta rescates y ejecuta la ruta GPS.',
+    capacidades: [
+      'Visualizar catálogo de rescates DISPONIBLE (/donaciones)',
+      'Tomar donaciones en tiempo real con bloqueo pesimista (CMP-03)',
+      'Navegación GPS y trazabilidad en ruta activa (/ruta-activa)',
+      'Restricción: No publica donaciones ni aprueba miembros ni ve impacto',
+    ],
+    icono: <Truck className="w-5 h-5 text-amber-700" />,
+    colorBadge: 'bg-amber-100 text-amber-900 border-amber-500',
+    defaultEmail: 'voluntario@mesacomun.org',
+    defaultNombre: 'Voluntario Operativo Cali',
   },
   {
     rol: 'RECEPTOR',
     titulo: 'Comedor Comunitario / ONG',
     subtitulo: 'Ollas Comunitarias, Fundaciones y Hogares de Paso',
-    descripcion: 'Registra tu comedor, capacidad de comensales y refrigeración, y firma actas de recepción física.',
+    descripcion: 'Gestiona la capacidad instalada y cadena de frío de su propia sede y firma actas de recepción.',
+    capacidades: [
+      'Gestionar la ficha de capacidad y refrigeración de su propio comedor',
+      'Ver entregas asignadas en tránsito hacia su sede',
+      'Firma y validación digital de acta de recepción física (CMP-04)',
+      'Restricción: No crea otros comedores ni ejecuta matching global',
+    ],
     icono: <Utensils className="w-5 h-5 text-sky-700" />,
     colorBadge: 'bg-sky-100 text-sky-900 border-sky-500',
-  },
-  {
-    rol: 'VOLUNTARIO',
-    titulo: 'Voluntario Logístico',
-    subtitulo: 'Rescatistas en Moto, Carromoto, Bicicleta o Vehículo',
-    descripcion: 'Explora el catálogo por zonas de Cali, acepta rescates, navega por GPS y entrega en comedores.',
-    icono: <Truck className="w-5 h-5 text-amber-700" />,
-    colorBadge: 'bg-amber-100 text-amber-900 border-amber-500',
+    defaultEmail: 'comedor@mesacomun.org',
+    defaultNombre: 'Comedor Comunitario Siloé Esperanza',
   },
   {
     rol: 'COORDINADOR',
-    titulo: 'Coordinador Operativo',
-    subtitulo: 'Mesa de Despacho Logístico y Supervisión de Red',
-    descripcion: 'Gestiona el directorio de comedores, asigna donaciones, audita lotes expirados y exporta métricas.',
+    titulo: 'Coordinador Operativo (Torre de Control)',
+    subtitulo: 'Mesa de Despacho Logístico — Fundación Mesa Común',
+    descripcion: 'Torre de control: directorio de comedores, pre-asignación por cadena de frío, aprobación de miembros y métricas.',
+    capacidades: [
+      'Supervisión y asignación de lotes a comedores con frío compatible',
+      'Directorio y gestión de comedores comunitarios en Cali',
+      'Aprobación de postulaciones públicas en PENDIENTE_AUTORIZACION',
+      'Auditoría de lotes expirados y exportación de reportes CSV (/impacto)',
+    ],
     icono: <Compass className="w-5 h-5 text-purple-700" />,
     colorBadge: 'bg-purple-100 text-purple-900 border-purple-500',
+    defaultEmail: 'coordinacion@mesacomun.org',
+    defaultNombre: 'Marcela Ocampo (Coordinación Operativa)',
   },
   {
     rol: 'ADMIN',
-    titulo: 'Administrador del Sistema',
-    subtitulo: 'Gobernanza RBAC, Auditoría e Impacto Global',
-    descripcion: 'Administra usuarios y roles, suspende cuentas, audita trazabilidad y supervisa toda la red.',
+    titulo: 'Administrador Corporativo',
+    subtitulo: 'Gobernanza RBAC, Auditoría y Mantenimiento del Sistema',
+    descripcion: 'Control absoluto del RBAC, bitácora inmutable de auditoría, gestión de usuarios y herramientas de purga.',
+    capacidades: [
+      'Gobernanza total de usuarios, roles y permisos (/admin/usuarios)',
+      'Inspección de la bitácora inmutable de eventos (audit_rbac_eventos)',
+      'Suspensión, reactivación y control de cuentas corporativas',
+      'Herramienta de Purga Total del Sistema y limpieza cartográfica',
+    ],
     icono: <ShieldCheck className="w-5 h-5 text-red-700" />,
     colorBadge: 'bg-red-100 text-red-900 border-red-500',
+    defaultEmail: 'admin@nexorescate.org',
+    defaultNombre: 'Administrador Corporativo Nexo',
+  },
+];
+
+const ROLES_PUBLICOS: Array<{ rol: RolUsuario; titulo: string; descripcion: string }> = [
+  {
+    rol: 'VOLUNTARIO',
+    titulo: 'Voluntario / Rescatista de Alimentos',
+    descripcion: 'Deseo transportar excedentes desde los donantes hasta los comedores comunitarios.',
+  },
+  {
+    rol: 'DONANTE',
+    titulo: 'Comercio o Empresa Donante',
+    descripcion: 'Tengo un puesto en galería, restaurante, fruver o empresa con excedentes aptos para consumo.',
+  },
+  {
+    rol: 'RECEPTOR',
+    titulo: 'Comedor Comunitario / Entidad Beneficiaria',
+    descripcion: 'Opero una olla comunitaria, comedor infantil o fundación que atiende población vulnerable.',
   },
 ];
 
 const ZONAS_CALI: ZonaCali[] = ['CENTRO', 'NORTE', 'SUR', 'ORIENTE', 'LADERA'];
 
-/**
- * Pantalla inicial de Autenticación y Registro Diferenciado por Rol (`/login`).
- *
- * ¿Por qué?: Garantiza que cada actor de la red en Santiago de Cali ingrese con los datos reales
- * de su rol específico y acceda únicamente a su portal dedicado sin botones ajenos.
- */
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { sesion, establecerSesion } = useSession();
 
-  const [modo, setModo] = useState<'registro' | 'login'>('registro');
-  const [rolSeleccionado, setRolSeleccionado] = useState<RolUsuario>('DONANTE');
-  const [usuariosExistentes, setUsuariosExistentes] = useState<SesionUsuarioActiva[]>([]);
+  const [pestana, setPestana] = useState<'sandbox' | 'login' | 'postulacion'>('sandbox');
   const [cargando, setCargando] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [mensajeExito, setMensajeExito] = useState<string | null>(null);
+  const [estadoPendienteVisible, setEstadoPendienteVisible] = useState(false);
 
   // Campos de inicio de sesión
   const [emailLogin, setEmailLogin] = useState('');
 
-  // Campos comunes de registro
+  // Campos de postulación pública
+  const [rolPostulacion, setRolPostulacion] = useState<RolUsuario>('VOLUNTARIO');
   const [nombre, setNombre] = useState('');
   const [email, setEmail] = useState('');
-  const [telefono, setTelefono] = useState('+57 315 ');
+  const [telefono, setTelefono] = useState('');
   const [zona, setZona] = useState<ZonaCali>('CENTRO');
-
-  // Campos específicos de DONANTE y RECEPTOR
+  const [vehiculoTipo, setVehiculoTipo] = useState<'MOTO' | 'CARROMOTO' | 'CARRO' | 'BICICLETA' | 'A_PIE'>('MOTO');
   const [organizacionNombre, setOrganizacionNombre] = useState('');
   const [direccion, setDireccion] = useState('');
-  const [nit, setNit] = useState('');
-  const [plazaGaleria, setPlazaGaleria] = useState('Galería Santa Elena');
-
-  // Campos específicos de RECEPTOR (Comedor Comunitario)
-  const [comensalesDiarios, setComensalesDiarios] = useState('150');
-  const [tieneRefrigeracion, setTieneRefrigeracion] = useState(true);
-  const [urgencia, setUrgencia] = useState<'Alta' | 'Media' | 'Normal'>('Alta');
-
-  // Campos específicos de VOLUNTARIO
-  const [medioTransporte, setMedioTransporte] = useState('Moto');
+  const [tieneRefrigeracion, setTieneRefrigeracion] = useState(false);
+  const [capacidadRacionesDia, setCapacidadRacionesDia] = useState('');
 
   useEffect(() => {
-    listarUsuariosParaAcceso()
-      .then((lista) => {
-        setUsuariosExistentes(lista);
-        if (lista.length > 0) {
-          setModo('login');
-        }
-      })
-      .catch(() => {});
-  }, []);
+    const estadoParam = searchParams.get('estado');
+    if (estadoParam === 'pendiente') {
+      setEstadoPendienteVisible(true);
+      setPestana('login');
+    }
+  }, [searchParams]);
 
+  // Manejo de acceso por tarjeta de evaluación (Sandbox de 5 roles)
+  const handleEntrarRolEvaluacion = async (config: typeof ROLES_EVALUACION[0]) => {
+    setCargando(true);
+    setErrorMsg(null);
+    try {
+      const sesionDemo: SesionUsuarioActiva = {
+        id: `00000000-0000-4000-8000-${config.rol.padEnd(12, '0').slice(0, 12)}`,
+        userId: `00000000-0000-4000-8000-${config.rol.padEnd(12, '0').slice(0, 12)}`,
+        nombre: config.defaultNombre,
+        email: config.defaultEmail,
+        rol: config.rol,
+        telefono: '+573150001122',
+        zona: 'CENTRO',
+        estadoCuenta: 'ACTIVO',
+        vehiculoTipo: config.rol === 'VOLUNTARIO' ? 'CARROMOTO' : undefined,
+        tieneRefrigeracion: config.rol === 'RECEPTOR',
+        capacidadRacionesDia: config.rol === 'RECEPTOR' ? 250 : undefined,
+        organizacionNombre:
+          config.rol === 'DONANTE'
+            ? 'Galería Santa Elena - Puesto 45'
+            : config.rol === 'RECEPTOR'
+            ? 'Comedor Comunitario Siloé Esperanza'
+            : undefined,
+      };
+
+      await establecerSesion(sesionDemo);
+      router.push('/');
+    } catch {
+      setErrorMsg('No fue posible inicializar la sesión del rol seleccionado.');
+    } finally {
+      setCargando(false);
+    }
+  };
+
+  // Manejo de inicio de sesión con correo registrado
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!emailLogin.trim() || cargando) return;
     setCargando(true);
     setErrorMsg(null);
+    setEstadoPendienteVisible(false);
 
     try {
-      const res = await iniciarSesionPorEmail(emailLogin.trim());
-      if (res.exito && res.sesion) {
-        await establecerSesion(res.sesion);
-        router.push('/');
-      } else if (!res.exito) {
-        setErrorMsg(res.error);
+      const res = await autenticarPorCorreoAction(emailLogin.trim());
+      if (!res.exito) {
+        setErrorMsg(res.mensaje);
+        return;
       }
+
+      const u = res.usuario;
+      if (u.estadoCuenta === 'PENDIENTE_AUTORIZACION') {
+        setEstadoPendienteVisible(true);
+        return;
+      }
+
+      if (u.estadoCuenta === 'SUSPENDIDO') {
+        setErrorMsg('Esta cuenta ha sido SUSPENDIDA por la administración corporativa (CA-05.2).');
+        return;
+      }
+
+      const sesionActiva: SesionUsuarioActiva = {
+        id: u.id,
+        userId: u.id,
+        nombre: u.nombre,
+        email: u.email,
+        rol: u.rol,
+        telefono: u.telefono,
+        zona: 'CENTRO',
+        estadoCuenta: u.estadoCuenta,
+        vehiculoTipo: u.vehiculoTipo,
+        organizacionId: u.organizacionId,
+      };
+
+      await establecerSesion(sesionActiva);
+      router.push('/');
     } catch {
-      setErrorMsg('Error al verificar la cuenta.');
+      setErrorMsg('Error de conexión al verificar credenciales.');
     } finally {
       setCargando(false);
     }
   };
 
-  const handleAccesoDirecto = async (u: SesionUsuarioActiva) => {
-    if (u.estadoCuenta === 'SUSPENDIDO') {
-      setErrorMsg('Esta cuenta ha sido suspendida por un Administrador (CA-05.2).');
-      return;
-    }
-    await establecerSesion(u);
-    router.push('/');
-  };
-
-  const handleRegistroSubmit = async (e: React.FormEvent) => {
+  // Manejo de postulación pública externa (VOLUNTARIO, DONANTE, RECEPTOR)
+  const handlePostulacionSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (cargando) return;
     setCargando(true);
     setErrorMsg(null);
+    setMensajeExito(null);
 
     try {
-      const res = await registrarUsuarioPorRol({
+      const res = await registrarPostulacionPublicaAction({
         nombre: nombre.trim(),
         email: email.trim(),
-        rol: rolSeleccionado,
         telefono: telefono.trim(),
         zona,
+        rol: rolPostulacion,
+        vehiculoTipo: rolPostulacion === 'VOLUNTARIO' ? vehiculoTipo : undefined,
         organizacionNombre:
-          rolSeleccionado === 'DONANTE' || rolSeleccionado === 'RECEPTOR'
+          rolPostulacion === 'DONANTE' || rolPostulacion === 'RECEPTOR'
             ? organizacionNombre.trim()
             : undefined,
         direccion:
-          rolSeleccionado === 'DONANTE' || rolSeleccionado === 'RECEPTOR'
+          rolPostulacion === 'DONANTE' || rolPostulacion === 'RECEPTOR'
             ? direccion.trim()
             : undefined,
-        nit: rolSeleccionado === 'DONANTE' ? nit.trim() : undefined,
-        plazaGaleria: rolSeleccionado === 'DONANTE' ? plazaGaleria : undefined,
-        comensalesDiarios:
-          rolSeleccionado === 'RECEPTOR' ? Number(comensalesDiarios) || 120 : undefined,
-        tieneRefrigeracion: rolSeleccionado === 'RECEPTOR' ? tieneRefrigeracion : undefined,
-        urgencia: rolSeleccionado === 'RECEPTOR' ? urgencia : undefined,
-        medioTransporte: rolSeleccionado === 'VOLUNTARIO' ? medioTransporte : undefined,
+        tieneRefrigeracion: rolPostulacion === 'RECEPTOR' ? tieneRefrigeracion : undefined,
+        capacidadRacionesDia:
+          rolPostulacion === 'RECEPTOR' && capacidadRacionesDia
+            ? Number(capacidadRacionesDia)
+            : undefined,
       });
 
-      if (res.exito && res.sesion) {
-        await establecerSesion(res.sesion);
-        router.push('/');
-      } else if (!res.exito) {
+      if (!res.exito) {
         setErrorMsg(res.error);
+        return;
       }
+
+      setMensajeExito(res.mensaje);
+      setEstadoPendienteVisible(true);
+      // Limpiar formulario
+      setNombre('');
+      setEmail('');
+      setTelefono('');
+      setOrganizacionNombre('');
+      setDireccion('');
+      setCapacidadRacionesDia('');
     } catch {
-      setErrorMsg('No fue posible completar el registro.');
+      setErrorMsg('No fue posible procesar la postulación.');
     } finally {
       setCargando(false);
     }
   };
 
-  const rolInfo = ROLES_CONFIG.find((r) => r.rol === rolSeleccionado) || ROLES_CONFIG[0];
-
   return (
     <main className="min-h-screen bg-[#090d16] p-2 sm:p-4 lg:p-6 flex items-center justify-center text-black">
-      <div className="bevel-out w-full max-w-4xl bg-[#d4d0c8] p-[3px] shadow-[8px_8px_0_rgba(0,0,0,0.65)]">
-        {/* Barra de título Windows 98 */}
-        <header className="titlebar flex items-center justify-between gap-2 px-2.5 py-1.5 text-white">
+      <div className="bevel-out w-full max-w-5xl bg-[#d4d0c8] p-[3px] shadow-[8px_8px_0_rgba(0,0,0,0.65)]">
+        {/* Barra de Título Corporativa */}
+        <header className="titlebar flex items-center justify-between gap-2 px-3 py-1.5 text-white">
           <div className="flex items-center gap-2">
-            <span className="w-3 h-3 bg-emerald-400 text-black font-extrabold text-[10px] flex items-center justify-center">
+            <span className="w-3.5 h-3.5 bg-emerald-400 text-black font-extrabold text-[11px] flex items-center justify-center">
               ■
             </span>
             <h1 className="font-mono text-xs sm:text-sm font-bold tracking-wide">
-              NEXO RESCATE DE ALIMENTOS — ACCESO Y REGISTRO POR ROL (CALI, COLOMBIA)
+              NEXO RESCATE DE ALIMENTOS — PORTAL CORPORATIVO (FUNDACIÓN MESA COMÚN, CALI)
             </h1>
           </div>
           {sesion && (
@@ -220,483 +324,420 @@ export default function LoginPage() {
               onClick={() => router.push('/')}
               className="btn-98 !py-0.5 !px-2 text-[11px] font-mono font-bold text-[#000080]"
             >
-              Ir a mi Portal ({sesion.rol}) &gt;
+              Ir al Tablero ({sesion.rol}) &gt;
             </button>
           )}
         </header>
 
-        {/* Selector de Modo: Registro de Cuenta vs Iniciar Sesión */}
-        <div className="flex flex-wrap items-center justify-between gap-2 bg-[#ece9d8] px-3 py-2 border-b border-[#808080] font-mono text-xs">
-          <div className="flex gap-2">
+        {/* Pestañas de Navegación del Portal */}
+        <nav className="flex flex-wrap items-center justify-between gap-2 bg-[#ece9d8] px-3 py-2 border-b border-[#808080] font-mono text-xs">
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => {
-                setModo('registro');
+                setPestana('sandbox');
                 setErrorMsg(null);
+                setEstadoPendienteVisible(false);
               }}
               className={`min-h-[40px] px-3 py-1 font-bold flex items-center gap-1.5 ${
-                modo === 'registro' ? 'bg-[#000080] text-white bevel-in' : 'btn-98 text-black'
+                pestana === 'sandbox' ? 'bg-[#000080] text-white bevel-in' : 'btn-98 text-black'
               }`}
             >
-              <UserPlus className="w-4 h-4" />
-              <span>1. Crear Cuenta por Rol</span>
+              <Sparkles className="w-4 h-4 text-amber-300" />
+              <span>1. Explorar los 5 Roles (Auditoría en 1 Clic)</span>
             </button>
             <button
               type="button"
               onClick={() => {
-                setModo('login');
+                setPestana('login');
                 setErrorMsg(null);
               }}
               className={`min-h-[40px] px-3 py-1 font-bold flex items-center gap-1.5 ${
-                modo === 'login' ? 'bg-[#000080] text-white bevel-in' : 'btn-98 text-black'
+                pestana === 'login' ? 'bg-[#000080] text-white bevel-in' : 'btn-98 text-black'
               }`}
             >
               <LogIn className="w-4 h-4" />
-              <span>2. Iniciar Sesión ({usuariosExistentes.length})</span>
+              <span>2. Iniciar Sesión Registrada</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setPestana('postulacion');
+                setErrorMsg(null);
+                setEstadoPendienteVisible(false);
+              }}
+              className={`min-h-[40px] px-3 py-1 font-bold flex items-center gap-1.5 ${
+                pestana === 'postulacion' ? 'bg-[#000080] text-white bevel-in' : 'btn-98 text-black'
+              }`}
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>3. Postulación Pública de Miembros</span>
             </button>
           </div>
-          <span className="text-[11px] text-slate-700">
-            Ley 1990 de 2019 • Trazabilidad Real Sin Datos Ficticios
+          <span className="text-[11px] text-gray-600 hidden sm:inline">
+            Normativa Ley 1990 de 2019 · EatCloud Architecture
           </span>
-        </div>
+        </nav>
 
-        <div className="p-3 sm:p-5">
-          {errorMsg && (
-            <div
-              role="alert"
-              className="mb-4 bevel-in bg-red-100 border-2 border-red-700 p-3 text-red-950 font-mono text-xs flex items-center gap-2"
-            >
-              <AlertCircle className="w-5 h-5 text-red-700 shrink-0" />
-              <span>{errorMsg}</span>
+        {/* Panel de Alertas Globales */}
+        {errorMsg && (
+          <div className="m-3 p-2.5 bg-red-100 border-2 border-red-600 text-red-900 font-mono text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span>{errorMsg}</span>
+          </div>
+        )}
+
+        {mensajeExito && (
+          <div className="m-3 p-2.5 bg-emerald-100 border-2 border-emerald-600 text-emerald-950 font-mono text-xs flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 flex-shrink-0 text-emerald-700" />
+            <span>{mensajeExito}</span>
+          </div>
+        )}
+
+        {/* PESTAÑA 1: SANDBOX DE EVALUACIÓN DE LOS 5 ROLES */}
+        {pestana === 'sandbox' && (
+          <div className="p-3 sm:p-4 space-y-4 font-mono text-xs">
+            <div className="bg-[#ffffd8] border border-[#d0c060] p-3 text-[11px] leading-relaxed">
+              <p className="font-bold text-[#604000] mb-1">
+                ℹ️ SANDBOX CORPORATIVO DE EVALUACIÓN Y AUDITORÍA DE ROLES:
+              </p>
+              <p>
+                Como usuario evaluador o auditor, puedes ingresar en un clic a cualquiera de los{' '}
+                <strong>5 roles del ecosistema</strong> para auditar sus vistas, capacidades y
+                restricciones estrictas según la normativa colombiana de rescate de alimentos. Para
+                cambiar de rol, haz clic en <strong>&quot;Cerrar Sesión / Cambiar Rol&quot;</strong> en la
+                barra superior.
+              </p>
             </div>
-          )}
 
-          {modo === 'login' ? (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-              {/* Formulario de Login por Correo */}
-              <form
-                onSubmit={handleLoginSubmit}
-                className="lg:col-span-5 bevel-out bg-white p-4 flex flex-col gap-3 font-mono text-xs"
-              >
-                <div className="titlebar px-2 py-1 text-white font-bold">
-                  INGRESAR CON CORREO REGISTRADO
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {ROLES_EVALUACION.map((c) => (
+                <div
+                  key={c.rol}
+                  className="bevel-out bg-[#ece9d8] p-3 flex flex-col justify-between gap-3 hover:bg-[#f5f3e9] transition-colors"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-1 border-b border-[#a0a0a0] pb-1.5">
+                      <div className="flex items-center gap-2">
+                        {c.icono}
+                        <h2 className="font-bold text-xs text-black">{c.titulo}</h2>
+                      </div>
+                      <span className={`text-[10px] px-1.5 py-0.5 border font-bold ${c.colorBadge}`}>
+                        {c.rol}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-700 font-semibold">{c.subtitulo}</p>
+                    <p className="text-[11px] text-gray-600 leading-snug">{c.descripcion}</p>
+                    <div className="pt-2 border-t border-dashed border-[#b0b0b0] space-y-1">
+                      <p className="text-[10px] font-bold text-gray-800 uppercase tracking-wider">
+                        Capacidades y Restricciones:
+                      </p>
+                      <ul className="list-disc pl-3.5 space-y-0.5 text-[10px] text-gray-700">
+                        {c.capacidades.map((cap, i) => (
+                          <li
+                            key={i}
+                            className={cap.startsWith('Restricción') ? 'text-red-700 font-medium' : ''}
+                          >
+                            {cap}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    disabled={cargando}
+                    onClick={() => handleEntrarRolEvaluacion(c)}
+                    className="btn-98 w-full py-1.5 font-bold text-xs text-[#000080] flex items-center justify-center gap-2 hover:bg-[#000080] hover:text-white"
+                  >
+                    <span>Entrar como {c.rol} &gt;</span>
+                  </button>
                 </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* PESTAÑA 2: INICIAR SESIÓN CON CORREO REGISTRADO */}
+        {pestana === 'login' && (
+          <div className="p-4 sm:p-6 space-y-4 font-mono text-xs max-w-xl mx-auto">
+            {estadoPendienteVisible ? (
+              <div className="bevel-out bg-[#fff8e7] border-2 border-amber-600 p-4 space-y-3">
+                <div className="flex items-center gap-2 text-amber-900 font-bold text-sm">
+                  <Clock className="w-5 h-5 text-amber-700 animate-spin" />
+                  <span>CUENTA EN REVISIÓN (PENDIENTE_AUTORIZACION)</span>
+                </div>
+                <p className="text-xs text-gray-800 leading-relaxed">
+                  Tu postulación se encuentra registrada y en espera de validación por parte de la{' '}
+                  <strong>Coordinación Operativa de la Fundación Mesa Común</strong>.
+                </p>
+                <div className="bg-white p-3 border border-amber-300 text-[11px] space-y-1.5 text-gray-700">
+                  <p className="font-bold text-gray-900">¿Por qué este proceso es obligatorio?</p>
+                  <p>
+                    Bajo la <strong>Ley 1990 de 2019</strong> y la <strong>Resolución 2674 INVIMA</strong>,
+                    los rescatistas y beneficiarios deben ser verificados en identidad, vehículo y capacidad
+                    sanitaria antes de recibir acceso a los lotes de alimentos perecederos.
+                  </p>
+                  <p className="text-[#000080] font-semibold pt-1">
+                    👉 Un Coordinador u Administrador puede activar tu cuenta desde su mesa de despacho.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEstadoPendienteVisible(false);
+                    setPestana('sandbox');
+                  }}
+                  className="btn-98 w-full py-1.5 font-bold text-xs text-[#000080]"
+                >
+                  Entrar mediante Sandbox de Evaluación
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleLoginSubmit} className="bevel-out bg-[#ece9d8] p-4 space-y-4">
                 <div>
-                  <label className="retro-label" htmlFor="login-email">
-                    Correo electrónico *
-                  </label>
+                  <h2 className="font-bold text-sm text-black mb-1">
+                    Acceso Corporativo por Correo Electrónico
+                  </h2>
+                  <p className="text-gray-600 text-[11px]">
+                    Ingresa con tu correo corporativo registrado en Fundación Mesa Común.
+                  </p>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block font-bold text-gray-800">Correo Electrónico:</label>
                   <input
-                    id="login-email"
                     type="email"
                     required
                     value={emailLogin}
                     onChange={(e) => setEmailLogin(e.target.value)}
-                    placeholder="usuario@organizacion.org"
-                    className="retro-field min-h-[44px]"
+                    placeholder="ej. coordinacion@mesacomun.org"
+                    className="bevel-in w-full px-2 py-1.5 bg-white font-mono text-xs text-black"
                   />
                 </div>
+
                 <button
                   type="submit"
                   disabled={cargando}
-                  className="btn-green min-h-[48px] font-bold flex items-center justify-center gap-2"
+                  className="btn-98 w-full py-2 font-bold text-xs text-[#000080] flex items-center justify-center gap-2 hover:bg-[#000080] hover:text-white"
                 >
                   <LogIn className="w-4 h-4" />
-                  <span>{cargando ? 'VERIFICANDO...' : 'ENTRAR AL PORTAL'}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setModo('registro')}
-                  className="btn-98 min-h-[40px] font-bold text-[#000080]"
-                >
-                  ¿No tienes cuenta? Regístrate aquí &gt;
+                  <span>{cargando ? 'Verificando cuenta...' : 'Ingresar al Tablero Operativo'}</span>
                 </button>
               </form>
+            )}
+          </div>
+        )}
 
-              {/* Cuentas reales creadas en esta sesión / base de datos */}
-              <div className="lg:col-span-7 bevel-in bg-[#f8fafc] p-4 font-mono text-xs flex flex-col gap-2">
-                <h2 className="font-bold text-[#000080] text-sm">
-                  CUENTAS REGISTRADAS EN EL SISTEMA ({usuariosExistentes.length})
-                </h2>
-                {usuariosExistentes.length === 0 ? (
-                  <div className="bevel-in bg-[#ffffe1] p-4 text-slate-800 my-auto">
-                    <p className="font-bold mb-1">Aún no hay usuarios registrados.</p>
-                    <p className="text-[11px] text-slate-600 mb-3">
-                      El sistema inicia limpio sin datos simulados. Crea tu primera cuenta como Donante, Comedor Comunitario, Voluntario, Coordinador o Administrador.
-                    </p>
-                    <button
-                      type="button"
-                      onClick={() => setModo('registro')}
-                      className="btn-green min-h-[42px] px-4 font-bold"
-                    >
-                      + Crear primera cuenta ahora
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-2 max-h-[320px] overflow-y-auto">
-                    {usuariosExistentes.map((u) => (
-                      <div
-                        key={u.userId}
-                        className="bevel-out bg-white p-2.5 flex items-center justify-between gap-2"
-                      >
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-black">{u.nombre}</span>
-                            <span className="px-1.5 py-0.5 text-[10px] font-extrabold bg-[#000080] text-white">
-                              {u.rol}
-                            </span>
-                            {u.estadoCuenta === 'SUSPENDIDO' && (
-                              <span className="px-1.5 py-0.5 text-[10px] font-extrabold bg-red-600 text-white">
-                                SUSPENDIDO
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-[11px] text-slate-600">
-                            {u.email} {u.organizacionNombre ? `• ${u.organizacionNombre}` : ''} • Zona {u.zona || 'CENTRO'}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleAccesoDirecto(u)}
-                          className="btn-98 min-h-[38px] px-3 font-bold text-[#000080] shrink-0"
-                        >
-                          Ingresar &gt;
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+        {/* PESTAÑA 3: POSTULACIÓN PÚBLICA DE MIEMBROS */}
+        {pestana === 'postulacion' && (
+          <form
+            onSubmit={handlePostulacionSubmit}
+            className="p-3 sm:p-5 space-y-4 font-mono text-xs max-w-2xl mx-auto"
+          >
+            <div className="bg-[#e8f4fc] border border-[#6090d0] p-3 text-[11px] leading-relaxed">
+              <p className="font-bold text-[#003080] mb-1">
+                📝 FORMULARIO DE POSTULACIÓN PÚBLICA (VOLUNTARIOS, DONANTES Y COMEDORES):
+              </p>
+              <p>
+                Al registrarte, tu cuenta ingresará en estado <strong>PENDIENTE_AUTORIZACION</strong>. Un
+                Coordinador logístico o Administrador validará tus datos para garantizar la inocuidad
+                alimentaria y seguridad de la red.
+              </p>
+            </div>
+
+            {/* Selector de Rol Público */}
+            <div className="space-y-1.5">
+              <label className="block font-bold text-gray-900">Selecciona el tipo de vinculación:</label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                {ROLES_PUBLICOS.map((rp) => (
+                  <button
+                    key={rp.rol}
+                    type="button"
+                    onClick={() => setRolPostulacion(rp.rol)}
+                    className={`p-2.5 text-left border ${
+                      rolPostulacion === rp.rol
+                        ? 'bg-[#000080] text-white border-black bevel-in'
+                        : 'bg-[#ece9d8] text-black border-[#808080] btn-98'
+                    }`}
+                  >
+                    <p className="font-bold text-xs">{rp.titulo}</p>
+                    <p className="text-[10px] mt-1 opacity-90 leading-tight">{rp.descripcion}</p>
+                  </button>
+                ))}
               </div>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
-              {/* Columna Izquierda: Selección de los 5 Roles */}
-              <div className="lg:col-span-5 flex flex-col gap-2">
-                <p className="font-mono text-xs font-bold text-[#000080] uppercase">
-                  Paso 1: Selecciona tu Rol en la Red *
-                </p>
-                {ROLES_CONFIG.map((r) => {
-                  const activo = rolSeleccionado === r.rol;
-                  return (
-                    <button
-                      key={r.rol}
-                      type="button"
-                      onClick={() => setRolSeleccionado(r.rol)}
-                      className={`w-full text-left p-3 font-mono transition-all ${
-                        activo
-                          ? 'bevel-in bg-white ring-2 ring-[#000080]'
-                          : 'bevel-out bg-[#ece9d8] hover:bg-white/80'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <div className="flex items-center gap-2">
-                          {r.icono}
-                          <span className="font-extrabold text-xs sm:text-sm text-black">
-                            {r.titulo}
-                          </span>
-                        </div>
-                        <span className={`px-1.5 py-0.5 text-[10px] font-extrabold border ${r.colorBadge}`}>
-                          {r.rol}
-                        </span>
-                      </div>
-                      <p className="text-[11px] font-bold text-slate-700">{r.subtitulo}</p>
-                      <p className="text-[10px] text-slate-600 mt-1 leading-snug">{r.descripcion}</p>
-                    </button>
-                  );
-                })}
-              </div>
 
-              {/* Columna Derecha: Formulario Específico del Rol Seleccionado */}
-              <form
-                onSubmit={handleRegistroSubmit}
-                className="lg:col-span-7 bevel-out bg-white p-4 font-mono text-xs flex flex-col gap-3"
-              >
-                <div className="titlebar px-2.5 py-1.5 text-white font-bold flex items-center justify-between">
-                  <span>PASO 2: DATOS DE REGISTRO — {rolInfo.titulo.toUpperCase()}</span>
-                  <span className="bg-white/20 px-1.5 py-0.5 text-[10px]">{rolSeleccionado}</span>
+            {/* Datos Personales */}
+            <div className="bevel-out bg-[#ece9d8] p-3 space-y-3">
+              <p className="font-bold text-black border-b border-[#a0a0a0] pb-1">
+                1. Datos del Solicitante
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="block font-bold">Nombre Completo:</label>
+                  <input
+                    type="text"
+                    required
+                    value={nombre}
+                    onChange={(e) => setNombre(e.target.value)}
+                    placeholder="ej. Juan Carlos Pérez"
+                    className="bevel-in w-full px-2 py-1 bg-white"
+                  />
                 </div>
+                <div className="space-y-1">
+                  <label className="block font-bold">Correo Electrónico:</label>
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="ej. juan.perez@correo.com"
+                    className="bevel-in w-full px-2 py-1 bg-white"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block font-bold">Teléfono de Contacto (Cali):</label>
+                  <input
+                    type="tel"
+                    required
+                    value={telefono}
+                    onChange={(e) => setTelefono(e.target.value)}
+                    placeholder="+57 315 000 0000"
+                    className="bevel-in w-full px-2 py-1 bg-white"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="block font-bold">Zona de Cobertura en Cali:</label>
+                  <select
+                    value={zona}
+                    onChange={(e) => setZona(e.target.value as ZonaCali)}
+                    className="bevel-in w-full px-2 py-1 bg-white"
+                  >
+                    {ZONAS_CALI.map((z) => (
+                      <option key={z} value={z}>
+                        Zona {z}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
 
-                {/* Datos personales básicos */}
+            {/* Datos Específicos según Rol */}
+            {rolPostulacion === 'VOLUNTARIO' && (
+              <div className="bevel-out bg-[#ece9d8] p-3 space-y-2">
+                <p className="font-bold text-black border-b border-[#a0a0a0] pb-1">
+                  2. Medio de Transporte para Rescate
+                </p>
+                <div className="space-y-1">
+                  <label className="block font-bold">Vehículo o Medio de Desplazamiento:</label>
+                  <select
+                    value={vehiculoTipo}
+                    onChange={(e) => setVehiculoTipo(e.target.value as any)}
+                    className="bevel-in w-full px-2 py-1 bg-white"
+                  >
+                    <option value="MOTO">Motocicleta (Capacidad recomendada hasta 30 kg)</option>
+                    <option value="CARROMOTO">Carromoto / Motocarguero (Hasta 150 kg)</option>
+                    <option value="CARRO">Automóvil o Camioneta</option>
+                    <option value="BICICLETA">Bicicleta de Carga / Morral Térmico</option>
+                    <option value="A_PIE">A Pie / Zona de Barrio Cercana</option>
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {(rolPostulacion === 'DONANTE' || rolPostulacion === 'RECEPTOR') && (
+              <div className="bevel-out bg-[#ece9d8] p-3 space-y-3">
+                <p className="font-bold text-black border-b border-[#a0a0a0] pb-1">
+                  2. Datos de la Organización ({rolPostulacion === 'DONANTE' ? 'Comercio Donante' : 'Comedor Beneficiario'})
+                </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="retro-label" htmlFor="reg-nombre">
-                      {rolSeleccionado === 'DONANTE'
-                        ? 'Nombre del comerciante / encargado *'
-                        : rolSeleccionado === 'RECEPTOR'
-                        ? 'Nombre del coordinador(a) del comedor *'
-                        : 'Nombre completo *'}
-                    </label>
+                  <div className="space-y-1">
+                    <label className="block font-bold">Nombre del Establecimiento:</label>
                     <input
-                      id="reg-nombre"
                       type="text"
                       required
-                      value={nombre}
-                      onChange={(e) => setNombre(e.target.value)}
-                      placeholder="Ej. Doña Rosa Valencia"
-                      className="retro-field min-h-[44px]"
+                      value={organizacionNombre}
+                      onChange={(e) => setOrganizacionNombre(e.target.value)}
+                      placeholder={
+                        rolPostulacion === 'DONANTE'
+                          ? 'ej. Puesto 45 Galería Santa Elena'
+                          : 'ej. Comedor San Antonio Siloé'
+                      }
+                      className="bevel-in w-full px-2 py-1 bg-white"
                     />
                   </div>
-                  <div>
-                    <label className="retro-label" htmlFor="reg-email">
-                      Correo electrónico *
-                    </label>
+                  <div className="space-y-1">
+                    <label className="block font-bold">Dirección en Cali:</label>
                     <input
-                      id="reg-email"
-                      type="email"
+                      type="text"
                       required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="contacto@ejemplo.org"
-                      className="retro-field min-h-[44px]"
+                      value={direccion}
+                      onChange={(e) => setDireccion(e.target.value)}
+                      placeholder="ej. Calle 25 con Carrera 29"
+                      className="bevel-in w-full px-2 py-1 bg-white"
                     />
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="retro-label" htmlFor="reg-telefono">
-                      Teléfono / WhatsApp de contacto *
-                    </label>
-                    <input
-                      id="reg-telefono"
-                      type="tel"
-                      required
-                      value={telefono}
-                      onChange={(e) => setTelefono(e.target.value)}
-                      placeholder="+57 315 400 1122"
-                      className="retro-field min-h-[44px]"
-                    />
-                  </div>
-                  <div>
-                    <label className="retro-label" htmlFor="reg-zona">
-                      Zona de Cali *
-                    </label>
-                    <select
-                      id="reg-zona"
-                      value={zona}
-                      onChange={(e) => setZona(e.target.value as ZonaCali)}
-                      className="retro-field min-h-[44px] font-bold"
-                    >
-                      {ZONAS_CALI.map((z) => (
-                        <option key={z} value={z}>
-                          ZONA {z} — Santiago de Cali
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Campos exclusivos para DONANTE */}
-                {rolSeleccionado === 'DONANTE' && (
-                  <div className="bevel-in bg-[#f0fdf4] p-3 border border-emerald-600 flex flex-col gap-3">
-                    <p className="font-extrabold text-emerald-950 text-xs">
-                      ▣ DATOS DEL COMERCIO O PUESTO DONANTE
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="retro-label" htmlFor="reg-comercio">
-                          Nombre del Puesto / Comercio / Restaurante *
-                        </label>
-                        <input
-                          id="reg-comercio"
-                          type="text"
-                          required
-                          value={organizacionNombre}
-                          onChange={(e) => setOrganizacionNombre(e.target.value)}
-                          placeholder="Ej. Puesto 45 Doña Rosa"
-                          className="retro-field min-h-[44px]"
-                        />
-                      </div>
-                      <div>
-                        <label className="retro-label" htmlFor="reg-plaza">
-                          Plaza de Mercado / Sector *
-                        </label>
-                        <select
-                          id="reg-plaza"
-                          value={plazaGaleria}
-                          onChange={(e) => setPlazaGaleria(e.target.value)}
-                          className="retro-field min-h-[44px]"
-                        >
-                          <option value="Galería Santa Elena">Galería Santa Elena</option>
-                          <option value="Central Mayorista Cavasa">Central Mayorista Cavasa</option>
-                          <option value="Galería Alameda">Galería Alameda</option>
-                          <option value="Galería La Floresta">Galería La Floresta</option>
-                          <option value="Galería Alfonso López">Galería Alfonso López</option>
-                          <option value="Restaurante / Supermercado Independiente">
-                            Restaurante / Supermercado Independiente
-                          </option>
-                        </select>
-                      </div>
+                {rolPostulacion === 'RECEPTOR' && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                    <div className="space-y-1">
+                      <label className="block font-bold">Capacidad de Raciones Diarias:</label>
+                      <input
+                        type="number"
+                        min="1"
+                        value={capacidadRacionesDia}
+                        onChange={(e) => setCapacidadRacionesDia(e.target.value)}
+                        placeholder="ej. 200"
+                        className="bevel-in w-full px-2 py-1 bg-white"
+                      />
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="retro-label" htmlFor="reg-dir-donante">
-                          Dirección y número de local / muelle *
-                        </label>
-                        <input
-                          id="reg-dir-donante"
-                          type="text"
-                          required
-                          value={direccion}
-                          onChange={(e) => setDireccion(e.target.value)}
-                          placeholder="Ej. Calle 25 # 29-10, Pabellón 2 Puesto 45"
-                          className="retro-field min-h-[44px]"
-                        />
-                      </div>
-                      <div>
-                        <label className="retro-label" htmlFor="reg-nit">
-                          NIT o Cédula (para Certificado DIAN Ley 1990)
-                        </label>
-                        <input
-                          id="reg-nit"
-                          type="text"
-                          value={nit}
-                          onChange={(e) => setNit(e.target.value)}
-                          placeholder="Ej. 901.428.192-3"
-                          className="retro-field min-h-[44px]"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Campos exclusivos para RECEPTOR (Comedor Comunitario) */}
-                {rolSeleccionado === 'RECEPTOR' && (
-                  <div className="bevel-in bg-[#e0f2fe] p-3 border border-sky-700 flex flex-col gap-3">
-                    <p className="font-extrabold text-sky-950 text-xs">
-                      ▣ DATOS DEL COMEDOR COMUNITARIO / FUNDACIÓN RECEPTORA
-                    </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="retro-label" htmlFor="reg-comedor">
-                          Nombre del Comedor Comunitario *
-                        </label>
-                        <input
-                          id="reg-comedor"
-                          type="text"
-                          required
-                          value={organizacionNombre}
-                          onChange={(e) => setOrganizacionNombre(e.target.value)}
-                          placeholder="Ej. Comedor Comunitario Siloé Esperanza"
-                          className="retro-field min-h-[44px]"
-                        />
-                      </div>
-                      <div>
-                        <label className="retro-label" htmlFor="reg-dir-comedor">
-                          Dirección física en Cali *
-                        </label>
-                        <input
-                          id="reg-dir-comedor"
-                          type="text"
-                          required
-                          value={direccion}
-                          onChange={(e) => setDireccion(e.target.value)}
-                          placeholder="Ej. Calle 1 Oeste # 50-12, Siloé"
-                          className="retro-field min-h-[44px]"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="retro-label" htmlFor="reg-comensales">
-                          Beneficiarios / Comensales diarios *
-                        </label>
-                        <input
-                          id="reg-comensales"
-                          type="number"
-                          min="10"
-                          required
-                          value={comensalesDiarios}
-                          onChange={(e) => setComensalesDiarios(e.target.value)}
-                          className="retro-field min-h-[44px] font-bold"
-                        />
-                      </div>
-                      <div>
-                        <label className="retro-label" htmlFor="reg-urgencia">
-                          Prioridad alimentaria *
-                        </label>
-                        <select
-                          id="reg-urgencia"
-                          value={urgencia}
-                          onChange={(e) =>
-                            setUrgencia(e.target.value as 'Alta' | 'Media' | 'Normal')
-                          }
-                          className="retro-field min-h-[44px] font-bold"
-                        >
-                          <option value="Alta">Prioridad Alta (Vulnerabilidad crítica)</option>
-                          <option value="Media">Prioridad Media</option>
-                          <option value="Normal">Prioridad Normal</option>
-                        </select>
-                      </div>
-                    </div>
-                    <div className="bevel-out bg-white p-2.5 flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2">
-                        <Snowflake className="w-5 h-5 text-sky-700 shrink-0" />
-                        <div>
-                          <p className="font-bold text-black">
-                            ¿Cuenta con nevera / cuarto frío operativo?
-                          </p>
-                          <p className="text-[10px] text-slate-600">
-                            Indispensable para poder asignarle lácteos, cárnicos y alimentos que requieren frío (CA-02.2).
-                          </p>
-                        </div>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setTieneRefrigeracion(!tieneRefrigeracion)}
-                        className={`min-h-[42px] px-3 font-extrabold ${
-                          tieneRefrigeracion ? 'btn-blue' : 'btn-98'
-                        }`}
-                      >
-                        {tieneRefrigeracion ? '❄ SÍ TIENE FRÍO' : 'SIN NEVERA'}
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Campos exclusivos para VOLUNTARIO */}
-                {rolSeleccionado === 'VOLUNTARIO' && (
-                  <div className="bevel-in bg-[#fef3c7] p-3 border border-amber-600 flex flex-col gap-2">
-                    <p className="font-extrabold text-amber-950 text-xs">
-                      ▣ DATOS OPERATIVOS DEL VOLUNTARIO EN CAMPO
-                    </p>
-                    <div>
-                      <label className="retro-label" htmlFor="reg-transporte">
-                        Medio de transporte disponible para rescates *
+                    <div className="flex items-center gap-2 pt-5">
+                      <input
+                        type="checkbox"
+                        id="checkRefri"
+                        checked={tieneRefrigeracion}
+                        onChange={(e) => setTieneRefrigeracion(e.target.checked)}
+                        className="w-4 h-4"
+                      />
+                      <label htmlFor="checkRefri" className="font-bold flex items-center gap-1 cursor-pointer">
+                        <Snowflake className="w-4 h-4 text-sky-700" />
+                        <span>Cuenta con refrigeración o congelación</span>
                       </label>
-                      <select
-                        id="reg-transporte"
-                        value={medioTransporte}
-                        onChange={(e) => setMedioTransporte(e.target.value)}
-                        className="retro-field min-h-[44px] font-bold"
-                      >
-                        <option value="Moto">Motocicleta con cajón / parrilla</option>
-                        <option value="Carromoto">Carromoto de carga</option>
-                        <option value="Vehículo particular">Vehículo particular / Camioneta</option>
-                        <option value="Bicicleta">Bicicleta de reparto</option>
-                        <option value="A pie">A pie (entregas dentro de la misma galería/barrio)</option>
-                      </select>
                     </div>
                   </div>
                 )}
+              </div>
+            )}
 
-                <button
-                  type="submit"
-                  disabled={cargando}
-                  className="btn-green min-h-[48px] text-sm font-extrabold flex items-center justify-center gap-2 mt-1"
-                >
-                  <CheckCircle2 className="w-5 h-5" />
-                  <span>
-                    {cargando
-                      ? 'CREANDO CUENTA Y PORTAL...'
-                      : `REGISTRARME E INGRESAR COMO ${rolSeleccionado}`}
-                  </span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </form>
-            </div>
-          )}
-        </div>
+            <button
+              type="submit"
+              disabled={cargando}
+              className="btn-98 w-full py-2.5 font-bold text-xs text-[#000080] flex items-center justify-center gap-2 hover:bg-[#000080] hover:text-white"
+            >
+              <UserPlus className="w-4 h-4" />
+              <span>{cargando ? 'Enviando postulación...' : 'Enviar Solicitud de Postulación'}</span>
+            </button>
+          </form>
+        )}
       </div>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#090d16] flex items-center justify-center font-mono text-white text-xs">
+          Cargando Portal de Acceso Corporativo...
+        </div>
+      }
+    >
+      <LoginContent />
+    </Suspense>
   );
 }

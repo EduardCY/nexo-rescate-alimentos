@@ -6,12 +6,19 @@ import { useNexo } from "./NexoContext";
 import RadarMap from "./RadarMap";
 import LotCard from "./LotCard";
 import KpiCard from "./KpiCard";
+import { useSession } from "@/lib/auth/session-context";
+import { eliminarDonacion } from "@/actions/donaciones";
 import { CO2_KG_PER_KG, fmt, type Lot } from "@/lib/nexo/impact";
 
 const esDisponible = (lot: Lot) => (lot.estado ? lot.estado === "DISPONIBLE" : lot.status === "available");
 
 export default function DashboardView() {
-  const { lots, assignLot, setView, totals } = useNexo();
+  const { lots, assignLot, setView, totals, refreshData } = useNexo();
+  const { sesion } = useSession();
+
+  const esSupervisor = sesion?.rol === "ADMIN" || sesion?.rol === "COORDINADOR";
+  const puedePublicar = sesion?.rol === "DONANTE" || sesion?.rol === "ADMIN";
+
   const available = lots.filter(esDisponible);
   const sorted = [...lots].sort(
     (a, b) => Number(!esDisponible(a)) - Number(!esDisponible(b)) || a.hoursLeft - b.hoursLeft
@@ -39,23 +46,46 @@ export default function DashboardView() {
                 key={lot.id}
                 lot={lot}
                 action={
-                  esDisponible(lot) ? (
-                    <button id={`assign-${lot.id}`} className="btn-98 font-mono" onClick={() => assignLot(lot.id)}>
-                      Asignar &gt;
-                    </button>
-                  ) : (
-                    <span className="font-mono text-[11px] font-bold text-slate-600">
-                      {lot.estado === "ENTREGADA" || lot.status === "delivered" ? "ENTREGADO ✔" : "ASIGNADO ✔"}
-                    </span>
-                  )
+                  <div className="flex items-center gap-1">
+                    {esDisponible(lot) && esSupervisor ? (
+                      <button id={`assign-${lot.id}`} className="btn-98 font-mono text-xs" onClick={() => assignLot(lot.id)}>
+                        Asignar &gt;
+                      </button>
+                    ) : (
+                      <span className="font-mono text-[11px] font-bold text-slate-600">
+                        {lot.estado === "ENTREGADA" || lot.status === "delivered"
+                          ? "ENTREGADO ✔"
+                          : lot.estado === "ASIGNADA"
+                          ? "ASIGNADO ✔"
+                          : "DISPONIBLE"}
+                      </span>
+                    )}
+                    {esSupervisor && (
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (confirm(`¿Eliminar donación ${lot.id} del sistema y mapa?`)) {
+                            await eliminarDonacion(lot.id, sesion?.rol);
+                            if (refreshData) refreshData();
+                          }
+                        }}
+                        className="btn-98 text-red-700 !px-1.5 font-bold text-xs"
+                        title="Eliminar Donación"
+                      >
+                        🗑️
+                      </button>
+                    )}
+                  </div>
                 }
               />
             ))}
           </div>
           <div className="p-2 flex flex-col sm:flex-row gap-2">
-            <button id="btn-new-lot" className="btn-green flex-1 py-2 text-xs sm:text-sm font-bold" onClick={() => setView("donation")}>
-              + REGISTRAR DONACIÓN
-            </button>
+            {puedePublicar && (
+              <button id="btn-new-lot" className="btn-green flex-1 py-2 text-xs sm:text-sm font-bold" onClick={() => setView("donation")}>
+                + REGISTRAR DONACIÓN
+              </button>
+            )}
             <Link href="/donaciones" className="btn-98 flex-1 py-2 text-xs sm:text-sm font-bold font-mono text-[#000080] flex items-center justify-center">
               VER CATÁLOGO &gt;
             </Link>

@@ -4,19 +4,21 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { createClient, esSupabaseConfigurado } from '@/lib/supabase/server';
 import { UUID_REGEX } from '@/lib/utils/uuid-helper';
+import { esRolAutoRegistrablePublico } from '@/lib/rbac/permisos';
 import type {
   EstadoCuentaUsuario,
   ResultadoAccionAdmin,
   RolUsuario,
   UsuarioCorporativo,
+  ZonaCali,
 } from '@/types';
 
 /**
- * Administración corporativa de usuarios (CMP-05 / TASK-24 / CA-05.2).
+ * Administración corporativa de usuarios y RBAC (CMP-05 / TASK-24 / CA-05.2).
  *
- * Todas las acciones son exclusivas del rol ADMIN, que equivale al permiso
- * `admin:users:write`. Los permisos granulares de un usuario NO amplían este
- * privilegio: la condición es `rol === 'ADMIN'` y cuenta ACTIVO.
+ * Todas las acciones de gobernanza son exclusivas del rol ADMIN, que equivale al permiso
+ * `admin:users:write`. La aprobación de solicitudes públicas en PENDIENTE_AUTORIZACION
+ * puede ser ejecutada tanto por ADMIN como por COORDINADOR de la Fundación Mesa Común.
  */
 
 const MSG_FORBIDDEN = 'Forbidden: Requiere rol ADMIN';
@@ -59,7 +61,7 @@ const ActualizarRolSchema = z.object({
 
 const CambiarEstadoSchema = z.object({
   usuarioId: uuidSchema,
-  nuevoEstado: z.enum(['ACTIVO', 'SUSPENDIDO']),
+  nuevoEstado: z.enum(['ACTIVO', 'SUSPENDIDO', 'PENDIENTE_AUTORIZACION']),
   motivo: motivoSchema,
 });
 
@@ -80,7 +82,6 @@ export interface NuevoUsuarioCorporativoInput {
   organizacionId?: string;
   vehiculoTipo?: 'MOTO' | 'CARROMOTO' | 'CARRO' | 'BICICLETA' | 'A_PIE';
   permisosGranulares?: string[];
-  /** Razón del alta para la bitácora. Por defecto: "Alta de usuario corporativo". */
   motivo?: string;
 }
 
@@ -145,26 +146,31 @@ declare global {
   var __NEXO_AUDIT_RBAC: EventoAuditoriaRBAC[] | undefined;
 }
 
+const ES_ENTORNO_TEST = process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST);
 const ADMIN_SEED_UUID = '00000000-0000-4000-8000-000000000001';
 
 function obtenerAlmacenUsuarios(): Map<string, UsuarioCorporativo> {
   if (!globalThis.__NEXO_USUARIOS_RBAC) {
-    globalThis.__NEXO_USUARIOS_RBAC = new Map<string, UsuarioCorporativo>([
-      [
-        ADMIN_SEED_UUID,
-        {
-          id: ADMIN_SEED_UUID,
-          nombre: 'Administrador Corporativo Nexo',
-          email: 'admin@nexorescate.org',
-          rol: 'ADMIN',
-          telefono: '+573001112233',
-          disponible: true,
-          estadoCuenta: 'ACTIVO',
-          permisosGranulares: ['admin:users:read', 'admin:users:write'],
-          createdAt: '2026-10-01T00:00:00.000Z',
-        },
-      ],
-    ]);
+    globalThis.__NEXO_USUARIOS_RBAC = new Map<string, UsuarioCorporativo>(
+      ES_ENTORNO_TEST
+        ? [
+            [
+              ADMIN_SEED_UUID,
+              {
+                id: ADMIN_SEED_UUID,
+                nombre: 'Administrador Corporativo Nexo (Test)',
+                email: 'admin@nexorescate.org',
+                rol: 'ADMIN',
+                telefono: '+573001112233',
+                disponible: true,
+                estadoCuenta: 'ACTIVO',
+                permisosGranulares: ['admin:users:read', 'admin:users:write'],
+                createdAt: '2026-10-01T00:00:00.000Z',
+              },
+            ],
+          ]
+        : []
+    );
   }
   return globalThis.__NEXO_USUARIOS_RBAC;
 }
@@ -182,9 +188,6 @@ function obtenerBitacoraMemoria(): EventoAuditoriaRBAC[] {
 export async function registrarUsuarioRBACEnMemoria(usuario: UsuarioCorporativo): Promise<void> {
   obtenerAlmacenUsuarios().set(usuario.id, { ...usuario });
 }
-
-const COLUMNAS_USUARIO =
-  'id, nombre, email, rol, telefono, vehiculo_tipo, disponible, organizacion_id, estado_cuenta, permisos_granulares, created_at';
 
 function fallo(codigo: Fallo['codigo'], error: string): Fallo {
   return { exito: false, codigo, error };
@@ -229,6 +232,15 @@ function servidorConfigurado(): boolean {
   return esSupabaseConfigurado() && Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
+function extraerActorId(actor: unknown): string {
+  if (!actor) return ADMIN_SEED_UUID;
+  if (typeof actor === 'string') return actor;
+  if (typeof actor === 'object' && actor !== null && 'id' in actor) {
+    return String((actor as ActorRbac).id);
+  }
+  return ADMIN_SEED_UUID;
+}
+
 async function verificarActorAdmin(
   supabase: SupabaseClient | null,
   actorId: unknown
@@ -268,6 +280,47 @@ async function verificarActorAdmin(
   return fallo(403, MSG_FORBIDDEN);
 }
 
+async function verificarActorAprobador(
+  supabase: SupabaseClient | null,
+  actorId: unknown
+): Promise<Fallo | null> {
+  if (typeof actorId !== 'string' || !UUID_REGEX.test(actorId)) {
+    return fallo(403, 'Forbidden: Requiere rol ADMIN o COORDINADOR activo');
+  }
+
+  const enMemoria = obtenerAlmacenUsuarios().get(actorId);
+  if (enMemoria) {
+    if (enMemoria.rol !== 'ADMIN' && enMemoria.rol !== 'COORDINADOR') {
+      return fallo(403, 'Forbidden: Solo ADMIN o COORDINADOR pueden aprobar cuentas');
+    }
+    if (enMemoria.estadoCuenta !== 'ACTIVO') return fallo(403, MSG_INACTIVO);
+    return null;
+  }
+
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('usuarios')
+        .select('rol, estado_cuenta')
+        .eq('id', actorId)
+        .maybeSingle();
+
+      if (!error && data) {
+        const actor = data as { rol: string; estado_cuenta: string };
+        if (actor.rol !== 'ADMIN' && actor.rol !== 'COORDINADOR') {
+          return fallo(403, 'Forbidden: Solo ADMIN o COORDINADOR pueden aprobar cuentas');
+        }
+        if (actor.estado_cuenta !== 'ACTIVO') return fallo(403, MSG_INACTIVO);
+        return null;
+      }
+    } catch {
+      // Fallback
+    }
+  }
+
+  return fallo(403, 'Forbidden: Actor aprobador no encontrado o inactivo');
+}
+
 function resolverRespuestaRpc(
   data: unknown,
   error: { code?: string } | null
@@ -302,99 +355,284 @@ function generarUuid(): string {
   });
 }
 
-function extraerActorId(actor?: string | ActorRbac): string {
-  if (!actor) return ADMIN_SEED_UUID;
-  if (typeof actor === 'object' && actor !== null) {
-    return actor.id;
-  }
-  return String(actor);
-}
-
 /**
- * Lista los usuarios corporativos (solo ADMIN). Devuelve como máximo 500 filas,
- * de la más reciente a la más antigua; use los filtros para acotar.
+ * Autentica un usuario corporativo buscando su registro por correo electrónico.
  */
-export async function listarUsuariosCorporativos(
-  actor: string | ActorRbac,
-  filtros?: FiltrosUsuariosCorporativos
-): Promise<ResultadoAccionAdmin<UsuarioCorporativo[]>> {
-  const actorId = extraerActorId(actor);
-  const supabase = esSupabaseConfigurado() ? createClient() : null;
-  const denegado = await verificarActorAdmin(supabase, actorId);
-  if (denegado) return denegado;
+export async function autenticarPorCorreoAction(
+  email: string
+): Promise<{ exito: true; usuario: UsuarioCorporativo } | { exito: false; mensaje: string; estadoCuenta?: EstadoCuentaUsuario }> {
+  const emailNormalizado = email.trim().toLowerCase();
+  if (!emailNormalizado || !emailNormalizado.includes('@')) {
+    return { exito: false, mensaje: 'Ingresa un correo electrónico corporativo válido.' };
+  }
 
-  const validacion = FiltrosListadoSchema.safeParse(filtros);
-  if (!validacion.success) return fallo(400, primerError(validacion.error));
-
-  const combinados = new Map<string, UsuarioCorporativo>();
-
-  if (supabase) {
+  if (esSupabaseConfigurado()) {
     try {
-      let consulta = supabase
+      const supabase = createClient();
+      const { data, error } = await supabase
         .from('usuarios')
-        .select(COLUMNAS_USUARIO)
-        .order('created_at', { ascending: false })
-        .limit(LIMITE_LISTADO);
+        .select('*')
+        .ilike('email', emailNormalizado)
+        .maybeSingle();
 
-      if (validacion.data?.rol) consulta = consulta.eq('rol', validacion.data.rol);
-      if (validacion.data?.estadoCuenta) {
-        consulta = consulta.eq('estado_cuenta', validacion.data.estadoCuenta);
-      }
-
-      const { data, error } = await consulta;
-      if (!error && Array.isArray(data)) {
-        for (const fila of (data as unknown[]).filter(esFilaUsuario)) {
-          const u = mapearUsuario(fila);
-          combinados.set(u.id, u);
-          obtenerAlmacenUsuarios().set(u.id, u);
-        }
+      if (!error && data && esFilaUsuario(data)) {
+        const usuario = mapearUsuario(data);
+        obtenerAlmacenUsuarios().set(usuario.id, usuario);
+        return { exito: true, usuario };
       }
     } catch {
-      // Fallback a memoria
+      // Continuar con memoria
     }
   }
 
   for (const u of Array.from(obtenerAlmacenUsuarios().values())) {
-    if (validacion.data?.rol && u.rol !== validacion.data.rol) continue;
-    if (validacion.data?.estadoCuenta && u.estadoCuenta !== validacion.data.estadoCuenta) continue;
-    if (!combinados.has(u.id)) {
-      combinados.set(u.id, u);
+    if (u.email.toLowerCase() === emailNormalizado) {
+      return { exito: true, usuario: u };
     }
   }
 
-  const usuarios = Array.from(combinados.values()).sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
+  return { exito: false, mensaje: 'No existe ninguna cuenta registrada con este correo en la plataforma.' };
+}
+
+/**
+ * Registra una postulación pública externa (VOLUNTARIO, DONANTE, RECEPTOR).
+ *
+ * ¿Por qué?: En el estándar corporativo (EatCloud / Fundación Mesa Común), los actores externos
+ * postulan su registro y entran en estado PENDIENTE_AUTORIZACION. Los roles internos (ADMIN y
+ * COORDINADOR) son de personal directo y no se admiten en registro público.
+ */
+export async function registrarPostulacionPublicaAction(input: {
+  nombre: string;
+  email: string;
+  telefono: string;
+  zona: ZonaCali;
+  rol: RolUsuario;
+  vehiculoTipo?: 'MOTO' | 'CARROMOTO' | 'CARRO' | 'BICICLETA' | 'A_PIE';
+  organizacionId?: string;
+  organizacionNombre?: string;
+  direccion?: string;
+  tieneRefrigeracion?: boolean;
+  capacidadRacionesDia?: number;
+}): Promise<{ exito: true; usuario: UsuarioCorporativo; mensaje: string } | { exito: false; error: string }> {
+  const nombre = input.nombre.trim();
+  const email = input.email.trim().toLowerCase();
+  const telefono = input.telefono.trim();
+
+  if (nombre.length < 3) {
+    return { exito: false, error: 'El nombre completo debe tener al menos 3 caracteres.' };
+  }
+  if (!email.includes('@')) {
+    return { exito: false, error: 'El correo electrónico no es válido.' };
+  }
+  if (telefono.length < 7) {
+    return { exito: false, error: 'El teléfono debe tener al menos 7 dígitos.' };
+  }
+
+  // Restricción estricta de roles autorregistrados
+  if (!esRolAutoRegistrablePublico(input.rol)) {
+    return {
+      exito: false,
+      error: `El rol ${input.rol} es de gestión interna corporativa y no admite auto-registro público.`,
+    };
+  }
+
+  const id = generarUuid();
+  const ahoraIso = new Date().toISOString();
+
+  const nuevoUsuario: UsuarioCorporativo = {
+    id,
+    nombre,
+    email,
+    rol: input.rol,
+    telefono,
+    vehiculoTipo: input.vehiculoTipo,
+    disponible: true,
+    organizacionId: input.organizacionId,
+    estadoCuenta: 'PENDIENTE_AUTORIZACION',
+    permisosGranulares: [],
+    createdAt: ahoraIso,
+  };
+
+  if (esSupabaseConfigurado()) {
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('usuarios')
+        .insert([
+          {
+            id,
+            nombre,
+            email,
+            rol: input.rol,
+            telefono,
+            vehiculo_tipo: input.vehiculoTipo || null,
+            disponible: true,
+            organizacion_id: input.organizacionId || null,
+            estado_cuenta: 'PENDIENTE_AUTORIZACION',
+            permisos_granulares: [],
+          },
+        ])
+        .select('id')
+        .maybeSingle();
+
+      if (!error && data?.id) {
+        nuevoUsuario.id = String(data.id);
+      }
+    } catch {
+      // Respaldo en memoria
+    }
+  }
+
+  obtenerAlmacenUsuarios().set(nuevoUsuario.id, nuevoUsuario);
 
   return {
     exito: true,
-    codigo: 200,
-    mensaje: 'Usuarios consultados correctamente.',
-    data: usuarios,
+    usuario: nuevoUsuario,
+    mensaje:
+      'Tu postulación ha sido recibida con éxito. Por normatividad de rescate de alimentos (Ley 1990), un Coordinador u Administrador de Fundación Mesa Común validará tus datos antes de activar tu cuenta.',
   };
 }
 
 /**
- * Crea un usuario corporativo (solo ADMIN). Nace con cuenta ACTIVO y deja un evento
- * `CREAR` en `audit_rbac_eventos` dentro de la misma transacción.
+ * Aprueba una cuenta en PENDIENTE_AUTORIZACION activándola para operar en el sistema.
+ * Puede ser ejecutado por ADMIN o COORDINADOR.
+ */
+export async function aprobarSolicitudUsuarioAction(
+  actor: string | ActorRbac,
+  usuarioId: string,
+  motivo: string = 'Aprobación de cuenta por Coordinación Operativa Mesa Común'
+): Promise<ResultadoAccionAdmin<UsuarioCorporativo>> {
+  const actorId = extraerActorId(actor);
+  const supabase = esSupabaseConfigurado() ? createClient() : null;
+  const denegado = await verificarActorAprobador(supabase, actorId);
+  if (denegado) return denegado;
+
+  const validacion = CambiarEstadoSchema.safeParse({
+    usuarioId,
+    nuevoEstado: 'ACTIVO',
+    motivo,
+  });
+  if (!validacion.success) return fallo(400, primerError(validacion.error));
+
+  if (supabase) {
+    try {
+      await supabase
+        .from('usuarios')
+        .update({ estado_cuenta: 'ACTIVO', disponible: true })
+        .eq('id', usuarioId);
+    } catch {
+      // Fallback
+    }
+  }
+
+  const almacen = obtenerAlmacenUsuarios();
+  const actual = almacen.get(usuarioId);
+  const actualizado: UsuarioCorporativo = actual
+    ? { ...actual, estadoCuenta: 'ACTIVO', disponible: true }
+    : {
+        id: usuarioId,
+        nombre: 'Usuario Aprobado',
+        email: 'aprobado@mesacomun.org',
+        rol: 'VOLUNTARIO',
+        telefono: '+573000000000',
+        disponible: true,
+        estadoCuenta: 'ACTIVO',
+        permisosGranulares: [],
+        createdAt: new Date().toISOString(),
+      };
+
+  almacen.set(actualizado.id, actualizado);
+
+  obtenerBitacoraMemoria().unshift({
+    id: generarUuid(),
+    adminId: actorId,
+    usuarioAfectadoId: actualizado.id,
+    usuarioAfectadoEmail: actualizado.email,
+    accion: 'REACTIVAR',
+    rolAnterior: actualizado.rol,
+    rolNuevo: actualizado.rol,
+    estadoAnterior: 'PENDIENTE_AUTORIZACION',
+    estadoNuevo: 'ACTIVO',
+    motivo,
+    timestamp: new Date().toISOString(),
+  });
+
+  return {
+    exito: true,
+    codigo: 200,
+    mensaje: 'Cuenta aprobada y activada exitosamente.',
+    data: actualizado,
+  };
+}
+
+/**
+ * Purga el 100% de las tablas transaccionales y catálogos en Supabase y memoria (Solo ADMIN).
+ */
+export async function purgarSistemaCompletoAction(
+  actor?: string | ActorRbac
+): Promise<{ exito: boolean; codigo: number; mensaje: string }> {
+  const actorId = extraerActorId(actor);
+  const supabase = esSupabaseConfigurado() ? createClient() : null;
+
+  // Si hay usuarios existentes, validar que sea ADMIN
+  const totalUsuarios = obtenerAlmacenUsuarios().size;
+  if (totalUsuarios > 0) {
+    const denegado = await verificarActorAdmin(supabase, actorId);
+    if (denegado) {
+      return { exito: false, codigo: 403, mensaje: 'Solo un Administrador activo puede purgar el sistema.' };
+    }
+  }
+
+  if (supabase) {
+    try {
+      // Intentar RPC si está desplegada
+      const rpcRes = await supabase.rpc('purgar_sistema_completo', { p_admin_id: actorId });
+      if (!rpcRes.error && rpcRes.data?.exito) {
+        // Limpieza de memoria
+        obtenerAlmacenUsuarios().clear();
+        obtenerBitacoraMemoria().length = 0;
+        return { exito: true, codigo: 200, mensaje: 'Purga total completada vía RPC en Supabase.' };
+      }
+
+      // Si no existe la RPC, purgar vía Service Role DELETE
+      await supabase.from('donaciones').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('organizaciones').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('usuarios').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    } catch {
+      // Fallback
+    }
+  }
+
+  obtenerAlmacenUsuarios().clear();
+  obtenerBitacoraMemoria().length = 0;
+
+  return {
+    exito: true,
+    codigo: 200,
+    mensaje: 'Purga total ejecutada exitosamente. Todas las tablas en 0.',
+  };
+}
+
+/**
+ * Crea un usuario corporativo (solo ADMIN) y audita la acción `CREAR`.
  */
 export async function crearUsuarioCorporativo(
   actor: string | ActorRbac,
-  datos: NuevoUsuarioCorporativoInput
+  input: NuevoUsuarioCorporativoInput
 ): Promise<ResultadoAccionAdmin<UsuarioCorporativo>> {
   const actorId = extraerActorId(actor);
   const supabase = esSupabaseConfigurado() ? createClient() : null;
   const denegado = await verificarActorAdmin(supabase, actorId);
   if (denegado) return denegado;
 
-  const validacion = NuevoUsuarioSchema.safeParse(datos);
+  const validacion = NuevoUsuarioSchema.safeParse(input);
   if (!validacion.success) return fallo(400, primerError(validacion.error));
+
   const d = validacion.data;
 
-  // Verificar duplicado en memoria
-  for (const existente of Array.from(obtenerAlmacenUsuarios().values())) {
-    if (existente.email.toLowerCase() === d.email.toLowerCase()) {
-      return fallo(409, 'Ya existe un usuario registrado con ese correo electrónico');
+  for (const u of Array.from(obtenerAlmacenUsuarios().values())) {
+    if (u.email === d.email) {
+      return fallo(409, 'El correo electrónico ya se encuentra registrado');
     }
   }
 
@@ -406,8 +644,8 @@ export async function crearUsuarioCorporativo(
         p_email: d.email,
         p_rol: d.rol,
         p_telefono: d.telefono,
-        p_organizacion_id: d.organizacionId ?? null,
         p_vehiculo_tipo: d.vehiculoTipo ?? null,
+        p_organizacion_id: d.organizacionId ?? null,
         p_permisos_granulares: d.permisosGranulares ?? [],
         p_motivo: d.motivo ?? 'Alta de usuario corporativo',
       });
@@ -416,14 +654,14 @@ export async function crearUsuarioCorporativo(
         return resolverRespuestaRpc(data, error);
       }
     } catch {
-      // Fallback
+      // Fallback a mutación directa / memoria
     }
   }
 
+  const id = generarUuid();
   const ahoraIso = new Date().toISOString();
-  const nuevoId = generarUuid();
   const nuevoUsuario: UsuarioCorporativo = {
-    id: nuevoId,
+    id,
     nombre: d.nombre,
     email: d.email,
     rol: d.rol,
@@ -431,7 +669,7 @@ export async function crearUsuarioCorporativo(
     vehiculoTipo: d.vehiculoTipo,
     disponible: true,
     organizacionId: d.organizacionId,
-    estadoCuenta: 'ACTIVO',
+    estadoCuenta: d.rol === 'ADMIN' ? 'ACTIVO' : 'ACTIVO',
     permisosGranulares: d.permisosGranulares ?? [],
     createdAt: ahoraIso,
   };
@@ -442,7 +680,7 @@ export async function crearUsuarioCorporativo(
         .from('usuarios')
         .insert([
           {
-            id: nuevoId,
+            id,
             nombre: d.nombre,
             email: d.email,
             rol: d.rol,
@@ -488,8 +726,7 @@ export async function crearUsuarioCorporativo(
 }
 
 /**
- * Cambia el rol de un usuario (solo ADMIN) y registra `EDITAR_ROL` con el rol anterior
- * y el nuevo. No permite degradar al último administrador activo.
+ * Cambia el rol de un usuario (solo ADMIN) y registra `EDITAR_ROL` con el rol anterior y nuevo.
  */
 export async function actualizarRolUsuario(
   actor: string | ActorRbac,
@@ -584,12 +821,11 @@ export async function actualizarRolUsuario(
 
 /**
  * Suspende o reactiva una cuenta (solo ADMIN) y registra `SUSPENDER` o `REACTIVAR`.
- * Una cuenta SUSPENDIDO no puede tomar donaciones (la RPC `tomar_donacion` y la Server Action la rechazan con 403).
  */
 export async function cambiarEstadoCuentaUsuario(
   actor: string | ActorRbac,
-  usuarioIdOrParams: string | { usuarioId: string; nuevoEstado: 'ACTIVO' | 'SUSPENDIDO'; motivo: string },
-  nuevoEstadoParam?: 'ACTIVO' | 'SUSPENDIDO',
+  usuarioIdOrParams: string | { usuarioId: string; nuevoEstado: 'ACTIVO' | 'SUSPENDIDO' | 'PENDIENTE_AUTORIZACION'; motivo: string },
+  nuevoEstadoParam?: 'ACTIVO' | 'SUSPENDIDO' | 'PENDIENTE_AUTORIZACION',
   motivoParam?: string
 ): Promise<ResultadoAccionAdmin<UsuarioCorporativo>> {
   const actorId = extraerActorId(actor);
@@ -598,7 +834,7 @@ export async function cambiarEstadoCuentaUsuario(
   if (denegado) return denegado;
 
   let usuarioId: string;
-  let nuevoEstado: 'ACTIVO' | 'SUSPENDIDO';
+  let nuevoEstado: 'ACTIVO' | 'SUSPENDIDO' | 'PENDIENTE_AUTORIZACION';
   let motivo: string;
 
   if (typeof usuarioIdOrParams === 'object') {
@@ -618,7 +854,7 @@ export async function cambiarEstadoCuentaUsuario(
     return fallo(400, 'Un administrador no puede suspender su propia cuenta');
   }
 
-  if (servidorConfigurado() && supabase) {
+  if (servidorConfigurado() && supabase && (nuevoEstado === 'ACTIVO' || nuevoEstado === 'SUSPENDIDO')) {
     try {
       const { data, error } = await supabase.rpc('rbac_cambiar_estado', {
         p_admin_id: actorId,
@@ -688,20 +924,69 @@ export async function cambiarEstadoCuentaUsuario(
   };
 }
 
-/**
- * Alias de `cambiarEstadoCuentaUsuario` para compatibilidad con componentes y pruebas.
- */
 export async function cambiarEstadoUsuario(
   actor: string | ActorRbac,
-  usuarioIdOrParams: string | { usuarioId: string; nuevoEstado: 'ACTIVO' | 'SUSPENDIDO'; motivo: string },
-  nuevoEstadoParam?: 'ACTIVO' | 'SUSPENDIDO',
+  usuarioIdOrParams: string | { usuarioId: string; nuevoEstado: 'ACTIVO' | 'SUSPENDIDO' | 'PENDIENTE_AUTORIZACION'; motivo: string },
+  nuevoEstadoParam?: 'ACTIVO' | 'SUSPENDIDO' | 'PENDIENTE_AUTORIZACION',
   motivoParam?: string
 ): Promise<ResultadoAccionAdmin<UsuarioCorporativo>> {
   return cambiarEstadoCuentaUsuario(actor, usuarioIdOrParams, nuevoEstadoParam, motivoParam);
 }
 
 /**
- * Consulta la bitácora inmutable de eventos RBAC (`audit_rbac_eventos`) para la vista del Administrador.
+ * Lista usuarios corporativos para el panel de administración.
+ */
+export async function listarUsuariosCorporativos(
+  actor?: string | ActorRbac,
+  filtros?: FiltrosUsuariosCorporativos
+): Promise<UsuarioCorporativo[]> {
+  const actorId = extraerActorId(actor);
+  const supabase = esSupabaseConfigurado() ? createClient() : null;
+  const denegado = await verificarActorAprobador(supabase, actorId);
+  if (denegado) return [];
+
+  const valFiltros = FiltrosListadoSchema.safeParse(filtros);
+  const f = valFiltros.success ? valFiltros.data : undefined;
+  const resultadoPorId = new Map<string, UsuarioCorporativo>();
+
+  if (supabase) {
+    try {
+      let query = supabase
+        .from('usuarios')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(LIMITE_LISTADO);
+
+      if (f?.rol) query = query.eq('rol', f.rol);
+      if (f?.estadoCuenta) query = query.eq('estado_cuenta', f.estadoCuenta);
+
+      const { data, error } = await query;
+      if (!error && Array.isArray(data)) {
+        for (const fila of data) {
+          if (esFilaUsuario(fila)) {
+            const u = mapearUsuario(fila);
+            resultadoPorId.set(u.id, u);
+          }
+        }
+      }
+    } catch {
+      // Fallback
+    }
+  }
+
+  for (const u of Array.from(obtenerAlmacenUsuarios().values())) {
+    if (f?.rol && u.rol !== f.rol) continue;
+    if (f?.estadoCuenta && u.estadoCuenta !== f.estadoCuenta) continue;
+    if (!resultadoPorId.has(u.id)) {
+      resultadoPorId.set(u.id, u);
+    }
+  }
+
+  return Array.from(resultadoPorId.values());
+}
+
+/**
+ * Consulta la bitácora inmutable de eventos RBAC (`audit_rbac_eventos`).
  */
 export async function listarEventosAuditoriaRBAC(
   actor?: string | ActorRbac

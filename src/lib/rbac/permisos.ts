@@ -101,6 +101,37 @@ export const RUTAS_ADMINISTRATIVAS_EXCLUSIVAS: readonly string[] = Object.freeze
 ]);
 
 /**
+ * Roles autorizados para auto-postulación en el formulario de registro público.
+ * Los roles de gestión interna (ADMIN, COORDINADOR) no se pueden auto-registrar.
+ */
+export const ROLES_PUBLICOS_AUTORREGISTRABLES: readonly RolCorporativo[] = Object.freeze([
+  'VOLUNTARIO',
+  'DONANTE',
+  'RECEPTOR',
+]);
+
+/**
+ * Verifica si un rol pertenece a la categoría de auto-postulación pública externa.
+ */
+export function esRolAutoRegistrablePublico(rol: RolCorporativo): boolean {
+  return ROLES_PUBLICOS_AUTORREGISTRABLES.includes(rol);
+}
+
+/**
+ * Verifica si un rol tiene facultades operativas para aprobar solicitudes pendientes.
+ */
+export function puedeAprobarUsuarios(rol: RolCorporativo): boolean {
+  return rol === 'ADMIN' || rol === 'COORDINADOR';
+}
+
+/**
+ * Verifica si un rol tiene autorización para eliminar nodos (comedores/donaciones) del mapa.
+ */
+export function puedeEliminarNodos(rol: RolCorporativo): boolean {
+  return rol === 'ADMIN' || rol === 'COORDINADOR';
+}
+
+/**
  * Valida si un rol corporativo posee un permiso específico en el sistema.
  *
  * ¿Por qué?: Los usuarios con estado SUSPENDIDO o PENDIENTE_AUTORIZACION deben ver revocadas
@@ -144,45 +175,50 @@ export function puedeAccederRuta(
   pathname: string,
   estadoCuenta: EstadoCuenta = 'ACTIVO'
 ): boolean {
-  if (estadoCuenta === 'SUSPENDIDO') {
+  // Cuentas suspendidas o no activas no tienen acceso a rutas operativas
+  if (estadoCuenta !== 'ACTIVO') {
     return false;
   }
 
   // Normalizar ruta eliminando trailing slash y querystrings
   const rutaLimpia = pathname.split('?')[0].replace(/\/+$/, '') || '/';
 
-  // 1. Reglas estrictas para el rol VOLUNTARIO (CA-05.1)
-  if (rol === 'VOLUNTARIO') {
-    // Si intenta ingresar a administración, reportes globales o configuración, bloqueo categórico
-    if (
-      rutaLimpia.startsWith('/admin') ||
-      rutaLimpia.startsWith('/impacto') ||
-      rutaLimpia.startsWith('/configuracion')
-    ) {
-      return false;
-    }
+  // 1. Módulo de Administración exclusivo para ADMIN (CA-05.2)
+  if (rutaLimpia.startsWith('/admin')) {
+    return rol === 'ADMIN';
+  }
 
-    // Permitir subrutas operativas autorizadas (ej. /entregas/123)
+  // 2. Panel de Impacto y Métricas reservado para administración y coordinación
+  if (rutaLimpia.startsWith('/impacto')) {
+    return rol === 'ADMIN' || rol === 'COORDINADOR';
+  }
+
+  // 3. Donar reservado exclusivamente para DONANTE y ADMIN (Aislamiento Estricto EatCloud)
+  if (rutaLimpia.startsWith('/donar')) {
+    return rol === 'DONANTE' || rol === 'ADMIN';
+  }
+
+  // 4. Ruta Activa reservada para VOLUNTARIO, COORDINADOR y ADMIN
+  if (rutaLimpia.startsWith('/ruta-activa')) {
+    return rol === 'VOLUNTARIO' || rol === 'COORDINADOR' || rol === 'ADMIN';
+  }
+
+  // 5. Entregas reservado para RECEPTOR, VOLUNTARIO, COORDINADOR y ADMIN
+  if (rutaLimpia.startsWith('/entregas')) {
+    return rol === 'RECEPTOR' || rol === 'VOLUNTARIO' || rol === 'COORDINADOR' || rol === 'ADMIN';
+  }
+
+  // 6. Confinamiento específico del rol VOLUNTARIO (CA-05.1)
+  if (rol === 'VOLUNTARIO') {
     return RUTAS_OPERATIVAS_VOLUNTARIO.some(
       (base) => rutaLimpia === base || (base !== '/' && rutaLimpia.startsWith(base))
     );
   }
 
-  // 2. Módulo de Administración exclusivo para ADMIN (CA-05.2)
-  if (rutaLimpia.startsWith('/admin')) {
-    return rol === 'ADMIN';
+  // 7. Catálogo de donaciones disponible para todos los roles activos
+  if (rutaLimpia.startsWith('/donaciones') || rutaLimpia === '/' || rutaLimpia.startsWith('/rastreo')) {
+    return true;
   }
 
-  // 3. Panel de Impacto y Métricas reservado para administración y coordinación
-  if (rutaLimpia.startsWith('/impacto')) {
-    return rol === 'ADMIN' || rol === 'COORDINADOR';
-  }
-
-  // 4. Donar reservado para donantes y administradores
-  if (rutaLimpia.startsWith('/donar')) {
-    return rol === 'ADMIN' || rol === 'DONANTE' || rol === 'COORDINADOR';
-  }
-
-  // Resto de rutas base públicas/comunes
   return true;
 }

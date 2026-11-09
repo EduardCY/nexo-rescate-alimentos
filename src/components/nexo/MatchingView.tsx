@@ -6,7 +6,8 @@ import MatchingCard from "./MatchingCard";
 import TerminalLog from "./TerminalLog";
 import ColdChainBadge from "@/components/donaciones/ColdChainBadge";
 import { bestMatch, scoreMatch, requiresCold, type NgoUrgency } from "@/lib/nexo/impact";
-import { crearOrganizacion } from "@/actions/organizaciones";
+import { crearOrganizacion, eliminarOrganizacion } from "@/actions/organizaciones";
+import { useSession } from "@/lib/auth/session-context";
 import type { ZonaCali } from "@/types";
 
 const URG: Record<NgoUrgency, string> = {
@@ -56,6 +57,8 @@ function RetroQrCode({ code }: { code: string }) {
 }
 
 export default function MatchingView() {
+  const { sesion } = useSession();
+  const esSupervisor = sesion?.rol === "ADMIN" || sesion?.rol === "COORDINADOR";
   const { lots, ngos, logs, dispatch, validateMatch, focusNgos, refreshData, pushLog } = useNexo();
   const candidates = lots.filter(
     (l) => (l.estado ? l.estado === "DISPONIBLE" : l.status === "available") || l.id === dispatch?.lotId

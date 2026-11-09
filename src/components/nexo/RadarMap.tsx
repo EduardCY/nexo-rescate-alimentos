@@ -1,99 +1,83 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import type L from 'leaflet';
-import { useNexoOptional } from './NexoContext';
-import { nexoApi } from '@/lib/nexo/api';
-import type { MapNode, MapNodeKind } from '@/lib/nexo/impact';
-import type { Donacion, ZonaCali } from '@/types';
 import {
   MapPin,
-  Truck,
-  ExternalLink,
-  Layers,
   Compass,
+  Navigation,
+  ExternalLink,
+  ChevronLeft,
+  ChevronRight,
+  Maximize2,
+  Trash2,
 } from 'lucide-react';
+import { nexoApi } from '@/lib/nexo/api';
+import { useNexoOptional } from './NexoContext';
+import { useSession } from '@/lib/auth/session-context';
+import { eliminarDonacion } from '@/actions/donaciones';
+import { eliminarOrganizacion } from '@/actions/organizaciones';
+import type { Donacion, ZonaCali } from '@/types';
+import type { MapNode } from '@/lib/nexo/impact';
+
+type VistaFiltro = 'CALI_TODO' | ZonaCali | 'REGIONAL';
+
+interface ConfigVista {
+  center: [number, number];
+  zoom: number;
+  label: string;
+}
+
+const VISTAS_MAPA: Record<VistaFiltro, ConfigVista> = {
+  CALI_TODO: { center: [3.435, -76.525], zoom: 12.5, label: 'Cali Completa' },
+  CENTRO: { center: [3.435, -76.528], zoom: 14.5, label: 'Centro / Santa Elena' },
+  SUR: { center: [3.402, -76.538], zoom: 13.5, label: 'Sur / Valle del Lili' },
+  NORTE: { center: [3.475, -76.515], zoom: 14.0, label: 'Norte / La Flora' },
+  ORIENTE: { center: [3.422, -76.492], zoom: 13.5, label: 'Oriente / Aguablanca' },
+  LADERA: { center: [3.428, -76.56], zoom: 14.0, label: 'Ladera / Siloé' },
+  REGIONAL: { center: [3.415, -76.45], zoom: 11.0, label: 'Regional (Cavasa/Candelaria)' },
+};
 
 const KIND_CONFIG: Record<
-  MapNodeKind,
-  { label: string; bg: string; border: string; text: string; iconSymbol: string }
+  MapNode['kind'],
+  { bg: string; border: string; text: string; iconSymbol: string; label: string }
 > = {
   donor: {
-    label: 'DONANTE',
     bg: '#00c853',
     border: '#00471f',
-    text: '#00130a',
-    iconSymbol: '📦',
+    text: '#ffffff',
+    iconSymbol: '🏪',
+    label: 'COMERCIO DONANTE',
   },
   receiver: {
-    label: 'COMEDOR RECEPTOR',
     bg: '#00b0ff',
     border: '#015a88',
-    text: '#001f3f',
-    iconSymbol: '🍲',
-  },
-  agro: {
-    label: 'CENTRAL MAYORISTA',
-    bg: '#f59e0b',
-    border: '#78350f',
-    text: '#261200',
-    iconSymbol: '🌾',
+    text: '#ffffff',
+    iconSymbol: '🥣',
+    label: 'COMEDOR RECEPTOR',
   },
   truck: {
-    label: 'VOLUNTARIO EN RUTA',
     bg: '#ef4444',
     border: '#7f1d1d',
     text: '#ffffff',
     iconSymbol: '🚚',
+    label: 'VOLUNTARIO EN RUTA',
+  },
+  agro: {
+    bg: '#f59e0b',
+    border: '#78350f',
+    text: '#000000',
+    iconSymbol: '🏭',
+    label: 'CENTRO MAYORISTA / AGRO',
   },
 };
 
-type VistaFiltro = 'CALI_TODO' | ZonaCali | 'REGIONAL';
-
-interface VistaConfig {
-  label: string;
-  center: [number, number];
-  zoom: number;
-}
-
-const VISTAS_MAPA: Record<VistaFiltro, VistaConfig> = {
-  CALI_TODO: {
-    label: 'Cali (Todo)',
-    center: [3.435, -76.53],
-    zoom: 12.5,
-  },
-  CENTRO: {
-    label: 'Centro',
-    center: [3.435, -76.528],
-    zoom: 14.5,
-  },
-  SUR: {
-    label: 'Sur',
-    center: [3.4, -76.538],
-    zoom: 14,
-  },
-  LADERA: {
-    label: 'Ladera',
-    center: [3.428, -76.56],
-    zoom: 14,
-  },
-  ORIENTE: {
-    label: 'Oriente',
-    center: [3.422, -76.492],
-    zoom: 13.5,
-  },
-  NORTE: {
-    label: 'Norte',
-    center: [3.475, -76.515],
-    zoom: 13.5,
-  },
-  REGIONAL: {
-    label: 'Corredor Valle (Cavasa)',
-    center: [3.422, -76.475],
-    zoom: 11.5,
-  },
-};
-
+/**
+ * Mapa SCADA interactivo de Cali motorizado por Leaflet y OpenStreetMap (100% libre de mocks).
+ *
+ * ¿Por qué?: Permite a los Coordinadores, Voluntarios y Donantes visualizar la ubicación real
+ * de los excedentes perecederos y comedores receptores en el territorio urbano de Santiago de Cali.
+ */
 export default function RadarMap({
   filtroZonaExterna,
   donacionesExternas,
@@ -102,26 +86,30 @@ export default function RadarMap({
   donacionesExternas?: Donacion[];
 }) {
   const nexoCtx = useNexoOptional();
+  const { sesion } = useSession();
   const [nodosLocales, setNodosLocales] = useState<MapNode[]>([]);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const [mapaListo, setMapaListo] = useState(false);
   const [nodoSeleccionado, setNodoSeleccionado] = useState<MapNode | null>(null);
   const [vistaActual, setVistaActual] = useState<VistaFiltro>('CALI_TODO');
+  const [eliminandoNodo, setEliminandoNodo] = useState(false);
 
-  // Si no está dentro de NexoProvider, cargar nodos autónomamente
+  const cargarNodosAutonomos = () => {
+    nexoApi
+      .listMapNodes()
+      .then((nodes) => setNodosLocales(nodes))
+      .catch(() => {});
+  };
+
   useEffect(() => {
     if (!nexoCtx) {
-      nexoApi
-        .listMapNodes()
-        .then((nodes) => setNodosLocales(nodes))
-        .catch(() => {});
+      cargarNodosAutonomos();
     }
   }, [nexoCtx]);
 
   const baseMapNodes = nexoCtx?.mapNodes ?? nodosLocales;
 
-  // Si se reciben donaciones del catálogo con coordenadas, incorporarlas como pines donantes
   const mapNodes = useMemo(() => {
     if (!donacionesExternas || donacionesExternas.length === 0) {
       return baseMapNodes;
@@ -165,13 +153,6 @@ export default function RadarMap({
     return [...baseMapNodes, ...nuevos];
   }, [baseMapNodes, donacionesExternas]);
 
-  // Flota de voluntarios y unidades de transporte activas en campo
-  const voluntariosActivos = useMemo(
-    () => mapNodes.filter((n) => n.kind === 'truck'),
-    [mapNodes]
-  );
-  const [voluntarioCicloIndex, setVoluntarioCicloIndex] = useState<number>(-1);
-
   // Si se pasa un filtro externo (ej. desde el catálogo de donaciones)
   useEffect(() => {
     if (filtroZonaExterna && filtroZonaExterna !== 'TODAS') {
@@ -187,44 +168,44 @@ export default function RadarMap({
       return mapNodes.filter((n) => !n.alcance || n.alcance === 'URBANO');
     }
     if (vistaActual === 'REGIONAL') {
-      return mapNodes; // Todos, incluyendo Cavasa / Candelaria / Intermunicipal
+      return mapNodes;
     }
-    // Filtrar por zona de Cali
     return mapNodes.filter((n) => n.zona === vistaActual || n.kind === 'truck');
   }, [mapNodes, vistaActual]);
 
-  // Inicialización segura de Leaflet en el cliente (SSR-safe)
+  // Inicialización de Leaflet (SSR-safe)
   useEffect(() => {
     let isMounted = true;
 
     if (typeof window === 'undefined' || !mapContainerRef.current) return;
 
-    // Importación dinámica para Next.js App Router
     import('leaflet').then((L) => {
       if (!isMounted || !mapContainerRef.current) return;
+      if (mapInstanceRef.current) return;
 
-      // Limpiar instancia previa si existe
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
+      const defaultCfg = VISTAS_MAPA.CALI_TODO;
 
-      const cfg = VISTAS_MAPA.CALI_TODO;
       const map = L.map(mapContainerRef.current, {
-        center: cfg.center,
-        zoom: cfg.zoom,
+        center: defaultCfg.center,
+        zoom: defaultCfg.zoom,
         zoomControl: false,
         attributionControl: false,
       });
 
-      // Teselas gratuitas y ligeras de OpenStreetMap ($0 USD/mes - RNF-005)
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 18,
-        minZoom: 9,
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        maxZoom: 19,
+        subdomains: 'abcd',
       }).addTo(map);
 
-      // Control de zoom en esquina superior derecha con estética táctil
-      L.control.zoom({ position: 'topright' }).addTo(map);
+      L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+      L.control
+        .attribution({
+          position: 'bottomleft',
+          prefix:
+            '<span style="font-family: monospace; font-size: 10px;">OSM · CartoDB · Nexo Cali</span>',
+        })
+        .addTo(map);
 
       mapInstanceRef.current = map;
       setMapaListo(true);
@@ -239,14 +220,14 @@ export default function RadarMap({
     };
   }, []);
 
-  // Actualización de vista (pan & zoom) cuando cambia la vista seleccionada
+  // Actualización de vista (pan & zoom)
   useEffect(() => {
     if (!mapInstanceRef.current || !mapaListo) return;
     const cfg = VISTAS_MAPA[vistaActual];
     mapInstanceRef.current.flyTo(cfg.center, cfg.zoom, { duration: 1.2 });
   }, [vistaActual, mapaListo]);
 
-  // Renderizado reactivo de marcadores y ruta activa sobre el mapa Leaflet
+  // Renderizado reactivo de marcadores SIN rutas ni polilíneas inventadas
   useEffect(() => {
     if (!mapInstanceRef.current || !mapaListo) return;
 
@@ -255,50 +236,14 @@ export default function RadarMap({
       if (!isMounted || !mapInstanceRef.current) return;
       const map = mapInstanceRef.current;
 
-      // Limpiar capas previas de marcadores y polilíneas
+      // Limpiar capas previas de marcadores
       map.eachLayer((layer: L.Layer) => {
         if (layer instanceof L.Marker || layer instanceof L.Polyline) {
           map.removeLayer(layer);
         }
       });
 
-      // 1. Trazado de ruta activa 1 (Santa Elena -> Voluntario Carromoto -> Siloé)
-      const ruta1Nodos = mapNodes.filter(
-        (n) => n.id === 'node-1' || n.id === 'node-5' || n.id === 'node-3'
-      );
-      if (ruta1Nodos.length >= 2) {
-        const coordsRuta1: [number, number][] = [
-          [3.4258, -76.5244], // Santa Elena
-          [3.4315, -76.541],  // Voluntario 1 en Calle 5ta (Juan Pérez)
-          [3.4285, -76.5572], // Comedor Siloé
-        ];
-
-        L.polyline(coordsRuta1, {
-          color: '#00e676',
-          weight: 3.5,
-          opacity: 0.85,
-          dashArray: '6, 6',
-        }).addTo(map);
-      }
-
-      // Trazado de ruta activa 2 (Plaza Alameda -> Voluntario 2 Moto -> Comedor Norte)
-      const voluntario2 = mapNodes.find((n) => n.id === 'node-7');
-      if (voluntario2) {
-        const coordsRuta2: [number, number][] = [
-          [3.4372, -76.5389], // Plaza Alameda
-          [voluntario2.lat, voluntario2.lng], // Voluntario 2 (Carlos Gómez)
-          [3.475, -76.515],   // Destino La Flora
-        ];
-
-        L.polyline(coordsRuta2, {
-          color: '#38bdf8',
-          weight: 3,
-          opacity: 0.85,
-          dashArray: '4, 6',
-        }).addTo(map);
-      }
-
-      // 2. Colocación de marcadores personalizados sin solapamiento
+      // Colocación de marcadores dinámicos reales
       nodosFiltrados.forEach((node) => {
         const conf = KIND_CONFIG[node.kind];
 
@@ -338,24 +283,23 @@ export default function RadarMap({
               ${node.label}
             </div>
             ${node.sub ? `<div style="color: #475569; font-size: 11px; margin-bottom: 4px;">${node.sub}</div>` : ''}
-            <div style="border-top: 1px dotted #808080; padding-top: 4px; margin-top: 4px; color: #1e293b; font-size: 10px;">
-              📍 ${node.direccion || 'Santiago de Cali'}
-              <br/>
-              <b>Sector:</b> ${node.zona || 'Urbano'} • <b>Ciudad:</b> ${node.municipio || 'Cali'}
+            <div style="color: #334155; font-size: 10px; border-top: 1px dashed #cbd5e1; padding-top: 4px; margin-top: 4px;">
+              📍 ${node.direccion || 'Ubicación verificada'}
             </div>
             <div style="margin-top: 6px;">
-              <a href="https://www.google.com/maps/search/?api=1&query=${node.lat},${node.lng}" 
-                 target="_blank" 
-                 rel="noopener noreferrer"
-                 style="display: inline-block; background: #000080; color: #fff; text-decoration: none; padding: 3px 6px; font-weight: bold; font-size: 10px; box-shadow: inset -1px -1px #000, inset 1px 1px #fff;">
-                Cómo llegar ↗
+              <a href="https://www.google.com/maps/search/?api=1&query=${node.lat},${node.lng}" target="_blank" rel="noopener noreferrer" style="color: #000080; font-weight: bold; text-decoration: underline; font-size: 10px;">
+                Abrir en Google Maps GPS &gt;
               </a>
             </div>
           </div>
         `;
 
         const marker = L.marker([node.lat, node.lng], { icon: customIcon }).addTo(map);
-        marker.bindPopup(popupContent);
+
+        marker.bindPopup(popupContent, {
+          closeButton: true,
+          offset: [0, -10],
+        });
 
         marker.on('click', () => {
           setNodoSeleccionado(node);
@@ -366,143 +310,93 @@ export default function RadarMap({
     return () => {
       isMounted = false;
     };
-  }, [nodosFiltrados, mapaListo, mapNodes]);
+  }, [nodosFiltrados, mapaListo]);
 
-  const centrarRutaVoluntario = () => {
-    if (!mapInstanceRef.current) return;
-    const map = mapInstanceRef.current;
+  const puedeEliminarNodos =
+    sesion?.rol === 'ADMIN' || sesion?.rol === 'COORDINADOR';
 
-    if (voluntariosActivos.length === 0) {
-      map.flyTo([3.435, -76.53], 13, { duration: 1 });
-      return;
-    }
+  const handleEliminarNodoSeleccionado = async () => {
+    if (!nodoSeleccionado || eliminandoNodo) return;
+    const confirmacion = window.confirm(
+      `¿Confirmas la eliminación del nodo "${nodoSeleccionado.label}" de la base de datos y del mapa?`
+    );
+    if (!confirmacion) return;
 
-    if (voluntariosActivos.length === 1) {
-      const v = voluntariosActivos[0];
-      map.flyTo([v.lat, v.lng], 15.5, { duration: 1 });
-      setNodoSeleccionado(v);
-      setVoluntarioCicloIndex(0);
-      return;
-    }
+    setEliminandoNodo(true);
+    try {
+      const rawId = nodoSeleccionado.id;
+      if (rawId.startsWith('don-')) {
+        const donId = rawId.replace('don-', '');
+        await eliminarDonacion(donId, sesion?.rol);
+      } else if (rawId.startsWith('org-')) {
+        const orgId = rawId.replace('org-', '');
+        await eliminarOrganizacion(orgId, sesion?.rol);
+      } else {
+        await eliminarOrganizacion(rawId, sesion?.rol);
+      }
 
-    // Múltiples voluntarios: alternar 0 -> 1 -> ... -> N-1 -> Panorámica global (fitBounds) -> 0
-    const nextIdx = (voluntarioCicloIndex + 1) % (voluntariosActivos.length + 1);
-    setVoluntarioCicloIndex(nextIdx);
-
-    if (nextIdx < voluntariosActivos.length) {
-      // Centrar en voluntario individual específico
-      const target = voluntariosActivos[nextIdx];
-      map.flyTo([target.lat, target.lng], 15.5, { duration: 1.2 });
-      setNodoSeleccionado(target);
-    } else {
-      // Encuadre global de toda la flota de voluntarios en campo (fitBounds)
-      const coordsFlota: [number, number][] = voluntariosActivos.map((c) => [c.lat, c.lng]);
-      map.fitBounds(coordsFlota, { padding: [60, 60], maxZoom: 15 });
       setNodoSeleccionado(null);
+      if (nexoCtx?.refreshData) {
+        await nexoCtx.refreshData();
+      } else {
+        cargarNodosAutonomos();
+      }
+    } catch {
+      alert('No fue posible eliminar el nodo.');
+    } finally {
+      setEliminandoNodo(false);
     }
   };
 
-  // Etiqueta y tooltip dinámicos según el estado de la flota
-  const botonVoluntarioInfo = useMemo(() => {
-    if (voluntariosActivos.length === 0) {
-      return {
-        label: 'Sin voluntarios',
-        titulo: 'No hay unidades de transporte activas en este momento',
-      };
-    }
-    if (voluntariosActivos.length === 1) {
-      return {
-        label: 'Centrar Voluntario',
-        titulo: `Centrar en ${voluntariosActivos[0].label}`,
-      };
-    }
-    if (voluntarioCicloIndex >= 0 && voluntarioCicloIndex < voluntariosActivos.length) {
-      return {
-        label: `Voluntario (${voluntarioCicloIndex + 1}/${voluntariosActivos.length})`,
-        titulo: `Viendo: ${voluntariosActivos[voluntarioCicloIndex].label}. Clic para siguiente unidad o ver toda la flota.`,
-      };
-    }
-    return {
-      label: `Ver Flota (${voluntariosActivos.length})`,
-      titulo: `Encuadrar a los ${voluntariosActivos.length} voluntarios activos en Cali`,
-    };
-  }, [voluntariosActivos, voluntarioCicloIndex]);
-
   return (
     <section
-      className="scada-panel flex flex-col overflow-hidden bevel-in-dark"
-      aria-label="Mapa cartográfico logístico de Cali y corredores metropolitanos"
+      aria-label="Mapa cartográfico de operaciones de rescate en Cali"
+      className="bevel-out flex flex-col bg-[#d4d0c8] p-[3px] shadow-[4px_4px_0_rgba(0,0,0,0.5)]"
     >
-      {/* Barra de título con identidad SCADA / Windows 98 */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-700 bg-[#0d1424] px-3 py-1.5 font-mono">
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 bg-nexo-phosphor inline-block" />
-          <h2 className="text-xs font-bold tracking-widest text-nexo-phosphor">
-            MAPA CARTOGRÁFICO LOGÍSTICO — OPENSTREETMAP
-          </h2>
-        </div>
-        <div className="flex items-center gap-2 text-[10px] text-slate-300">
-          <span className="bg-[#122240] px-2 py-0.5 border border-slate-600 text-nexo-cyan font-bold">
+      {/* Barra de herramientas superior */}
+      <header className="titlebar flex flex-wrap items-center justify-between gap-2 px-2 py-1 text-white">
+        <div className="flex items-center gap-1.5 font-mono text-xs font-bold tracking-wide">
+          <Compass className="w-4 h-4 text-emerald-400" />
+          <span>RADAR CARTOGRÁFICO — SANTIAGO DE CALI</span>
+          <span className="bg-emerald-900 text-emerald-300 px-1.5 py-0.2 text-[10px] rounded border border-emerald-500/40">
             {nodosFiltrados.length} NODOS ACTIVOS
           </span>
-          <span className="text-slate-500">•</span>
-          <span className="text-green-400 font-bold">$0 USD/mes (OpenStreetMap)</span>
         </div>
-      </div>
 
-      {/* Selector de Escala Geográfica: Urbano Cali -> Corredor Regional (TASK-19) */}
-      <div className="flex items-center gap-1.5 overflow-x-auto bg-[#070c18] p-1.5 border-b border-slate-800 font-mono text-[11px]">
-        <span className="text-slate-400 text-[10px] px-1 flex items-center gap-1 shrink-0">
-          <Layers className="w-3 h-3 text-nexo-phosphor" /> Escala:
-        </span>
-        {(Object.keys(VISTAS_MAPA) as VistaFiltro[]).map((vKey) => {
-          const cfg = VISTAS_MAPA[vKey];
-          const activo = vistaActual === vKey;
-          return (
+        {/* Selector de Vistas / Zonas */}
+        <div className="flex flex-wrap items-center gap-1 font-mono text-[11px] text-black">
+          <span className="text-white text-[10px] hidden sm:inline">Sector:</span>
+          {(Object.keys(VISTAS_MAPA) as VistaFiltro[]).map((vKey) => (
             <button
               key={vKey}
               type="button"
               onClick={() => setVistaActual(vKey)}
-              className={`px-2.5 py-1 text-[10px] font-bold shrink-0 transition-colors ${
-                activo
-                  ? 'bg-nexo-phosphor text-black font-extrabold shadow-[1px_1px_0_#fff]'
-                  : 'bg-[#15203b] text-slate-300 hover:bg-[#1e2f57]'
+              className={`px-1.5 py-0.5 font-bold transition-all ${
+                vistaActual === vKey
+                  ? 'bg-[#000080] text-white bevel-in'
+                  : 'btn-98 text-slate-800'
               }`}
+              title={`Centrar mapa en ${VISTAS_MAPA[vKey].label}`}
             >
-              {cfg.label}
+              {vKey === 'CALI_TODO' ? 'Cali' : vKey === 'REGIONAL' ? 'Cavasa' : vKey}
             </button>
-          );
-        })}
-        <button
-          type="button"
-          onClick={centrarRutaVoluntario}
-          className="ml-auto btn-98 !py-0.5 !px-2 text-[10px] font-mono flex items-center gap-1 shrink-0 text-[#000080]"
-          title={botonVoluntarioInfo.titulo}
-        >
-          <Compass className="w-3 h-3 text-[#000080]" />
-          <span>{botonVoluntarioInfo.label}</span>
-          {voluntariosActivos.length > 1 && (
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse ml-0.5" />
-          )}
-        </button>
-      </div>
+          ))}
+        </div>
+      </header>
 
-      {/* Contenedor del Mapa Cartográfico */}
-      <div className="relative w-full h-[360px] sm:h-[400px] bg-[#0b1020]">
-        <div ref={mapContainerRef} className="w-full h-full z-0" />
+      {/* Contenedor del Mapa Leaflet */}
+      <div className="relative h-[440px] sm:h-[480px] w-full bg-[#0a0f1d] overflow-hidden">
+        <div ref={mapContainerRef} className="h-full w-full z-[10]" />
 
-        {/* Fallback de carga / sin conexión */}
+        {/* Indicador de carga */}
         {!mapaListo && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#070c18] p-4 text-center font-mono text-xs text-slate-300">
-            <Compass className="w-8 h-8 mb-2 animate-spin text-nexo-phosphor" />
-            <p className="font-bold">Cargando cartografía OpenStreetMap de Cali...</p>
-            <p className="text-[11px] text-slate-400 mt-1">
-              Georreferenciando puntos de donación, centros de acopio y comedores.
-            </p>
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#070c18] font-mono text-emerald-400 text-xs gap-2 z-[20]">
+            <div className="w-6 h-6 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+            <p>Inicializando visor cartográfico de Santiago de Cali...</p>
           </div>
         )}
 
-        {/* Overlay limpio de Empty State cuando aún no hay nodos creados */}
+        {/* Overlay limpio de Empty State cuando hay 0 nodos */}
         {mapaListo && nodosFiltrados.length === 0 && (
           <div className="pointer-events-none absolute top-3 left-3 right-3 sm:right-auto sm:max-w-md z-[400] bevel-out bg-[#ffffe1]/95 p-2.5 text-black font-mono text-xs shadow-[3px_3px_0_rgba(0,0,0,0.65)]">
             <p className="font-bold text-[#000080] flex items-center gap-1.5">
@@ -517,7 +411,7 @@ export default function RadarMap({
 
         {/* Tarjeta flotante inferior si hay un nodo seleccionado */}
         {nodoSeleccionado && (
-          <div className="absolute bottom-2 left-2 right-2 sm:right-auto sm:max-w-md z-[500] bevel-out p-2.5 text-black font-mono text-xs shadow-[4px_4px_0_rgba(0,0,0,0.7)]">
+          <div className="absolute bottom-2 left-2 right-2 sm:right-auto sm:max-w-md z-[500] bevel-out p-2.5 text-black font-mono text-xs shadow-[4px_4px_0_rgba(0,0,0,0.7)] bg-[#f5f3e9]">
             <div className="flex items-start justify-between gap-2 mb-1">
               <div className="flex items-center gap-1.5">
                 <span className="text-base">
@@ -536,21 +430,35 @@ export default function RadarMap({
               </button>
             </div>
             <p className="text-[11px] text-slate-700 mb-1">
-              {nodoSeleccionado.sub} • <b>Dirección:</b> {nodoSeleccionado.direccion}
+              {nodoSeleccionado.sub} • <b>Dirección:</b> {nodoSeleccionado.direccion || 'Cali'}
             </p>
             <div className="flex items-center justify-between gap-2 pt-1 border-t border-[#808080] text-[10px]">
               <span className="text-slate-600">
-                Sector: <b>{nodoSeleccionado.zona || 'Urbano'}</b> ({nodoSeleccionado.municipio || 'Cali'})
+                Sector: <b>{nodoSeleccionado.zona || 'Urbano'}</b>
               </span>
-              <a
-                href={`https://www.google.com/maps/search/?api=1&query=${nodoSeleccionado.lat},${nodoSeleccionado.lng}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="btn-98 !py-0.5 !px-2 flex items-center gap-1 font-bold text-[#000080]"
-              >
-                <ExternalLink className="w-3 h-3" />
-                <span>Navegar GPS</span>
-              </a>
+              <div className="flex items-center gap-1.5">
+                {puedeEliminarNodos && (
+                  <button
+                    type="button"
+                    disabled={eliminandoNodo}
+                    onClick={handleEliminarNodoSeleccionado}
+                    className="btn-98 !py-0.5 !px-2 flex items-center gap-1 font-bold text-red-700"
+                    title="Eliminar este nodo del sistema y del mapa"
+                  >
+                    <Trash2 className="w-3 h-3 text-red-700" />
+                    <span>{eliminandoNodo ? 'Borrando...' : 'Eliminar'}</span>
+                  </button>
+                )}
+                <a
+                  href={`https://www.google.com/maps/search/?api=1&query=${nodoSeleccionado.lat},${nodoSeleccionado.lng}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-98 !py-0.5 !px-2 flex items-center gap-1 font-bold text-[#000080]"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  <span>GPS</span>
+                </a>
+              </div>
             </div>
           </div>
         )}
@@ -564,20 +472,20 @@ export default function RadarMap({
             <span>Donante (Galerías)</span>
           </li>
           <li className="flex items-center gap-1">
+            <span className="w-2.5 h-2.5 bg-[#00b0ff] inline-block border border-[#015a88]" />
+            <span>Receptor (Comedor)</span>
+          </li>
+          <li className="flex items-center gap-1">
             <span className="w-2.5 h-2.5 bg-[#ef4444] inline-block border border-[#7f1d1d]" />
-            <span>En ruta (Voluntario)</span>
+            <span>Voluntario en Ruta</span>
           </li>
           <li className="flex items-center gap-1">
             <span className="w-2.5 h-2.5 bg-[#f59e0b] inline-block border border-[#78350f]" />
             <span>Mayorista (Cavasa)</span>
           </li>
-          <li className="flex items-center gap-1">
-            <span className="w-2.5 h-2.5 bg-[#00b0ff] inline-block border border-[#015a88]" />
-            <span>Receptor (Comedor)</span>
-          </li>
         </ul>
         <div className="text-slate-400">
-          Escalable: Cali Urbana ➔ Corredor Intermunicipal Valle
+          Cali Metropolitana · Datos 100% Reales
         </div>
       </footer>
     </section>

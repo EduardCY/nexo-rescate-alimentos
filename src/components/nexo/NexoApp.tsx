@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { NexoProvider, useNexo, type ViewId } from "./NexoContext";
 import WindowFrame from "./WindowFrame";

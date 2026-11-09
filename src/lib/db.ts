@@ -204,6 +204,58 @@ export { RescateAlimentosDB as NexoOfflineDB };
 export const db = new RescateAlimentosDB();
 export const RescateDatabase = RescateAlimentosDB;
 
+export const NEXO_STORAGE_PURGE_VERSION = 'v3-enterprise-clean';
+
+/**
+ * Purga completa de datos obsoletos, mocks y almacenamiento local/IndexedDB
+ * para asegurar la transición limpia al modelo corporativo Enterprise.
+ */
+export async function purgarAlmacenamientoLocalCliente(): Promise<void> {
+  if (typeof window === 'undefined') return;
+  try {
+    await Promise.allSettled([
+      db.donaciones.clear(),
+      db.donaciones_locales.clear(),
+      db.outbox_mutations.clear(),
+      db.catalogo_productos.clear(),
+      db.donaciones_cache.clear(),
+      db.meta_sync.clear(),
+    ]);
+
+    const keysToRemove = [
+      'donaciones_cache',
+      'nexo_outbox',
+      'nexo_sesion_activa_v1',
+      'nexo_sesion_activa',
+      'nexo_offline_queue',
+      'donaciones_locales',
+    ];
+    for (const key of keysToRemove) {
+      try {
+        localStorage.removeItem(key);
+      } catch {
+        // Ignorar excepciones de storage
+      }
+    }
+
+    localStorage.setItem('nexo_storage_version', NEXO_STORAGE_PURGE_VERSION);
+  } catch (err) {
+    console.warn('[StoragePurge] Error purgando almacenamiento local:', err);
+  }
+}
+
+// Auto-ejecución inmediata en el cliente si la versión de almacenamiento no coincide
+if (typeof window !== 'undefined') {
+  try {
+    const currentVersion = localStorage.getItem('nexo_storage_version');
+    if (currentVersion !== NEXO_STORAGE_PURGE_VERSION) {
+      void purgarAlmacenamientoLocalCliente();
+    }
+  } catch {
+    // Entorno sin localStorage
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Utilidades internas
 // ---------------------------------------------------------------------------

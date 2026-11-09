@@ -3,53 +3,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type L from 'leaflet';
 import type { ZonaCali } from '@/types';
-import { MapPin, Navigation, Compass, AlertCircle, CheckCircle2 } from 'lucide-react';
-import { inferirZonaCali } from '@/lib/utils/donaciones-helper';
+import { MapPin, Navigation, Compass, AlertCircle } from 'lucide-react';
 
 export interface LocationCoords {
   lat: number;
   lng: number;
 }
-
-interface LocationPreset {
-  nombre: string;
-  direccion: string;
-  zona: ZonaCali;
-  coords: [number, number];
-}
-
-const PRESETS_CALI: LocationPreset[] = [
-  {
-    nombre: 'Galería Santa Elena',
-    direccion: 'Carrera 29 con Calle 25, Galería Santa Elena',
-    zona: 'CENTRO',
-    coords: [3.435, -76.528],
-  },
-  {
-    nombre: 'Plaza Alameda',
-    direccion: 'Calle 8 con Carrera 26, Galería Alameda',
-    zona: 'SUR',
-    coords: [3.434, -76.538],
-  },
-  {
-    nombre: 'Cavasa Mayorista',
-    direccion: 'Km 11 Vía Cali - Candelaria, Central Mayorista Cavasa',
-    zona: 'ORIENTE',
-    coords: [3.422, -76.475],
-  },
-  {
-    nombre: 'La Flora / Avenida 3N',
-    direccion: 'Avenida 3 Norte # 52N-40, La Flora',
-    zona: 'NORTE',
-    coords: [3.475, -76.515],
-  },
-  {
-    nombre: 'Siloé / Estación MIO',
-    direccion: 'Calle 1 Oeste # 50-12, Sector La Nave, Siloé',
-    zona: 'LADERA',
-    coords: [3.428, -76.56],
-  },
-];
 
 const ZONAS_CENTROS: Record<ZonaCali, [number, number]> = {
   CENTRO: [3.435, -76.528],
@@ -107,91 +66,67 @@ export function LocationPickerMap({
       const map = L.map(mapContainerRef.current, {
         center: initialCenter,
         zoom: 14,
-        zoomControl: true,
+        zoomControl: false,
         attributionControl: false,
       });
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
         maxZoom: 19,
-        minZoom: 10,
+        subdomains: 'abcd',
       }).addTo(map);
 
-      // Icono de pin táctil visible estilo Windows 98 / SCADA
-      const pinIcon = L.divIcon({
-        className: 'location-picker-pin',
+      L.control.zoom({ position: 'topright' }).addTo(map);
+
+      // Icono retro para el marcador de recogida
+      const customIcon = L.divIcon({
         html: `
           <div style="
-            background-color: #00c853;
-            border: 2px solid #00471f;
-            color: #00130a;
-            width: 34px;
-            height: 34px;
-            border-radius: 6px;
+            background-color: #00e676;
+            border: 2px solid #004d40;
+            width: 28px;
+            height: 28px;
+            border-radius: 50% 50% 50% 0;
+            transform: rotate(-45deg);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 18px;
-            box-shadow: 2px 2px 0 rgba(0,0,0,0.65);
-            font-family: monospace;
-            cursor: grab;
+            box-shadow: 2px 2px 0 rgba(0,0,0,0.6);
           ">
-            <span>📍</span>
+            <span style="transform: rotate(45deg); font-size: 13px;">📍</span>
           </div>
         `,
-        iconSize: [34, 34],
-        iconAnchor: [17, 34],
-        popupAnchor: [0, -32],
+        className: 'nexo-pin-picker',
+        iconSize: [28, 28],
+        iconAnchor: [14, 28],
       });
 
       const marker = L.marker(initialCenter, {
+        icon: customIcon,
         draggable: true,
-        icon: pinIcon,
       }).addTo(map);
 
-      marker.bindPopup(`
-        <div style="font-family: monospace; font-size: 11px; padding: 2px;">
-          <b>PUNTO DE RECOGIDA</b><br/>
-          Lat: ${initialCenter[0].toFixed(4)}<br/>
-          Lng: ${initialCenter[1].toFixed(4)}
-        </div>
-      `);
-
-      markerRef.current = marker;
-
-      // Evento de clic en cualquier lugar del mapa
-      map.on('click', (e) => {
-        const lat = Number(e.latlng.lat.toFixed(5));
-        const lng = Number(e.latlng.lng.toFixed(5));
-        const newCoords: LocationCoords = { lat, lng };
-
-        marker.setLatLng([lat, lng]);
-        marker.setPopupContent(`
-          <div style="font-family: monospace; font-size: 11px; padding: 2px;">
-            <b>PUNTO DE RECOGIDA</b><br/>
-            Lat: ${lat}<br/>
-            Lng: ${lng}
-          </div>
-        `);
-        setCoordsActuales(newCoords);
-
-        // Estimar zona según coordenadas relativas de Cali
-        const zonaEstimada = estimarZonaPorCoords(lat, lng);
-        onLocationSelect(newCoords, undefined, zonaEstimada);
-      });
-
-      // Evento de arrastre de marcador
       marker.on('dragend', () => {
         const latLng = marker.getLatLng();
         const lat = Number(latLng.lat.toFixed(5));
         const lng = Number(latLng.lng.toFixed(5));
         const newCoords: LocationCoords = { lat, lng };
+        setCoordsActuales(newCoords);
+        const zonaEstimada = estimarZonaPorCoords(lat, lng);
+        onLocationSelect(newCoords, undefined, zonaEstimada);
+      });
 
+      map.on('click', (e: L.LeafletMouseEvent) => {
+        const lat = Number(e.latlng.lat.toFixed(5));
+        const lng = Number(e.latlng.lng.toFixed(5));
+        const newCoords: LocationCoords = { lat, lng };
+        marker.setLatLng([lat, lng]);
         setCoordsActuales(newCoords);
         const zonaEstimada = estimarZonaPorCoords(lat, lng);
         onLocationSelect(newCoords, undefined, zonaEstimada);
       });
 
       mapRef.current = map;
+      markerRef.current = marker;
       setMapaListo(true);
     });
 
@@ -204,27 +139,20 @@ export function LocationPickerMap({
     };
   }, []);
 
-  // Actualizar centro cuando cambia la zona desde el selector exterior
+  // Actualizar centro cuando cambia la zona desde el select superior
   useEffect(() => {
-    if (!mapRef.current || !mapaListo) return;
-    const centro = ZONAS_CENTROS[zonaActual];
-    if (centro) {
-      mapRef.current.flyTo(centro, 14, { duration: 0.8 });
+    if (!mapRef.current || !markerRef.current || !mapaListo) return;
+    const centroZona = ZONAS_CENTROS[zonaActual];
+    if (centroZona && !coordenadas) {
+      mapRef.current.flyTo(centroZona, 14, { duration: 0.8 });
+      markerRef.current.setLatLng(centroZona);
+      const newCoords: LocationCoords = { lat: centroZona[0], lng: centroZona[1] };
+      setCoordsActuales(newCoords);
+      onLocationSelect(newCoords, undefined, zonaActual);
     }
   }, [zonaActual, mapaListo]);
 
-  // Selección de preset
-  const aplicarPreset = (p: LocationPreset) => {
-    const coords: LocationCoords = { lat: p.coords[0], lng: p.coords[1] };
-    setCoordsActuales(coords);
-    if (mapRef.current && markerRef.current) {
-      mapRef.current.flyTo(p.coords, 15, { duration: 0.8 });
-      markerRef.current.setLatLng(p.coords);
-    }
-    onLocationSelect(coords, p.direccion, p.zona);
-  };
-
-  // Botón de geolocalización GPS
+  // Manejo de geolocalización GPS real del dispositivo
   const handleUsarGps = () => {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
       setGpsMensaje('Geolocalización no soportada por el navegador.');
@@ -253,7 +181,7 @@ export function LocationPickerMap({
       },
       (err) => {
         setGpsBuscando(false);
-        setGpsMensaje(`GPS no disponible (${err.message}). Puedes hacer clic en el mapa.`);
+        setGpsMensaje(`GPS no disponible (${err.message}). Haz clic directamente en el mapa para marcar.`);
       },
       { timeout: 8000, enableHighAccuracy: true }
     );
@@ -261,34 +189,6 @@ export function LocationPickerMap({
 
   return (
     <div className="flex flex-col gap-2">
-      {/* Botones de Presets Rápidos de Cali */}
-      <div>
-        <label className="retro-label">
-          Centros de acopio y plazas frecuentes (1 toque):
-        </label>
-        <div className="flex flex-wrap gap-1.5 mb-1.5">
-          {PRESETS_CALI.map((p) => {
-            const activo =
-              Math.abs(coordsActuales.lat - p.coords[0]) < 0.005 &&
-              Math.abs(coordsActuales.lng - p.coords[1]) < 0.005;
-
-            return (
-              <button
-                key={p.nombre}
-                type="button"
-                onClick={() => aplicarPreset(p)}
-                className={`min-h-[36px] px-2.5 py-1 text-[11px] font-mono flex items-center gap-1 ${
-                  activo ? 'bg-[#000080] text-white bevel-in font-bold' : 'btn-98 text-black'
-                }`}
-              >
-                <MapPin className="w-3 h-3 shrink-0" />
-                <span>{p.nombre}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
       {/* Barra de Controles sobre el Mapa: GPS y Coordenadas */}
       <div className="flex flex-wrap items-center justify-between gap-2 bg-[#d4d0c8] p-1.5 border border-[#808080] font-mono text-xs">
         <div className="flex items-center gap-1.5">
@@ -326,19 +226,15 @@ export function LocationPickerMap({
           style={{ cursor: 'crosshair' }}
         />
         <div className="absolute bottom-1 left-1 right-1 bg-black/80 text-white font-mono text-[10px] px-2 py-0.5 pointer-events-none flex items-center justify-between z-[400]">
-          <span>📍 Haz clic en el mapa o arrastra el pin para fijar el punto de recogida</span>
-          <span className="text-emerald-400 font-bold">OpenStreetMap ($0 USD)</span>
+          <span>📍 Haz clic en el mapa o arrastra el pin para fijar el punto exacto de recogida</span>
+          <span className="text-emerald-400 font-bold">OpenStreetMap / WGS84</span>
         </div>
       </div>
     </div>
   );
 }
 
-/**
- * Función auxiliar para estimar la zona de Cali según latitud y longitud.
- */
 function estimarZonaPorCoords(lat: number, lng: number): ZonaCali {
-  // Coordenadas centro de Cali aprox: 3.435, -76.528
   if (lat > 3.46) return 'NORTE';
   if (lng < -76.55) return 'LADERA';
   if (lng > -76.50) return 'ORIENTE';

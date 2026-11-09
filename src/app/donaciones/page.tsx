@@ -28,6 +28,8 @@ import { DonacionCard } from '@/components/donaciones/DonacionCard';
 import { ZonasFilter } from '@/components/donaciones/ZonasFilter';
 import { ConflictoTomaModal } from '@/components/donaciones/ConflictoTomaModal';
 import { useSession } from '@/lib/auth/session-context';
+import { useRouter } from 'next/navigation';
+import { eliminarDonacion } from '@/actions/donaciones';
 
 // Carga dinámica segura de RadarMap con Leaflet sin renderizado en servidor (SSR)
 const RadarMap = dynamic(() => import('@/components/nexo/RadarMap'), {

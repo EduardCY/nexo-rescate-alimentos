@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { Terminal } from "lucide-react";
+import { useSession } from "@/lib/auth/session-context";
 
 interface Props {
   title: string;
@@ -15,6 +17,7 @@ export default function WindowFrame({ title, menu, statusLeft, statusRight, chil
   const [minimized, setMinimized] = useState(false);
   const [maximized, setMaximized] = useState(false);
   const [closed, setClosed] = useState(false);
+  const { sesion } = useSession();
 
   if (closed) {
     return (
@@ -28,6 +31,10 @@ export default function WindowFrame({ title, menu, statusLeft, statusRight, chil
   }
 
   const ctl = "btn-98 !px-0 !py-0 w-[22px] h-[20px] flex items-center justify-center text-[12px] font-bold leading-none";
+
+  const rol = sesion?.rol;
+  const puedeVerRuta = rol === "VOLUNTARIO" || rol === "COORDINADOR" || rol === "ADMIN";
+  const puedePublicar = rol === "DONANTE" || rol === "ADMIN";
 
   return (
     <div className={maximized ? "p-0" : "p-2 sm:p-4 lg:p-6"}>
@@ -58,20 +65,31 @@ export default function WindowFrame({ title, menu, statusLeft, statusRight, chil
             <footer className="flex flex-wrap items-center gap-1 mt-1 text-[11px] text-black font-mono">
               <div className="bevel-in flex-1 px-2 py-0.5 truncate">{statusLeft}</div>
               <div className="flex items-center gap-1">
-                <a
+                <Link
                   href="/donaciones"
                   className="bevel-out px-2 py-0.5 hover:bg-slate-200 active:translate-y-px text-[11px] font-bold"
                   title="Abrir Catálogo de Alimentos"
                 >
-                  📱 Catálogo Móvil
-                </a>
-                <a
-                  href="/ruta-activa"
-                  className="bevel-out px-2 py-0.5 hover:bg-slate-200 active:translate-y-px text-[11px] font-bold"
-                  title="Ver Mi Recogida en Curso"
-                >
-                  🚚 Ruta Activa
-                </a>
+                  📱 Catálogo
+                </Link>
+                {puedeVerRuta && (
+                  <Link
+                    href="/ruta-activa"
+                    className="bevel-out px-2 py-0.5 hover:bg-slate-200 active:translate-y-px text-[11px] font-bold"
+                    title="Ver Mi Recogida en Curso"
+                  >
+                    🚚 Ruta Activa
+                  </Link>
+                )}
+                {puedePublicar && (
+                  <Link
+                    href="/donar"
+                    className="bevel-out px-2 py-0.5 hover:bg-slate-200 active:translate-y-px text-[11px] font-bold text-emerald-900"
+                    title="Publicar Nuevo Excedente"
+                  >
+                    + Publicar
+                  </Link>
+                )}
               </div>
               <div className="bevel-in px-2 py-0.5 hidden sm:block">{statusRight}</div>
             </footer>

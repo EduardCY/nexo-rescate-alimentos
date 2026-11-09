@@ -87,21 +87,21 @@ export function DonacionWizard({
 
   // Estado Paso 1: Alimento, Cantidad, Unidad y Refrigeración
   const [catId, setCatId] = useState<CategoryId>('fruta');
-  const [tipoAlimento, setTipoAlimento] = useState('Fruta & Verdura Fresca');
-  const [cantidadEstimada, setCantidadEstimada] = useState('45');
+  const [tipoAlimento, setTipoAlimento] = useState('');
+  const [cantidadEstimada, setCantidadEstimada] = useState('');
   const [unidadMedida, setUnidadMedida] = useState<'kg' | 'canastillas' | 'bultos' | 'unidades'>('kg');
   const [requiereFrio, setRequiereFrio] = useState(false);
 
   // Estado Paso 2: Dirección, Zona, Ubicación Exacta, Comedor Destino Opcional y Teléfono
   const [donanteNombre, setDonanteNombre] = useState(
-    sesion?.organizacionNombre || sesion?.nombre || 'Puesto 45 Galería Santa Elena'
+    sesion?.organizacionNombre || sesion?.nombre || ''
   );
   const [zona, setZona] = useState<ZonaCali>(sesion?.zona || 'CENTRO');
   const [direccionRecogida, setDireccionRecogida] = useState(
-    sesion?.direccion || 'Carrera 29 con Calle 25, Galería Santa Elena'
+    sesion?.direccion || ''
   );
-  const [indicacionesPuesto, setIndicacionesPuesto] = useState('Pabellón Central, Puesto 45 frente al muelle 2');
-  const [telefonoDonante, setTelefonoDonante] = useState(sesion?.telefono || '+573154201122');
+  const [indicacionesPuesto, setIndicacionesPuesto] = useState('');
+  const [telefonoDonante, setTelefonoDonante] = useState(sesion?.telefono || '');
   const [coordenadas, setCoordenadas] = useState<{ lat: number; lng: number } | null>({
     lat: 3.435,
     lng: -76.528,

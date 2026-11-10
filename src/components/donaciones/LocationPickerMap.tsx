@@ -47,11 +47,14 @@ export function LocationPickerMap({
   // Inicializar Leaflet (SSR-safe con importación dinámica)
   useEffect(() => {
     let activo = true;
+    let resizeObserver: ResizeObserver | null = null;
+    let invalidateTimer: NodeJS.Timeout | null = null;
 
     if (typeof window === 'undefined' || !mapContainerRef.current) return;
 
-    import('leaflet').then((L) => {
+    import('leaflet').then((module) => {
       if (!activo || !mapContainerRef.current) return;
+      const L = (module as any).default || module;
       leafletModuleRef.current = L;
 
       if (mapRef.current) {
@@ -128,10 +131,28 @@ export function LocationPickerMap({
       mapRef.current = map;
       markerRef.current = marker;
       setMapaListo(true);
+
+      // Invalida tamaño para asegurar renderizado correcto al desplegar el paso 2 del wizard
+      invalidateTimer = setTimeout(() => {
+        if (mapRef.current) {
+          mapRef.current.invalidateSize();
+        }
+      }, 200);
+
+      if (typeof ResizeObserver !== 'undefined' && mapContainerRef.current) {
+        resizeObserver = new ResizeObserver(() => {
+          if (mapRef.current) {
+            mapRef.current.invalidateSize();
+          }
+        });
+        resizeObserver.observe(mapContainerRef.current);
+      }
     });
 
     return () => {
       activo = false;
+      if (invalidateTimer) clearTimeout(invalidateTimer);
+      if (resizeObserver) resizeObserver.disconnect();
       if (mapRef.current) {
         mapRef.current.remove();
         mapRef.current = null;

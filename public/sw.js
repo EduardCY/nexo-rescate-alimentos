@@ -8,7 +8,7 @@
  * 4. Network-First para consultas dinámicas.
  */
 
-const CACHE_NAME = 'nexo-pwa-v4';
+const CACHE_NAME = 'nexo-pwa-v5';
 
 const APP_SHELL_ROUTES = [
   '/login',
@@ -73,6 +73,10 @@ self.addEventListener('activate', (event) => {
 });
 
 function esActivoEstatico(url, request) {
+  // Solo interceptar activos del mismo origen para no interferir con tiles cartográficos
+  if (url.origin !== self.location.origin) {
+    return false;
+  }
   const pathname = url.pathname;
   return (
     pathname.startsWith('/_next/static/') ||
@@ -96,6 +100,8 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (!url.protocol.startsWith('http')) return;
   if (url.hostname.includes('supabase.co')) return;
+  // Permitir que tiles de mapas (CartoDB, OpenStreetMap) fluyan de forma nativa por red y caché HTTP del navegador
+  if (url.hostname.includes('cartocdn.com') || url.hostname.includes('openstreetmap.org')) return;
 
   // 1. Estrategia Cache-First para activos estáticos
   if (esActivoEstatico(url, request)) {

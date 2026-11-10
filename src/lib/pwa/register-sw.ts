@@ -31,7 +31,7 @@ export function registrarServiceWorkerPWA(): () => void {
         .then((cacheNames) =>
           Promise.all(
             cacheNames
-              .filter((name) => name !== 'nexo-pwa-v4')
+              .filter((name) => name !== 'nexo-pwa-v5')
               .map((name) => window.caches.delete(name))
           )
         )

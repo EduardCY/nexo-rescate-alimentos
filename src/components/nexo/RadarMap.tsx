@@ -29,13 +29,13 @@ interface ConfigVista {
 }
 
 const VISTAS_MAPA: Record<VistaFiltro, ConfigVista> = {
-  CALI_TODO: { center: [3.435, -76.525], zoom: 12.5, label: 'Cali Completa' },
-  CENTRO: { center: [3.435, -76.528], zoom: 14.5, label: 'Centro / Santa Elena' },
-  SUR: { center: [3.402, -76.538], zoom: 13.5, label: 'Sur / Valle del Lili' },
-  NORTE: { center: [3.475, -76.515], zoom: 14.0, label: 'Norte / La Flora' },
-  ORIENTE: { center: [3.422, -76.492], zoom: 13.5, label: 'Oriente / Aguablanca' },
-  LADERA: { center: [3.428, -76.56], zoom: 14.0, label: 'Ladera / Siloé' },
-  REGIONAL: { center: [3.415, -76.45], zoom: 11.0, label: 'Regional (Cavasa/Candelaria)' },
+  CALI_TODO: { center: [3.435, -76.525], zoom: 12, label: 'Cali Completa' },
+  CENTRO: { center: [3.435, -76.528], zoom: 14, label: 'Centro / Santa Elena' },
+  SUR: { center: [3.402, -76.538], zoom: 13, label: 'Sur / Valle del Lili' },
+  NORTE: { center: [3.475, -76.515], zoom: 14, label: 'Norte / La Flora' },
+  ORIENTE: { center: [3.422, -76.492], zoom: 13, label: 'Oriente / Aguablanca' },
+  LADERA: { center: [3.428, -76.56], zoom: 14, label: 'Ladera / Siloé' },
+  REGIONAL: { center: [3.415, -76.45], zoom: 11, label: 'Regional (Cavasa/Candelaria)' },
 };
 
 const KIND_CONFIG: Record<
@@ -176,13 +176,16 @@ export default function RadarMap({
   // Inicialización de Leaflet (SSR-safe)
   useEffect(() => {
     let isMounted = true;
+    let resizeObserver: ResizeObserver | null = null;
+    let invalidateTimer: NodeJS.Timeout | null = null;
 
     if (typeof window === 'undefined' || !mapContainerRef.current) return;
 
-    import('leaflet').then((L) => {
+    import('leaflet').then((module) => {
       if (!isMounted || !mapContainerRef.current) return;
       if (mapInstanceRef.current) return;
 
+      const L = (module as any).default || module;
       const defaultCfg = VISTAS_MAPA.CALI_TODO;
 
       const map = L.map(mapContainerRef.current, {
@@ -209,10 +212,29 @@ export default function RadarMap({
 
       mapInstanceRef.current = map;
       setMapaListo(true);
+
+      // Invalida el tamaño inicial después del pintado del DOM para evitar grises/tiles cortados
+      invalidateTimer = setTimeout(() => {
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.invalidateSize();
+        }
+      }, 200);
+
+      // Observador de cambio de dimensiones para responsive/tabs
+      if (typeof ResizeObserver !== 'undefined' && mapContainerRef.current) {
+        resizeObserver = new ResizeObserver(() => {
+          if (mapInstanceRef.current) {
+            mapInstanceRef.current.invalidateSize();
+          }
+        });
+        resizeObserver.observe(mapContainerRef.current);
+      }
     });
 
     return () => {
       isMounted = false;
+      if (invalidateTimer) clearTimeout(invalidateTimer);
+      if (resizeObserver) resizeObserver.disconnect();
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
@@ -232,8 +254,9 @@ export default function RadarMap({
     if (!mapInstanceRef.current || !mapaListo) return;
 
     let isMounted = true;
-    import('leaflet').then((L) => {
+    import('leaflet').then((module) => {
       if (!isMounted || !mapInstanceRef.current) return;
+      const L = (module as any).default || module;
       const map = mapInstanceRef.current;
 
       // Limpiar capas previas de marcadores

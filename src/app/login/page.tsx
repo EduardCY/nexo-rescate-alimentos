@@ -176,9 +176,17 @@ function LoginContent() {
     setCargando(true);
     setErrorMsg(null);
     try {
+      const DEMO_UUIDS: Record<RolUsuario, string> = {
+        ADMIN: '00000000-0000-4000-8000-000000000001',
+        COORDINADOR: '00000000-0000-4000-8000-000000000002',
+        DONANTE: '00000000-0000-4000-8000-000000000003',
+        VOLUNTARIO: '00000000-0000-4000-8000-000000000004',
+        RECEPTOR: '00000000-0000-4000-8000-000000000005',
+      };
+      const demoId = DEMO_UUIDS[config.rol];
       const sesionDemo: SesionUsuarioActiva = {
-        id: `00000000-0000-4000-8000-${config.rol.padEnd(12, '0').slice(0, 12)}`,
-        userId: `00000000-0000-4000-8000-${config.rol.padEnd(12, '0').slice(0, 12)}`,
+        id: demoId,
+        userId: demoId,
         nombre: config.defaultNombre,
         email: config.defaultEmail,
         rol: config.rol,

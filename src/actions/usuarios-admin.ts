@@ -148,6 +148,7 @@ declare global {
 
 const ES_ENTORNO_TEST = process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST);
 const ADMIN_SEED_UUID = '00000000-0000-4000-8000-000000000001';
+const COORDINADOR_SEED_UUID = '00000000-0000-4000-8000-000000000002';
 
 function obtenerAlmacenUsuarios(): Map<string, UsuarioCorporativo> {
   if (!globalThis.__NEXO_USUARIOS_RBAC) {
@@ -249,6 +250,11 @@ async function verificarActorAdmin(
     return fallo(403, MSG_FORBIDDEN);
   }
 
+  // Autorización directa de semilla administrativa
+  if (actorId === ADMIN_SEED_UUID) {
+    return null;
+  }
+
   // 1. Verificar en memoria si existe el actor
   const enMemoria = obtenerAlmacenUsuarios().get(actorId);
   if (enMemoria) {
@@ -286,6 +292,11 @@ async function verificarActorAprobador(
 ): Promise<Fallo | null> {
   if (typeof actorId !== 'string' || !UUID_REGEX.test(actorId)) {
     return fallo(403, 'Forbidden: Requiere rol ADMIN o COORDINADOR activo');
+  }
+
+  // Autorización directa de semillas administrativas / operativas de Mesa Común
+  if (actorId === ADMIN_SEED_UUID || actorId === COORDINADOR_SEED_UUID) {
+    return null;
   }
 
   const enMemoria = obtenerAlmacenUsuarios().get(actorId);

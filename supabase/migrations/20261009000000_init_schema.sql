@@ -167,14 +167,17 @@ ALTER TABLE donaciones ENABLE ROW LEVEL SECURITY;
 ALTER TABLE trazabilidad_eventos ENABLE ROW LEVEL SECURITY;
 
 -- Políticas de lectura abierta para el MVP (sujetas a afinamiento con Auth)
+DROP POLICY IF EXISTS "Permitir lectura general de donaciones disponibles" ON donaciones;
 CREATE POLICY "Permitir lectura general de donaciones disponibles"
     ON donaciones FOR SELECT
     USING (true);
 
+DROP POLICY IF EXISTS "Permitir inserción de donaciones a donantes" ON donaciones;
 CREATE POLICY "Permitir inserción de donaciones a donantes"
     ON donaciones FOR INSERT
     WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Permitir lectura general de trazabilidad" ON trazabilidad_eventos;
 CREATE POLICY "Permitir lectura general de trazabilidad"
     ON trazabilidad_eventos FOR SELECT
     USING (true);

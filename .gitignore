@@ -48,4 +48,7 @@ docs/sustentacion/
 /docs/sustentacion/
 *sustentacion*
 
+# Automated E2E video recordings (kept locally)
+/recordings/*.webm
+
 .vercel

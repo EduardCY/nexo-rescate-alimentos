@@ -391,13 +391,9 @@ export const nexoApi: NexoApi = {
         });
       }
 
-      if (nodes.length === 0) {
-        return SEED_MAP_NODES;
-      }
-
       return nodes;
     } catch {
-      return SEED_MAP_NODES;
+      return [];
     }
   },
 

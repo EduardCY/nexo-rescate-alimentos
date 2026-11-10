@@ -14,6 +14,8 @@ export const EntregaInputSchema = z.object({
     .min(3, 'El nombre de quien recibe debe tener al menos 3 caracteres'),
   estadoFisico: estadoFisicoEnum.default('BUENO'),
   observaciones: z.string().optional(),
+  mermaKg: z.number().min(0, 'La merma no puede ser negativa').optional(),
+  cantidadRealRecibidaKg: z.number().min(0, 'La cantidad real no puede ser negativa').optional(),
   voluntarioId: z.string().optional(),
   voluntarioNombre: z.string().optional(),
 });

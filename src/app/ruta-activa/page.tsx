@@ -9,6 +9,7 @@ import {
   obtenerDonacionParaEntrega,
   obtenerMisionesAsignadasVoluntario,
 } from '@/actions/entregas';
+import { liberarDonacionAsignada } from '@/actions/donaciones';
 import { useSession } from '@/lib/auth/session-context';
 
 function RutaActivaContenido() {
@@ -84,9 +85,22 @@ function RutaActivaContenido() {
     );
   }
 
+  const handleLiberarMision = async (id: string) => {
+    if (!window.confirm('¿Confirmas que deseas liberar esta misión por fuerza mayor/imprevisto? El lote volverá al catálogo para que otro rescatista o comedor lo recoja.')) {
+      return;
+    }
+    setCargando(true);
+    try {
+      await liberarDonacionAsignada(id, 'Imprevisto en vía reportado desde Hoja de Ruta');
+      setMision(null);
+    } finally {
+      setCargando(false);
+    }
+  };
+
   return (
     <section aria-label="Detalle de la misión de rescate asignada">
-      <RutaActivaCard mision={mision} />
+      <RutaActivaCard mision={mision} onLiberarMision={handleLiberarMision} />
 
       <footer className="mt-4 p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 text-[11px] text-slate-400 flex items-center gap-2">
         <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" aria-hidden="true" />

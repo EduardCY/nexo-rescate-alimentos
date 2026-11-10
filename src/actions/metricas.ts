@@ -37,6 +37,8 @@ export function procesarMetricasImpacto(
       emisionesCo2EvitadasKg: 0,
       donacionesCompletadas: 0,
       comedoresAbastecidos: 0,
+      donantesParticipantes: 0,
+      organizacionesParticipantes: 0,
       entregasDetalle: [],
       calculadoEnUtc: new Date().toISOString(),
       fuenteDatos: fuente,
@@ -46,6 +48,7 @@ export function procesarMetricasImpacto(
   let totalKg = 0;
   let totalRaciones = 0;
   const comedoresUnicos = new Set<string>();
+  const donantesUnicos = new Set<string>();
   const entregasDetalle: DonacionEntregadaResumenDTO[] = [];
 
   for (const item of entregadas) {
@@ -69,12 +72,19 @@ export function procesarMetricasImpacto(
       comedoresUnicos.add(comedor);
     }
 
+    const donante = String(
+      raw.donante_nombre ?? raw.donanteNombre ?? raw.donante_id ?? raw.donanteId ?? ''
+    ).trim();
+    if (donante) {
+      donantesUnicos.add(donante);
+    }
+
     entregasDetalle.push({
       id: String(raw.id ?? ''),
       codigo: String(raw.codigo ?? 'DON-000'),
       fechaRegistro: String(raw.created_at ?? raw.createdAt ?? ''),
       fechaEntrega: String(raw.entregada_at ?? raw.entregadaAt ?? new Date().toISOString()),
-      donante: String(raw.donante_nombre ?? raw.donanteNombre ?? 'Donante Anónimo'),
+      donante: donante || 'Donante Anónimo',
       comedorReceptor: comedor,
       kilogramos: Math.round(kg * 10) / 10,
       racionesEstimadas: raciones,
@@ -84,13 +94,18 @@ export function procesarMetricasImpacto(
 
   // Factor técnico FAO: 2.5 kg CO2e por cada kg de alimento rescatado
   const co2Evitado = Math.round(totalKg * FACTOR_CO2_FAO * 10) / 10;
+  const donantesParticipantes = donantesUnicos.size;
+  const comedoresAbastecidos = comedoresUnicos.size;
+  const organizacionesParticipantes = donantesParticipantes + comedoresAbastecidos;
 
   return {
     totalKgRescatados: Math.round(totalKg * 10) / 10,
     totalRacionesServidas: totalRaciones,
     emisionesCo2EvitadasKg: co2Evitado,
     donacionesCompletadas: entregadas.length,
-    comedoresAbastecidos: comedoresUnicos.size,
+    comedoresAbastecidos,
+    donantesParticipantes,
+    organizacionesParticipantes,
     entregasDetalle,
     calculadoEnUtc: new Date().toISOString(),
     fuenteDatos: fuente,

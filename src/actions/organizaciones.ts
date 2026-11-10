@@ -193,8 +193,15 @@ export async function listarOrganizaciones(
  * comedores y donantes reales con su capacidad instalada de refrigeración y raciones.
  */
 export async function crearOrganizacion(
-  input: CrearOrganizacionInput
+  input: CrearOrganizacionInput,
+  actorRol?: RolUsuario
 ): Promise<{ exito: true; organizacion: Organizacion & { nit?: string } } | { exito: false; error: string }> {
+  if (actorRol && actorRol !== 'ADMIN' && actorRol !== 'COORDINADOR') {
+    return {
+      exito: false,
+      error: 'Acceso denegado: Requiere rol COORDINADOR o ADMIN para dar de alta comedores u organizaciones.',
+    };
+  }
   const nombre = input.nombre.trim();
   const direccion = input.direccion.trim();
   if (nombre.length < 3) {

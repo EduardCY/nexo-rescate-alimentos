@@ -28,29 +28,31 @@ import {
   PlusCircle,
 } from "lucide-react";
 
+import { actualizarDisponibilidadVoluntario } from "@/actions/donaciones";
+
 const MENUS_POR_ROL: Record<RolUsuario, MenuEntry[]> = {
   DONANTE: [
-    { id: "donante_inicio", label: "Mi Comercio y Donaciones", view: "dashboard" },
-    { id: "donante_publicar", label: "+ Publicar Donación", view: "donation" },
-    { id: "donante_rastreo", label: "Rastrear Mis Lotes", href: "/rastreo" },
-    { id: "donante_certificados", label: "Certificados Tributarios DIAN", view: "impact" },
+    { id: "donante_inicio", label: "Mis Alimentos y Estado", view: "dashboard" },
+    { id: "donante_publicar", label: "+ Publicar Alimento", href: "/donar" },
+    { id: "donante_rastreo", label: "Trazabilidad de Entregas", href: "/rastreo" },
   ],
   VOLUNTARIO: [
     { id: "vol_panel", label: "Mi Panel de Rescatista", view: "dashboard" },
-    { id: "vol_catalogo", label: "Catálogo y Mapa de Rescates", href: "/donaciones" },
+    { id: "vol_catalogo", label: "Misiones Disponibles", href: "/donaciones" },
     { id: "vol_ruta", label: "Mi Ruta Activa", href: "/ruta-activa" },
     { id: "vol_rastreo", label: "Rastreo de Lote", href: "/rastreo" },
   ],
   RECEPTOR: [
-    { id: "rec_panel", label: "Mi Comedor y Lotes en Camino", view: "dashboard" },
-    { id: "rec_directorio", label: "Directorio de Comedores", view: "matching", focusNgos: true },
+    { id: "rec_panel", label: "Mi Comedor y Lotes Asignados", view: "dashboard" },
+    { id: "rec_recogida", label: "Recogida Transporte Propio", href: "/donaciones" },
     { id: "rec_rastreo", label: "Rastreo de Custodia", href: "/rastreo" },
   ],
   COORDINADOR: [
-    { id: "coord_panel", label: "Centro de Control y Mapa", view: "dashboard" },
+    { id: "coord_panel", label: "Torre de Control Mesa Común", view: "dashboard" },
     { id: "coord_matching", label: "Asignación y Comedores", view: "matching" },
     { id: "coord_catalogo", label: "Catálogo y Expiradas", href: "/donaciones" },
-    { id: "coord_impacto", label: "Tablero de Impacto y CSV", href: "/impacto" },
+    { id: "coord_usuarios", label: "Aprobación de Usuarios", href: "/admin/usuarios" },
+    { id: "coord_impacto", label: "Reporte Cooperantes (CSV)", href: "/impacto" },
     { id: "coord_rastreo", label: "Rastreo", href: "/rastreo" },
   ],
   ADMIN: [
@@ -59,7 +61,7 @@ const MENUS_POR_ROL: Record<RolUsuario, MenuEntry[]> = {
     { id: "adm_impacto", label: "Tablero de Impacto y CSV", href: "/impacto" },
     { id: "adm_matching", label: "Asignación y Comedores", view: "matching" },
     { id: "adm_catalogo", label: "Catálogo y Expiradas", href: "/donaciones" },
-    { id: "adm_donar", label: "Publicar Donación", view: "donation" },
+    { id: "adm_donar", label: "+ Publicar Donación", href: "/donar" },
     { id: "adm_rastreo", label: "Rastreo", href: "/rastreo" },
   ],
 };
@@ -76,7 +78,7 @@ const TITLES: Record<ViewId, string> = {
  */
 function PortalDonanteView() {
   const { sesion } = useSession();
-  const { lots, setView } = useNexo();
+  const { lots } = useNexo();
 
   const misLotes = lots.filter(
     (l) =>
@@ -84,7 +86,7 @@ function PortalDonanteView() {
       l.donor.toLowerCase().includes(sesion.organizacionNombre.toLowerCase()) ||
       l.donor.toLowerCase().includes(sesion.nombre.toLowerCase())
   );
-  const lotesMostrar = misLotes.length > 0 ? misLotes : lots;
+  const lotesMostrar = misLotes;
 
   return (
     <div className="flex flex-col gap-4">
@@ -101,21 +103,19 @@ function PortalDonanteView() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setView("donation")}
+          <Link
+            href="/donar"
             className="btn-green min-h-[44px] px-4 font-extrabold flex items-center gap-1.5"
           >
             <PlusCircle className="w-4 h-4" />
-            <span>+ PUBLICAR NUEVA DONACIÓN</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setView("impact")}
-            className="btn-98 min-h-[44px] px-3 font-bold text-[#000080]"
+            <span>+ PUBLICAR ALIMENTO (<span className="text-[11px]">60s</span>)</span>
+          </Link>
+          <Link
+            href="/rastreo"
+            className="btn-98 min-h-[44px] px-3 font-bold text-[#000080] flex items-center gap-1.5"
           >
-            Certificados Tributarios DIAN &gt;
-          </button>
+            <span>Trazabilidad de Mis Lotes &gt;</span>
+          </Link>
         </div>
       </div>
 
@@ -126,25 +126,24 @@ function PortalDonanteView() {
         <section className="scada-panel lg:col-span-5 p-3 flex flex-col gap-2 font-mono text-xs">
           <div className="flex items-center justify-between border-b border-slate-700 pb-1.5">
             <h2 className="font-bold text-nexo-phosphor">
-              ▣ MIS LOTES PUBLICADOS ({lotesMostrar.length})
+              ▣ MIS LOTES ACTIVOS ({lotesMostrar.length})
             </h2>
             <Link href="/rastreo" className="text-[11px] text-nexo-cyan underline">
-              Auditar Trazabilidad &gt;
+              Trazabilidad Completa &gt;
             </Link>
           </div>
           {lotesMostrar.length === 0 ? (
             <div className="bevel-in bg-[#ffffe1] p-4 text-black my-auto">
-              <p className="font-bold text-[#000080] mb-1">Aún no has publicado excedentes.</p>
+              <p className="font-bold text-[#000080] mb-1">Aún no has publicado excedentes hoy.</p>
               <p className="text-[11px] text-slate-700 mb-3">
                 Publica en menos de 60 segundos tus excedentes aptos para consumo humano. Un voluntario los recogerá y entregará en un comedor comunitario cercano.
               </p>
-              <button
-                type="button"
-                onClick={() => setView("donation")}
-                className="btn-green min-h-[42px] px-4 font-bold"
+              <Link
+                href="/donar"
+                className="btn-green min-h-[42px] px-4 font-bold inline-flex items-center gap-1.5"
               >
-                + Publicar Primera Donación
-              </button>
+                + Publicar Donación de Alimentos
+              </Link>
             </div>
           ) : (
             <div className="space-y-2 max-h-[340px] overflow-y-auto">
@@ -183,12 +182,25 @@ function PortalDonanteView() {
 function PortalVoluntarioView() {
   const { sesion } = useSession();
   const [misiones, setMisiones] = useState<Donacion[]>([]);
+  const [disponible, setDisponible] = useState(true);
+  const [actualizandoDisp, setActualizandoDisp] = useState(false);
 
   useEffect(() => {
     obtenerMisionesAsignadasVoluntario(sesion?.userId)
       .then((lista) => setMisiones(lista))
       .catch(() => {});
   }, [sesion?.userId]);
+
+  const handleToggleDisponible = async () => {
+    setActualizandoDisp(true);
+    try {
+      const nuevo = !disponible;
+      setDisponible(nuevo);
+      await actualizarDisponibilidadVoluntario(sesion?.userId, nuevo, sesion?.vehiculoTipo);
+    } finally {
+      setActualizandoDisp(false);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-4">
@@ -204,13 +216,25 @@ function PortalVoluntarioView() {
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={handleToggleDisponible}
+            disabled={actualizandoDisp}
+            className={`min-h-[44px] px-3 font-bold text-xs font-mono inline-flex items-center gap-1.5 bevel-out ${
+              disponible ? "bg-[#dcfce7] text-[#15803d]" : "bg-[#f1f5f9] text-slate-600"
+            }`}
+            title="Cambiar estado de disponibilidad para rescates hoy (RF-003)"
+          >
+            <span className={`w-2.5 h-2.5 rounded-full ${disponible ? "bg-emerald-600 animate-pulse" : "bg-slate-400"}`} />
+            <span>{disponible ? "🟢 Disponible Hoy" : "⚪ No Disponible"}</span>
+          </button>
           <Link
             href="/donaciones"
             className="btn-green min-h-[44px] px-4 font-extrabold flex items-center gap-1.5"
           >
             <Compass className="w-4 h-4" />
-            <span>EXPLORAR CATÁLOGO Y ACEPTAR RESCATE</span>
+            <span>MISIONES DISPONIBLES</span>
           </Link>
           <Link
             href="/ruta-activa"
@@ -351,21 +375,31 @@ function PortalReceptorView() {
           </div>
         </div>
 
-        {miComedor && (
-          <button
-            type="button"
-            disabled={guardandoCapacidad}
-            onClick={handleToggleRefrigeracion}
-            className="btn-98 min-h-[42px] px-3 font-bold text-[#000080] flex items-center gap-1.5"
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            href="/donaciones"
+            className="btn-green min-h-[42px] px-3 font-bold flex items-center gap-1.5"
+            title="Explorar excedentes en Cali para ir a recoger con transporte propio del comedor"
           >
-            <Snowflake className="w-4 h-4 text-sky-700" />
-            <span>
-              {miComedor.tieneRefrigeracion
-                ? "Cambiar a Sin Nevera"
-                : "Activar Capacidad de Frío"}
-            </span>
-          </button>
-        )}
+            <Compass className="w-4 h-4" />
+            <span>Recogida Transporte Propio</span>
+          </Link>
+          {miComedor && (
+            <button
+              type="button"
+              disabled={guardandoCapacidad}
+              onClick={handleToggleRefrigeracion}
+              className="btn-98 min-h-[42px] px-3 font-bold text-[#000080] flex items-center gap-1.5"
+            >
+              <Snowflake className="w-4 h-4 text-sky-700" />
+              <span>
+                {miComedor.tieneRefrigeracion
+                  ? "Cambiar a Sin Nevera"
+                  : "Activar Capacidad de Frío"}
+              </span>
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
@@ -441,8 +475,14 @@ function Shell() {
   const { sesion } = useSession();
   const { view, setView, setFocusNgos, focusNgos, settings, lots } = useNexo();
 
-  const rolActivo: RolUsuario = sesion?.rol || "COORDINADOR";
-  const menuItems = MENUS_POR_ROL[rolActivo] || MENUS_POR_ROL.COORDINADOR;
+  const rolActivo: RolUsuario = sesion?.rol || "DONANTE";
+  const menuItems = sesion
+    ? (MENUS_POR_ROL[rolActivo] || MENUS_POR_ROL.DONANTE)
+    : [
+        { id: "login", label: "Iniciar Sesión / Registro", href: "/login" },
+        { id: "catalogo", label: "Catálogo de Rescates", href: "/donaciones" },
+        { id: "rastreo", label: "Trazabilidad Pública", href: "/rastreo" },
+      ];
 
   const activeId =
     menuItems.find((m) => m.view === view && !!m.focusNgos === (view === "matching" && focusNgos))?.id ??

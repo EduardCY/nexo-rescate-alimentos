@@ -17,9 +17,9 @@ import { MetricasDashboard } from '@/components/admin/MetricasDashboard';
 export default function ImpactoPage() {
   const { sesion } = useSession();
 
-  const rolEval = sesion?.rol || 'ADMIN';
+  const rolEval = sesion?.rol;
   const estadoEval = sesion?.estadoCuenta || 'ACTIVO';
-  const autorizado = puedeAccederRuta(rolEval, '/impacto', estadoEval);
+  const autorizado = Boolean(rolEval && puedeAccederRuta(rolEval, '/impacto', estadoEval));
 
   return (
     <main className="min-h-screen bg-[#090d16] text-slate-100 p-3 sm:p-6">
@@ -44,7 +44,7 @@ export default function ImpactoPage() {
             </div>
           </div>
 
-          {sesion?.rol === 'ADMIN' && (
+          {(sesion?.rol === 'ADMIN' || sesion?.rol === 'COORDINADOR') && (
             <Link
               href="/admin/usuarios"
               className="min-h-[44px] px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 font-mono text-xs font-bold text-sky-300 flex items-center gap-1.5"
@@ -57,8 +57,13 @@ export default function ImpactoPage() {
 
         {!autorizado ? (
           <RoleGuardBanner
-            rolActual={rolEval}
-            moduloRestringido="Tablero Global de Impacto y Exportación CSV (/impacto)"
+            rolActual={rolEval || 'SIN SESIÓN ACTIVA'}
+            moduloRestringido="Tablero de Impacto y Métricas Ambientales (/impacto)"
+            mensajePersonalizado={
+              !sesion
+                ? 'Debes iniciar sesión con una cuenta de rol ADMIN o COORDINADOR en /login para consultar las métricas de impacto.'
+                : undefined
+            }
           />
         ) : (
           <MetricasDashboard />

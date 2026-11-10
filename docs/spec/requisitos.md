@@ -94,8 +94,10 @@ graph LR
   * Tráfico 100% cifrado punto a punto mediante HTTPS con certificados TLS vigentes.
   * **Anonimización absoluta de beneficiarios finales:** Queda terminantemente prohibido almacenar nombres propios, fotografías de rostros de menores o documentos de identidad de comensales en comedores comunitarios.
   * **Separación Estricta de Roles (RBAC Corporativo — `CMP-05`):**
-    * Rol `VOLUNTARIO`: Estrictamente confinado a operaciones delegadas de campo (`/donaciones`, `/ruta-activa`, `/entregas/[id]`, `/rastreo` público); bloqueo con HTTP `403 Forbidden` ante intentos de acceso a administración, configuración o reportes globales.
-    * Rol `ADMIN` (Administrador del Sistema): Acceso exclusivo al módulo `/admin/usuarios` (`admin:users:write`) para creación, edición, suspensión (`SUSPENDIDO`) y asignación granular de permisos con bitácora inmutable `audit_rbac_eventos`.
+    * Rol `VOLUNTARIO`: Estrictamente confinado a operaciones delegadas de campo (`/donaciones`, `/ruta-activa`, `/entregas/[id]`, `/rastreo` público) con control de disponibilidad operativa (`RF-003`) y liberación de misiones por fuerza mayor (`RF-010`); bloqueo con HTTP `403 Forbidden` ante intentos de acceso a administración general o reportes de auditoría.
+    * Rol `RECEPTOR`: Acceso a monitoreo de donaciones entrantes, ruta activa y toma directa de donaciones con transporte propio del comedor (`RF-009`) con validación automática de compatibilidad de cadena de frío (`RF-014`).
+    * Rol `COORDINADOR`: Acceso a asignación y gestión de comedores, monitoreo de rescates vigentes e históricos/expirados, y acceso a `/admin/usuarios` (`admin:users:read`, `admin:users:approve`) para autorizar donantes y comedores en estado `PENDIENTE_AUTORIZACION`.
+    * Rol `ADMIN` (Administrador del Sistema): Acceso y gobierno pleno al módulo `/admin/usuarios` (`admin:users:write`) para creación, edición de roles, suspensión (`SUSPENDIDO`) y asignación granular de permisos con bitácora inmutable `audit_rbac_eventos`.
     * **Persistencia Segura de Sesión Offline (`CA-05.3`):** Almacenamiento del perfil RBAC en el store `sesion_rbac` de IndexedDB con sello de integridad firmado (`HMAC-SHA256`) y `TTL` de 24 horas para validar permisos sin red e invalidar sesiones adulteradas.
   * Registro de auditoría digital inalterable y advertencia legal resaltada (`CA-01.3`) de la aceptación de términos de inocuidad y exención de responsabilidad por cada donante, junto con etiquetado explícito de **"Temperatura Ambiente"** (`CA-01.4`) cuando no requiere frío.
 

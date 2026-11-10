@@ -24,6 +24,8 @@ export interface MetricasImpactoDTO {
   emisionesCo2EvitadasKg: number;
   donacionesCompletadas: number;
   comedoresAbastecidos: number;
+  donantesParticipantes?: number;
+  organizacionesParticipantes?: number;
   entregasDetalle: DonacionEntregadaResumenDTO[];
   calculadoEnUtc: string;
   fuenteDatos: 'SUPABASE_POSTGRES' | 'MEMORIA_VOLATIL' | 'DATASET_PRUEBA';

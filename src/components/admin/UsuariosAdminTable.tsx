@@ -15,6 +15,7 @@ import {
   crearUsuarioCorporativo,
   actualizarRolUsuario,
   cambiarEstadoCuentaUsuario,
+  aprobarSolicitudUsuarioAction,
   listarEventosAuditoriaRBAC,
   type ActorRbac,
   type EventoAuditoriaRbac,
@@ -147,6 +148,29 @@ export function UsuariosAdminTable({ actorAdmin }: UsuariosAdminTableProps) {
 
       if (res.exito) {
         setExitoMsg(res.mensaje);
+        await cargarDatos();
+      } else {
+        setErrorMsg(res.error);
+      }
+    } finally {
+      setProcesandoId(null);
+    }
+  };
+
+  const handleAprobarUsuario = async (u: UsuarioCorporativo) => {
+    setProcesandoId(u.id);
+    setErrorMsg(null);
+    setExitoMsg(null);
+
+    try {
+      const res = await aprobarSolicitudUsuarioAction(
+        actorAdmin,
+        u.id,
+        'Aprobación verificada de cuenta por Coordinación Operativa Mesa Común'
+      );
+
+      if (res.exito) {
+        setExitoMsg(`Cuenta de ${u.nombre} (${u.rol}) aprobada exitosamente.`);
         await cargarDatos();
       } else {
         setErrorMsg(res.error);
@@ -314,32 +338,43 @@ export function UsuariosAdminTable({ actorAdmin }: UsuariosAdminTableProps) {
             <tbody className="divide-y divide-slate-800">
               {usuarios.map((u) => {
                 const esSuspendido = u.estadoCuenta === 'SUSPENDIDO';
+                const esPendiente = u.estadoCuenta === 'PENDIENTE_AUTORIZACION';
                 const esMismoActor = u.id === actorAdmin.id;
+                const puedeEditarRol = actorAdmin.rol === 'ADMIN';
+
                 return (
                   <tr key={u.id} className="hover:bg-slate-800/40">
                     <td className="py-3 px-3 font-bold text-white">{u.nombre}</td>
                     <td className="py-3 px-3 text-slate-300">{u.email}</td>
                     <td className="py-3 px-3">
-                      <select
-                        aria-label={`Cambiar rol de ${u.nombre}`}
-                        value={u.rol}
-                        disabled={procesandoId === u.id}
-                        onChange={(e) =>
-                          handleCambioRol(u.id, e.target.value as RolUsuario)
-                        }
-                        className="rounded-lg bg-slate-950 border border-slate-700 px-2.5 py-1.5 text-xs font-bold text-emerald-300"
-                      >
-                        {ROLES_DISPONIBLES.map((r) => (
-                          <option key={r} value={r}>
-                            {r}
-                          </option>
-                        ))}
-                      </select>
+                      {puedeEditarRol ? (
+                        <select
+                          aria-label={`Cambiar rol de ${u.nombre}`}
+                          value={u.rol}
+                          disabled={procesandoId === u.id}
+                          onChange={(e) =>
+                            handleCambioRol(u.id, e.target.value as RolUsuario)
+                          }
+                          className="rounded-lg bg-slate-950 border border-slate-700 px-2.5 py-1.5 text-xs font-bold text-emerald-300"
+                        >
+                          {ROLES_DISPONIBLES.map((r) => (
+                            <option key={r} value={r}>
+                              {r}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span className="font-mono text-xs font-bold text-emerald-300 px-2 py-1 rounded bg-slate-950 border border-slate-800">
+                          {u.rol}
+                        </span>
+                      )}
                     </td>
                     <td className="py-3 px-3">
                       <span
                         className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold border ${
-                          esSuspendido
+                          esPendiente
+                            ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                            : esSuspendido
                             ? 'bg-red-500/20 text-red-300 border-red-500/40'
                             : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40'
                         }`}
@@ -348,28 +383,42 @@ export function UsuariosAdminTable({ actorAdmin }: UsuariosAdminTableProps) {
                       </span>
                     </td>
                     <td className="py-3 px-3 text-right">
-                      <button
-                        type="button"
-                        disabled={procesandoId === u.id || (esMismoActor && !esSuspendido)}
-                        onClick={() => handleToggleEstado(u)}
-                        className={`min-h-[38px] px-3 py-1.5 rounded-lg font-bold inline-flex items-center gap-1.5 disabled:opacity-40 ${
-                          esSuspendido
-                            ? 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40'
-                            : 'bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40'
-                        }`}
-                      >
-                        {esSuspendido ? (
-                          <>
-                            <ShieldCheck className="w-3.5 h-3.5" />
-                            <span>Reactivar</span>
-                          </>
-                        ) : (
-                          <>
-                            <Ban className="w-3.5 h-3.5" />
-                            <span>Suspender</span>
-                          </>
-                        )}
-                      </button>
+                      {esPendiente ? (
+                        <button
+                          type="button"
+                          disabled={procesandoId === u.id}
+                          onClick={() => handleAprobarUsuario(u)}
+                          className="min-h-[38px] px-3.5 py-1.5 rounded-lg font-bold inline-flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-mono shadow-md disabled:opacity-40"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          <span>Aprobar Solicitud</span>
+                        </button>
+                      ) : actorAdmin.rol === 'ADMIN' ? (
+                        <button
+                          type="button"
+                          disabled={procesandoId === u.id || (esMismoActor && !esSuspendido)}
+                          onClick={() => handleToggleEstado(u)}
+                          className={`min-h-[38px] px-3 py-1.5 rounded-lg font-bold inline-flex items-center gap-1.5 disabled:opacity-40 ${
+                            esSuspendido
+                              ? 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40'
+                              : 'bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40'
+                          }`}
+                        >
+                          {esSuspendido ? (
+                            <>
+                              <ShieldCheck className="w-3.5 h-3.5" />
+                              <span>Reactivar</span>
+                            </>
+                          ) : (
+                            <>
+                              <Ban className="w-3.5 h-3.5" />
+                              <span>Suspender</span>
+                            </>
+                          )}
+                        </button>
+                      ) : (
+                        <span className="text-[11px] text-slate-500 font-mono">Activo</span>
+                      )}
                     </td>
                   </tr>
                 );

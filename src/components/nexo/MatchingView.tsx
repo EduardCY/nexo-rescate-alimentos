@@ -109,7 +109,7 @@ export default function MatchingView() {
         comensalesDiarios: Number(comensales) || 120,
         tieneRefrigeracion: tieneFrio,
         urgencia: urgenciaComedor,
-      });
+      }, sesion?.rol);
       if (res.exito) {
         pushLog("ok", `Comedor comunitario registrado: ${res.organizacion.nombre} (Zona ${zonaComedor}).`);
         setNombreComedor("");
@@ -131,13 +131,15 @@ export default function MatchingView() {
           <h2 className="font-mono text-xs font-bold tracking-widest text-nexo-phosphor">
             ▣ COMEDORES Y FUNDACIONES RECEPTORAS ({ngos.length})
           </h2>
-          <button
-            type="button"
-            onClick={() => setMostrarFormComedor(!mostrarFormComedor)}
-            className="btn-98 !py-0.5 !px-2 text-[10px] font-mono font-bold text-[#000080]"
-          >
-            {mostrarFormComedor ? "Cancelar" : "+ Nuevo Comedor"}
-          </button>
+          {esSupervisor && (
+            <button
+              type="button"
+              onClick={() => setMostrarFormComedor(!mostrarFormComedor)}
+              className="btn-98 !py-0.5 !px-2 text-[10px] font-mono font-bold text-[#000080]"
+            >
+              {mostrarFormComedor ? "Cancelar" : "+ Nuevo Comedor"}
+            </button>
+          )}
         </div>
 
         {mostrarFormComedor && (

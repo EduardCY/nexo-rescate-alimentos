@@ -172,6 +172,21 @@ Escenario: CA-03.3 Bloqueo de toma sobre ofertas expiradas o canceladas
   Cuando cualquier voluntario intenta enviar una petición de toma,
   Entonces el sistema deniega la operación,
   Y emite el mensaje de advertencia: "La oferta seleccionada ya no se encuentra vigente para recogida."
+
+Escenario: CA-03.4 Recogida directa por Comedor Comunitario con transporte propio (Caso C0 / RF-009)
+  Dada una organización receptora autenticada con rol "RECEPTOR" (Comedor Comunitario),
+  Cuando visualiza una oferta en estado "DISPONIBLE" y presiona "RECOGIDA CON TRANSPORTE PROPIO",
+  Entonces el sistema valida la compatibilidad de cadena de frío (si requiere frío, el comedor debe poseer refrigeración activa),
+  Y asigna directamente la donación al comedor como receptor y ejecutor de transporte,
+  Y transiciona el estado a "ASIGNADA" habilitando su seguimiento en su propia Ruta Activa.
+
+Escenario: CA-03.5 Liberación voluntaria de donación por contingencia de transporte (RF-010)
+  Dada una donación en estado "ASIGNADA" asignada a un voluntario o comedor con transporte propio,
+  Cuando el transportista experimenta una falla mecánica o contingencia de fuerza mayor antes de expirar la ventana de recogida,
+  Y presiona "Liberar Misión",
+  Entonces el sistema libera la asignación,
+  Y transiciona la donación nuevamente a estado "DISPONIBLE" para que otro voluntario pueda rescatarla,
+  Y registra el evento de novedad en la trazabilidad inmutable.
 ```
 
 * **Se prueba como:** `voluntario de transporte` · `teléfono` (con prueba de concurrencia simulada)
@@ -216,6 +231,13 @@ Escenario: CA-04.3 Anonimización de beneficiarios finales (Cumplimiento Ley 158
   Cuando se consolida la información del acta digital,
   Entonces el sistema registra únicamente la institución receptora y la estimación agregada de raciones beneficiadas,
   Y garantiza que no se solicitan ni almacenan cédulas, documentos de identidad ni fotografías de comensales beneficiarios.
+
+Escenario: CA-04.4 Registro de merma o alimento descartado en entrega física (RF-012)
+  Dada la confirmación de entrega física en el comedor comunitario,
+  Cuando la persona encargada detecta que parte del lote se deterioró en el trayecto y diligencia el campo opcional "Merma (kg)",
+  Entonces el sistema calcula automáticamente la cantidad neta entregada descontando la merma,
+  Y actualiza la donación con el volumen real aprovechado,
+  Y registra el descarte en las observaciones inmutables para conciliar el impacto ambiental y las raciones efectivas.
 ```
 
 * **Se prueba como:** `voluntario / encargado de comedor` · `teléfono`
@@ -247,11 +269,11 @@ Escenario: CA-05.1 Separación estricta de roles y confinamiento operativo del r
   Y el guardián de rutas y políticas RLS bloquean la solicitud devolviendo estado HTTP 403 Forbidden con la notificación: "Acceso restringido: Tu perfil de Voluntario está habilitado exclusivamente para operaciones de rescate y entrega en campo",
   Permitiéndole operar únicamente en sus vistas delegadas ("/donaciones", "/ruta-activa", "/entregas/[id]" y "/rastreo" público).
 
-Escenario: CA-05.2 Módulo de Administración Corporativa de Usuarios exclusivo para Administrador del Sistema
-  Dado un usuario autenticado con rol "ADMIN" (Administrador del Sistema) en la ruta "/admin/usuarios",
-  Cuando ejecuta operaciones de creación de usuario, edición de atributos (rol, zona asignada, vehículo, teléfono, permisos granulares) o cambio de estado de cuenta ("ACTIVO" | "SUSPENDIDO" | "PENDIENTE_AUTORIZACION"),
-  Entonces el sistema valida que el ejecutor posea el permiso "admin:users:write",
-  Persiste la mutación en la tabla "usuarios", registra un evento inmutable en la bitácora "audit_rbac_eventos" con el ID del administrador y el motivo,
+Escenario: CA-05.2 Módulo de Administración Corporativa y Gobernanza de Usuarios (ADMIN y COORDINADOR)
+  Dado un usuario autenticado con rol "ADMIN" o "COORDINADOR" en la ruta "/admin/usuarios",
+  Cuando un usuario con rol "COORDINADOR" (Marcela Ocampo / Fundación Mesa Común) accede al módulo,
+  Entonces puede visualizar la lista completa de solicitudes y usuarios, y cuenta con permisos explícitos para autorizar cuentas en estado "PENDIENTE_AUTORIZACION" habilitando inmediatamente a donantes y comedores aliados,
+  Y cuando el usuario es "ADMIN", cuenta adicionalmente con el control pleno para mutar roles, suspender o reactivar cuentas registrando el motivo en "audit_rbac_eventos",
   Y si un usuario pasa a estado "SUSPENDIDO", invalida su sesión activa e impide que tome donaciones o ejecute mutaciones.
 
 Escenario: CA-05.3 Persistencia y validación segura de sesión y permisos RBAC en modo Offline

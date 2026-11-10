@@ -72,11 +72,17 @@ export default function CatalogoDonacionesPage() {
   const [, startTransition] = useTransition();
 
   const esSupervisor =
-    !sesion || sesion.rol === 'ADMIN' || sesion.rol === 'COORDINADOR';
+    Boolean(sesion && (sesion.rol === 'ADMIN' || sesion.rol === 'COORDINADOR'));
   const puedePublicar =
-    !sesion || sesion.rol === 'DONANTE' || sesion.rol === 'ADMIN' || sesion.rol === 'COORDINADOR';
+    Boolean(sesion && (sesion.rol === 'DONANTE' || sesion.rol === 'ADMIN' || sesion.rol === 'COORDINADOR'));
   const puedeVerRutaActiva =
-    !sesion || sesion.rol === 'VOLUNTARIO' || sesion.rol === 'COORDINADOR' || sesion.rol === 'ADMIN';
+    Boolean(
+      sesion &&
+        (sesion.rol === 'VOLUNTARIO' ||
+          sesion.rol === 'RECEPTOR' ||
+          sesion.rol === 'COORDINADOR' ||
+          sesion.rol === 'ADMIN')
+    );
 
   const cargarOfertas = useCallback(async () => {
     setCargando(true);
@@ -188,15 +194,31 @@ export default function CatalogoDonacionesPage() {
     setErrorAccion(null);
 
     try {
+      const esReceptor = sesion?.rol === 'RECEPTOR';
       const comId = comedorSeleccionadoPorDonacion[id];
       const comObj = comedores.find((c) => c.id === comId);
+
+      const comedorDestinoParam = esReceptor
+        ? {
+            comedorId: sesion?.organizacionId,
+            comedorNombre: sesion?.organizacionNombre || sesion?.nombre,
+            comedorTieneFrio: Boolean(sesion?.tieneRefrigeracion),
+            esRecogidaPropiaComedor: true,
+          }
+        : comObj
+        ? {
+            comedorId: comObj.id,
+            comedorNombre: comObj.nombre,
+            comedorTieneFrio: Boolean(comObj.tieneRefrigeracion),
+          }
+        : undefined;
 
       const res = await tomarDonacion(
         id,
         sesion?.userId,
         sesion?.nombre,
         undefined,
-        comObj ? { comedorId: comObj.id, comedorNombre: comObj.nombre } : undefined
+        comedorDestinoParam
       );
 
       if (res.exito && res.codigo === 200) {
@@ -476,13 +498,20 @@ export default function CatalogoDonacionesPage() {
                     onExpirada={handleOfertaExpirada}
                     tomando={tomandoId === donacion.id}
                     mostrarExpirada={vistaCatalogo === 'expiradas'}
+                    textoBotonTomar={
+                      sesion?.rol === 'RECEPTOR'
+                        ? 'RECOGIDA CON TRANSPORTE PROPIO'
+                        : 'TOMAR DONACIÓN'
+                    }
                     ocultarBotonTomar={
                       vistaCatalogo === 'expiradas' ||
                       sesion?.rol === 'DONANTE' ||
-                      sesion?.rol === 'RECEPTOR'
+                      sesion?.rol === 'COORDINADOR' ||
+                      sesion?.rol === 'ADMIN' ||
+                      !sesion
                     }
                     accionExtra={
-                      vistaCatalogo === 'vigentes' && comedoresAptos.length > 0 ? (
+                      esSupervisor && vistaCatalogo === 'vigentes' && comedoresAptos.length > 0 ? (
                         <div className="font-mono text-[11px] bg-white p-1.5 bevel-in">
                           <label
                             htmlFor={`sel-com-${donacion.id}`}

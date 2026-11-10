@@ -8,11 +8,14 @@
  * 4. Network-First para consultas dinámicas.
  */
 
-const CACHE_NAME = 'nexo-pwa-v2';
+const CACHE_NAME = 'nexo-pwa-v3';
 
 const APP_SHELL_ROUTES = [
   '/',
+  '/login',
   '/donaciones',
+  '/donar',
+  '/ruta-activa',
   '/rastreo',
   '/~offline',
   '/manifest.json',

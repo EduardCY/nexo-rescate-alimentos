@@ -34,6 +34,7 @@ export default function ConfirmarEntregaPage() {
   // Campos del formulario
   const [nombreReceptor, setNombreReceptor] = useState('');
   const [estadoFisico, setEstadoFisico] = useState<EstadoFisicoAlimento>('BUENO');
+  const [mermaKg, setMermaKg] = useState('');
   const [observaciones, setObservaciones] = useState('');
   const [procesando, setProcesando] = useState(false);
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
@@ -84,10 +85,12 @@ export default function ConfirmarEntregaPage() {
     setErrorEnvio(null);
 
     try {
+      const parsedMerma = mermaKg ? parseFloat(mermaKg) : undefined;
       const res = await confirmarEntrega({
         donacionId: donacion.id,
         nombreReceptor: nombreReceptor.trim(),
         estadoFisico,
+        mermaKg: parsedMerma !== undefined && !isNaN(parsedMerma) ? parsedMerma : undefined,
         observaciones: observaciones.trim(),
         voluntarioId: donacion.voluntarioId || 'vol-001',
         voluntarioNombre: donacion.voluntarioNombre || 'Voluntario',
@@ -285,6 +288,27 @@ export default function ConfirmarEntregaPage() {
                         );
                       })}
                     </div>
+                  </div>
+
+                  {/* RF-012: Registro de Merma o Pérdida de Alimentos (kg) */}
+                  <div>
+                    <label className="retro-label" htmlFor="merma-kg">
+                      Merma / Alimento descartado o no apto (kg, opcional)
+                    </label>
+                    <input
+                      id="merma-kg"
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      max={donacion.cantidadEstimada}
+                      className="retro-field min-h-[44px] font-bold text-xs"
+                      placeholder="0.0 (dejar vacío si el lote llegó 100% íntegro)"
+                      value={mermaKg}
+                      onChange={(e) => setMermaKg(e.target.value)}
+                    />
+                    <span className="text-[10px] text-slate-500">
+                      Si parte del lote se dañó en el trayecto, regístralo para conciliar el impacto neto.
+                    </span>
                   </div>
 
                   {/* Observaciones de Llegada */}

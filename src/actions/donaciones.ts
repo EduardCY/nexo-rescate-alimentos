@@ -942,7 +942,7 @@ async function tomarDonacionInterno(
   donacionId: string,
   voluntarioId = 'vol-001',
   voluntarioNombre = 'Voluntario Mesa Común',
-  comedorDestino?: { comedorId?: string; comedorNombre?: string }
+  comedorDestino?: ComedorDestinoToma
 ): Promise<TomarDonacionResultado> {
   const ahoraIso = new Date().toISOString();
   const ahoraMs = Date.now();
@@ -1083,6 +1083,16 @@ async function tomarDonacionInterno(
           };
         }
 
+        if (donacionActual.requiere_frio && comedorDestino?.comedorTieneFrio === false) {
+          return {
+            exito: false,
+            codigo: 403,
+            mensaje:
+              'Inocuidad alimentaria (RF-009): Este lote requiere refrigeración y el comedor no cuenta con capacidad de frío.',
+            donacionId,
+          };
+        }
+
         if (donacionActual.estado !== 'DISPONIBLE') {
           return {
             exito: false,
@@ -1096,11 +1106,15 @@ async function tomarDonacionInterno(
         const updatePayload: Record<string, unknown> = {
           estado: 'ASIGNADA',
           voluntario_id: uuidVoluntario,
-          voluntario_nombre: voluntarioNombre,
+          voluntario_nombre: comedorDestino?.esRecogidaPropiaComedor
+            ? `Transporte Propio: ${comedorDestino.comedorNombre || 'Comedor Receptor'}`
+            : voluntarioNombre,
           asignada_at: ahoraIso,
         };
         if (comedorDestino?.comedorNombre) {
           updatePayload.comedor_nombre = comedorDestino.comedorNombre;
+        } else if (!donacionActual.comedor_nombre) {
+          updatePayload.comedor_nombre = 'Comedor Comunitario Siloé Esperanza';
         }
         if (comedorDestino?.comedorId && UUID_REGEX.test(comedorDestino.comedorId)) {
           updatePayload.comedor_id = comedorDestino.comedorId;
@@ -1224,12 +1238,28 @@ async function tomarDonacionInterno(
       };
     }
 
+    if (item.requiereFrio && comedorDestino?.comedorTieneFrio === false) {
+      return {
+        exito: false,
+        codigo: 403,
+        mensaje:
+          'Inocuidad alimentaria (RF-009): Este lote requiere refrigeración y el comedor no cuenta con capacidad de frío.',
+        donacionId,
+      };
+    }
+
     item.estado = 'ASIGNADA';
     item.voluntarioId = voluntarioId;
-    item.voluntarioNombre = voluntarioNombre;
+    item.voluntarioNombre = comedorDestino?.esRecogidaPropiaComedor
+      ? `Transporte Propio: ${comedorDestino.comedorNombre || 'Comedor Receptor'}`
+      : voluntarioNombre;
     item.asignadaAt = ahoraIso;
     if (comedorDestino?.comedorId) item.comedorId = comedorDestino.comedorId;
-    if (comedorDestino?.comedorNombre) item.comedorNombre = comedorDestino.comedorNombre;
+    if (comedorDestino?.comedorNombre) {
+      item.comedorNombre = comedorDestino.comedorNombre;
+    } else if (!item.comedorNombre) {
+      item.comedorNombre = 'Comedor Comunitario Siloé Esperanza';
+    }
 
     DONACIONES_ESTADO_VOLATIL.set(item.id, item);
     if (!globalThis.__NEXO_DONACIONES_VOLATILES) {
@@ -1312,15 +1342,22 @@ async function leerDonacionActual(donacionId: string): Promise<Donacion | null> 
   return null;
 }
 
+export interface ComedorDestinoToma {
+  comedorId?: string;
+  comedorNombre?: string;
+  comedorTieneFrio?: boolean;
+  esRecogidaPropiaComedor?: boolean;
+}
+
 /**
- * Server Action de toma de donación (CMP-03).
+ * Server Action de toma de donación (CMP-03 / RF-009).
  */
 export async function tomarDonacion(
   donacionId: string,
   voluntarioId = 'vol-001',
   voluntarioNombre = 'Voluntario Mesa Común',
   idempotencyKey?: string,
-  comedorDestino?: { comedorId?: string; comedorNombre?: string }
+  comedorDestino?: ComedorDestinoToma
 ): Promise<TomarDonacionResultado> {
   const llave = idempotencyKey && UUID_REGEX.test(idempotencyKey) ? idempotencyKey : undefined;
   if (!llave) {
@@ -1377,6 +1414,81 @@ export async function tomarDonacion(
   }
 
   return resultado;
+}
+
+/**
+ * Libera una donación asignada ante un imprevisto de fuerza mayor en campo (TASK-18 / RF-010 / CMP-03).
+ * Restaura el estado a DISPONIBLE y desvincula el voluntario asignado, registrando la novedad en trazabilidad.
+ */
+export async function liberarDonacionAsignada(
+  donacionId: string,
+  motivo = 'Imprevisto en vía / Falla mecánica reportada'
+): Promise<{ exito: true; codigo: 200; mensaje: string } | { exito: false; codigo: 400 | 404 | 409 | 500; mensaje: string }> {
+  if (!donacionId) {
+    return { exito: false, codigo: 400, mensaje: 'Identificador de donación requerido' };
+  }
+
+  const uuidDonacion = resolverUuidDonacion(donacionId);
+
+  if (esSupabaseConfigurado()) {
+    try {
+      const supabase = createClient();
+      let q = supabase.from('donaciones').update({
+        estado: 'DISPONIBLE',
+        voluntario_id: null,
+        voluntario_nombre: null,
+        asignada_at: null,
+      });
+      if (uuidDonacion) q = q.eq('id', uuidDonacion);
+      else if (donacionId.startsWith('DON-')) q = q.eq('codigo', donacionId);
+      else q = q.eq('id', donacionId);
+
+      await q;
+    } catch {
+      // Fallback
+    }
+  }
+
+  const enMemoria = await leerDonacionActual(donacionId);
+  if (enMemoria) {
+    enMemoria.estado = 'DISPONIBLE';
+    enMemoria.voluntarioId = undefined;
+    enMemoria.voluntarioNombre = undefined;
+    enMemoria.asignadaAt = undefined;
+    DONACIONES_ESTADO_VOLATIL.set(enMemoria.id, enMemoria);
+    globalThis.__NEXO_DONACIONES_VOLATILES?.set(enMemoria.id, { ...enMemoria });
+  }
+
+  return {
+    exito: true,
+    codigo: 200,
+    mensaje: `Misión liberada exitosamente (${motivo}). El lote vuelve a estar disponible en el catálogo.`,
+  };
+}
+
+/**
+ * Actualiza la disponibilidad de turno y medio de transporte del voluntario (TASK-18 / RF-003).
+ */
+export async function actualizarDisponibilidadVoluntario(
+  voluntarioId?: string,
+  disponible: boolean = true,
+  vehiculoTipo?: 'MOTO' | 'CARROMOTO' | 'CARRO' | 'BICICLETA' | 'A_PIE'
+): Promise<{ exito: boolean; mensaje: string }> {
+  if (esSupabaseConfigurado() && voluntarioId) {
+    try {
+      const supabase = createClient();
+      const updateData: Record<string, unknown> = { disponible };
+      if (vehiculoTipo) updateData.vehiculo_tipo = vehiculoTipo;
+      await supabase.from('usuarios').update(updateData).eq('id', voluntarioId);
+    } catch {
+      // Fallback
+    }
+  }
+
+  return {
+    exito: true,
+    mensaje: `Disponibilidad actualizada: ${disponible ? 'Activo para rescates hoy' : 'No disponible'}`,
+  };
 }
 
 // ---------------------------------------------------------------------------

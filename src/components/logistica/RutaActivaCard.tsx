@@ -32,6 +32,7 @@ export interface MisionActiva {
 
 interface RutaActivaCardProps {
   mision: MisionActiva;
+  onLiberarMision?: (misionId: string) => Promise<void> | void;
   className?: string;
 }
 
@@ -42,6 +43,7 @@ interface RutaActivaCardProps {
  */
 export function RutaActivaCard({
   mision,
+  onLiberarMision,
   className = '',
 }: RutaActivaCardProps) {
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
@@ -216,6 +218,17 @@ export function RutaActivaCard({
           />
           <span>Confirmar Entrega en Comedor</span>
         </Link>
+
+        {onLiberarMision && (
+          <button
+            type="button"
+            onClick={() => onLiberarMision(mision.id)}
+            className="min-h-[44px] w-full px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-300 border border-amber-500/40 font-mono text-xs font-bold flex items-center justify-center gap-2 transition-colors select-none text-center"
+            title="Liberar asignación si tuviste un imprevisto mecánico o fuerza mayor (RF-010)"
+          >
+            <span>⚠️ Reportar Imprevisto / Liberar Donación (RF-010)</span>
+          </button>
+        )}
       </nav>
     </article>
   );

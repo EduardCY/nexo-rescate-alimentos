@@ -509,7 +509,17 @@ export async function confirmarEntrega(rawInput: EntregaInput): Promise<Confirma
     };
   }
 
+  const cantidadFinalKg = input.cantidadRealRecibidaKg !== undefined
+    ? input.cantidadRealRecibidaKg
+    : input.mermaKg !== undefined
+    ? Math.max(0, donacion.cantidadEstimada - input.mermaKg)
+    : donacion.cantidadEstimada;
+
   const textoObservaciones = `Receptor: ${input.nombreReceptor.trim()} | Estado físico: ${input.estadoFisico}${
+    input.mermaKg ? ` | Merma descartada: ${input.mermaKg} kg` : ''
+  }${
+    input.cantidadRealRecibidaKg ? ` | Cantidad neta recibida: ${input.cantidadRealRecibidaKg} kg` : ''
+  }${
     input.observaciones?.trim() ? ` | Notas: ${input.observaciones.trim()}` : ''
   }`;
 
@@ -526,6 +536,7 @@ export async function confirmarEntrega(rawInput: EntregaInput): Promise<Confirma
         .update({
           estado: 'ENTREGADA',
           entregada_at: ahoraUtcIso,
+          cantidad_estimada: cantidadFinalKg,
         })
         .eq('id', targetId)
         .eq('estado', 'ASIGNADA')
@@ -548,6 +559,7 @@ export async function confirmarEntrega(rawInput: EntregaInput): Promise<Confirma
 
         const donacionEntregada: Donacion = {
           ...donacion,
+          cantidadEstimada: cantidadFinalKg,
           estado: 'ENTREGADA',
           entregadaAt: ahoraUtcIso,
         };
@@ -578,6 +590,7 @@ export async function confirmarEntrega(rawInput: EntregaInput): Promise<Confirma
   const vol = globalThis.__NEXO_DONACIONES_VOLATILES?.get(input.donacionId) || donacion;
   const actualizadaVol: Donacion = {
     ...vol,
+    cantidadEstimada: cantidadFinalKg,
     estado: 'ENTREGADA',
     entregadaAt: ahoraUtcIso,
   };

@@ -183,8 +183,13 @@ export function puedeAccederRuta(
   // Normalizar ruta eliminando trailing slash y querystrings
   const rutaLimpia = pathname.split('?')[0].replace(/\/+$/, '') || '/';
 
-  // 1. Módulo de Administración exclusivo para ADMIN (CA-05.2)
-  if (rutaLimpia.startsWith('/admin')) {
+  // 1. Módulo de Administración de Usuarios: accesible para ADMIN y COORDINADOR (Mesa Común)
+  if (rutaLimpia.startsWith('/admin/usuarios')) {
+    return rol === 'ADMIN' || rol === 'COORDINADOR';
+  }
+
+  // Rutas administrativas generales y de configuración reservadas exclusivamente para ADMIN (CA-05.2)
+  if (rutaLimpia.startsWith('/admin') || rutaLimpia.startsWith('/configuracion')) {
     return rol === 'ADMIN';
   }
 
@@ -198,9 +203,9 @@ export function puedeAccederRuta(
     return rol === 'DONANTE' || rol === 'ADMIN';
   }
 
-  // 4. Ruta Activa reservada para VOLUNTARIO, COORDINADOR y ADMIN
+  // 4. Ruta Activa reservada para VOLUNTARIO, RECEPTOR (transporte propio del comedor), COORDINADOR y ADMIN
   if (rutaLimpia.startsWith('/ruta-activa')) {
-    return rol === 'VOLUNTARIO' || rol === 'COORDINADOR' || rol === 'ADMIN';
+    return rol === 'VOLUNTARIO' || rol === 'RECEPTOR' || rol === 'COORDINADOR' || rol === 'ADMIN';
   }
 
   // 5. Entregas reservado para RECEPTOR, VOLUNTARIO, COORDINADOR y ADMIN

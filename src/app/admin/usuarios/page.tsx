@@ -11,8 +11,9 @@ import { UsuariosAdminTable } from '@/components/admin/UsuariosAdminTable';
 /**
  * Consola de Administración de Usuarios y Gobernanza RBAC (`/admin/usuarios` — CMP-05 / TASK-25).
  *
- * ¿Por qué?: Aplica el confinamiento estricto CA-05.1 y CA-05.2, bloqueando cualquier rol distinto
- * a `ADMIN` con un estado 403 Forbidden explícito.
+ * ¿Por qué?: Aplica el confinamiento estricto CA-05.1 y CA-05.2, permitiendo la gestión
+ * de usuarios y aprobación de solicitudes públicas tanto a ADMIN como a COORDINADOR
+ * (Mesa Común), mientras que bloquea con 403 Forbidden a roles operativos (VOLUNTARIO, DONANTE, RECEPTOR).
  */
 export default function AdminUsuariosPage() {
   const { sesion } = useSession();
@@ -55,11 +56,11 @@ export default function AdminUsuariosPage() {
 
         {!autorizado ? (
           <RoleGuardBanner
-            rolActual={sesion?.rol || 'SIN CREDENCIAL ADMIN'}
+            rolActual={sesion?.rol || 'SIN CREDENCIAL'}
             moduloRestringido="Consola de Administración de Usuarios y Roles (/admin/usuarios)"
             mensajePersonalizado={
               !sesion
-                ? 'Debes iniciar sesión con una cuenta de rol ADMIN en /login para gestionar usuarios y permisos.'
+                ? 'Debes iniciar sesión con una cuenta de rol ADMIN o COORDINADOR en /login para gestionar usuarios y permisos.'
                 : undefined
             }
           />
@@ -67,7 +68,7 @@ export default function AdminUsuariosPage() {
           <UsuariosAdminTable
             actorAdmin={{
               id: sesion!.id || sesion!.userId || '00000000-0000-4000-8000-000000000001',
-              rol: 'ADMIN',
+              rol: sesion!.rol,
               estadoCuenta: sesion!.estadoCuenta,
             }}
           />

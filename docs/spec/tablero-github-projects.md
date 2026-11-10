@@ -1113,7 +1113,7 @@ Como QA Engineer, debo construir la suite de pruebas transversales que valide la
 #### Issue TASK-33: Revisión Transversal Final 360°, Aprobación de PRs en GitHub y Cierre de DoD en Main
 * **Título:** `[TASK-33] Ejecutar Revisión Transversal Final 360°, auditoría y merge de PRs junto a QA, validación de Gobierno y cierre DoD en main`
 * **Campos del Tablero:**
-  * **Status:** `Por hacer`
+  * **Status:** `Terminado`
   * **CMP:** `TRANSVERSAL`
   * **Origen:** `Gobernanza Módulo 3`
   * **Estimación:** `3`
@@ -1127,6 +1127,37 @@ Como Product Owner, debo liderar junto a QA (Felipe Charria) la revisión cruzad
 ### Entregables
 - Historial de Pull Requests revisados, aprobados y fusionados en GitHub con trazabilidad individual por autor.
 - Checklist de Definición de Terminado (DoD) al 100% en `docs/spec/comportamientos.md` y `docs/spec/tablero-github-projects.md`.
+```
+
+---
+
+#### Issue TASK-34: Plan de Auditoría Integral y Alineación con Caso de Estudio C0 (Fundación Mesa Común)
+* **Título:** `[TASK-34] Plan de Auditoría Integral, Gobernanza RBAC Unificada (Coordinador y Receptor), Caso C0, PWA WCAG y Sincronización en Producción`
+* **Campos del Tablero:**
+  * **Status:** `Terminado`
+  * **CMP:** `TRANSVERSAL`
+  * **Origen:** `Caso de Estudio C0 / Auditoría Integral UAO`
+  * **Estimación:** `5`
+  * **Assignee:** Eduard Criollo Yule (`Product Owner / Lead Architect`)
+  * **Labels:** `tarea`, `auditoria`, `rbac`, `pwa`, `caso-c0`, `release`
+
+```markdown
+### Contexto y Descripción Técnica
+Auditoría técnica y de negocio integral sobre el caso de estudio C0 (Fundación Mesa Común - Marcela Ocampo y Diana).
+Implementación de:
+1. Gobernanza RBAC: Unificación de permisos para que COORDINADOR pueda gestionar comedores y aprobar solicitudes en `/admin/usuarios` (`PENDIENTE_AUTORIZACION`).
+2. Caso C0 Comedor Transporte Propio: Habilitación de "Recogida con transporte propio del comedor" para rol RECEPTOR con validación de cadena de frío (`RF-009` / `RF-014`).
+3. Voluntarios de Transporte: Conmutador de disponibilidad en perfil (`RF-003`) y liberación de misión por contingencia mecánica (`RF-010`).
+4. Cierre de Custodia: Registro de mermas y kilogramos descartados en la entrega física en comedor (`RF-012`).
+5. Erradicación de Vistas Fantasma: Eliminación del botón cerrar `✕` en `WindowFrame.tsx` y sub-vistas duplicadas en `NexoApp.tsx`.
+6. Estándar PWA: Accesibilidad WCAG 2.1 AA (`userScalable: true`, `maximumScale: 5`) y actualización de Service Worker a versión `nexo-pwa-v3`.
+7. Métricas de Impacto: Incorporación de indicadores de organizaciones participantes (donantes y comedores aliados).
+
+### Entregables
+- `docs/spec/ARQUITECTURA_PORTALES_ROLES_Y_TAREAS_EXTRAS.md`, `docs/spec/requisitos.md`, `docs/spec/comportamientos.md`.
+- Verificación estática `scripts/verify-rbac-routes.mjs`.
+- Suite automatizada con 15 archivos pasando y 98 tests verdes.
+- Despliegue en producción verificado.
 ```
 
 ---

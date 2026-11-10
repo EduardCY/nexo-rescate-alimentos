@@ -66,11 +66,18 @@ describe('TASK-14: Gobernanza RBAC y Agregador de Impacto Real (Zero Invented Da
       expect(puedeAccederRuta('VOLUNTARIO', '/configuracion')).toBe(false);
     });
 
-    test('puedeAccederRuta reserva /admin/usuarios exclusivamente para ADMIN', () => {
+    test('puedeAccederRuta reserva /admin/usuarios para ADMIN y COORDINADOR (Mesa Común)', () => {
       expect(puedeAccederRuta('ADMIN', '/admin/usuarios')).toBe(true);
-      expect(puedeAccederRuta('COORDINADOR', '/admin/usuarios')).toBe(false);
+      expect(puedeAccederRuta('COORDINADOR', '/admin/usuarios')).toBe(true);
       expect(puedeAccederRuta('DONANTE', '/admin/usuarios')).toBe(false);
       expect(puedeAccederRuta('RECEPTOR', '/admin/usuarios')).toBe(false);
+      expect(puedeAccederRuta('VOLUNTARIO', '/admin/usuarios')).toBe(false);
+    });
+
+    test('puedeAccederRuta reserva otras rutas /admin exclusivamente para ADMIN', () => {
+      expect(puedeAccederRuta('ADMIN', '/admin')).toBe(true);
+      expect(puedeAccederRuta('COORDINADOR', '/admin')).toBe(false);
+      expect(puedeAccederRuta('COORDINADOR', '/configuracion')).toBe(false);
     });
 
     test('puedeAccederRuta bloquea cualquier ruta si la cuenta está SUSPENDIDA', () => {

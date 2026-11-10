@@ -14,6 +14,7 @@ interface DonacionCardProps {
   tomando?: boolean;
   mostrarExpirada?: boolean;
   ocultarBotonTomar?: boolean;
+  textoBotonTomar?: string;
   accionExtra?: React.ReactNode;
   className?: string;
 }
@@ -39,6 +40,7 @@ export function DonacionCard({
   tomando = false,
   mostrarExpirada = false,
   ocultarBotonTomar = false,
+  textoBotonTomar,
   accionExtra,
   className = '',
 }: DonacionCardProps) {
@@ -181,7 +183,7 @@ export function DonacionCard({
             ) : (
               <>
                 <Check className="w-4 h-4" />
-                <span>TOMAR DONACIÓN</span>
+                <span>{textoBotonTomar || 'TOMAR DONACIÓN'}</span>
               </>
             )}
           </button>

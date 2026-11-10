@@ -142,14 +142,16 @@ export function MetricasDashboard() {
 
         <article className="rounded-2xl backdrop-blur-md bg-slate-900/85 border border-purple-500/40 p-4">
           <div className="flex items-center justify-between text-purple-400 mb-2">
-            <span className="font-mono text-xs uppercase font-bold">Comedores Abastecidos</span>
+            <span className="font-mono text-xs uppercase font-bold">Comedores y Aliados</span>
             <Building2 className="w-5 h-5" />
           </div>
           <p className="font-mono text-3xl font-extrabold text-white">
-            {m.comedoresAbastecidos} <span className="text-sm text-purple-400">sedes</span>
+            {m.comedoresAbastecidos} <span className="text-sm text-purple-400">comedores</span>
           </p>
           <p className="text-[11px] font-mono text-slate-400 mt-1">
-            Organizaciones receptoras verificadas en Cali
+            {m.donantesParticipantes !== undefined
+              ? `${m.donantesParticipantes} donantes • ${m.comedoresAbastecidos} comedores activos`
+              : 'Organizaciones receptoras verificadas en Cali'}
           </p>
         </article>
       </div>

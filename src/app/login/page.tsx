@@ -197,7 +197,11 @@ function LoginContent() {
       };
 
       await establecerSesion(sesionDemo);
-      router.push('/');
+      if (typeof window !== 'undefined') {
+        window.location.assign('/');
+      } else {
+        router.push('/');
+      }
     } catch {
       setErrorMsg('No fue posible inicializar la sesión del rol seleccionado.');
     } finally {
@@ -245,7 +249,11 @@ function LoginContent() {
       };
 
       await establecerSesion(sesionActiva);
-      router.push('/');
+      if (typeof window !== 'undefined') {
+        window.location.assign('/');
+      } else {
+        router.push('/');
+      }
     } catch {
       setErrorMsg('Error de conexión al verificar credenciales.');
     } finally {

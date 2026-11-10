@@ -25,10 +25,28 @@ export function registrarServiceWorkerPWA(): () => void {
   }
 
   const handleLoad = () => {
+    if ('caches' in window) {
+      void window.caches
+        .keys()
+        .then((cacheNames) =>
+          Promise.all(
+            cacheNames
+              .filter((name) => name !== 'nexo-pwa-v4')
+              .map((name) => window.caches.delete(name))
+          )
+        )
+        .catch(() => undefined);
+    }
+
     if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {
-        // Silencioso en entornos de desarrollo sin HTTPS
-      });
+      navigator.serviceWorker
+        .register('/sw.js', { updateViaCache: 'none' })
+        .then((reg) => {
+          void reg.update();
+        })
+        .catch(() => {
+          // Silencioso en entornos de desarrollo sin HTTPS
+        });
     }
   };
 

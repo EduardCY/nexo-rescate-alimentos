@@ -2,21 +2,16 @@
  * Service Worker PWA - Nexo Rescate de Alimentos Cali (TASK-28 / RNF-002 / CA-PWA.2 / CA-PWA.3)
  *
  * Estrategias diferenciadas de caché:
- * 1. Pre-cache del App Shell en `install`: '/', '/donaciones', '/rastreo', '/~offline', '/manifest.json'.
+ * 1. Pre-cache seguro del App Shell en `install` (verificando `!response.redirected` para evitar respuestas redireccionadas en caché).
  * 2. Cache-First para activos estáticos inmutables (`/_next/static/*`, `/icons/*`, `.png`, `.svg`, `.woff2`, `.css`).
- * 3. Stale-While-Revalidate para navegaciones HTML (`request.mode === 'navigate'`) con degradación a `/~offline`.
+ * 3. Network-First con desinfección de bandera `redirected` para navegaciones HTML (`request.mode === 'navigate'`) y degradación a caché local o `/~offline`.
  * 4. Network-First para consultas dinámicas.
  */
 
-const CACHE_NAME = 'nexo-pwa-v3';
+const CACHE_NAME = 'nexo-pwa-v4';
 
 const APP_SHELL_ROUTES = [
-  '/',
   '/login',
-  '/donaciones',
-  '/donar',
-  '/ruta-activa',
-  '/rastreo',
   '/~offline',
   '/manifest.json',
   '/icons/icon-192x192.png',
@@ -25,6 +20,23 @@ const APP_SHELL_ROUTES = [
   '/icons/apple-touch-icon.png',
 ];
 
+/**
+ * Reconstruye una respuesta eliminando la bandera `redirected: true` cuando sea necesario.
+ * En Chromium, devolver una Response con `redirected === true` a una petición cuyo `redirect`
+ * mode no es `'follow'` (como toda navegación `request.mode === 'navigate'`) provoca `ERR_FAILED`.
+ */
+async function desinfectarRespuestaNavegacion(response) {
+  if (!response || !response.redirected) {
+    return response;
+  }
+  const body = await response.blob();
+  return new Response(body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: response.headers,
+  });
+}
+
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches
@@ -32,9 +44,12 @@ self.addEventListener('install', (event) => {
       .then(async (cache) => {
         for (const asset of APP_SHELL_ROUTES) {
           try {
-            await cache.add(asset);
+            const response = await fetch(asset, { cache: 'reload' });
+            if (response && response.status === 200 && !response.redirected) {
+              await cache.put(asset, response);
+            }
           } catch {
-            // Continuar pre-cacheo incluso si una ruta opcional aún no está compilada
+            // Continuar pre-cacheo incluso si una ruta opcional no está disponible
           }
         }
       })
@@ -86,10 +101,10 @@ self.addEventListener('fetch', (event) => {
   if (esActivoEstatico(url, request)) {
     event.respondWith(
       caches.match(request).then((cached) => {
-        if (cached) return cached;
+        if (cached && !cached.redirected) return cached;
         return fetch(request)
           .then((response) => {
-            if (response && response.status === 200) {
+            if (response && response.status === 200 && !response.redirected) {
               const clone = response.clone();
               caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
             }
@@ -101,33 +116,50 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. Estrategia Stale-While-Revalidate para navegaciones HTML con fallback a /~offline (CA-PWA.2 / CA-PWA.3)
+  // 2. Estrategia Network-First con protección anti-redirected para navegaciones HTML (CA-PWA.2 / CA-PWA.3)
   if (request.mode === 'navigate') {
     event.respondWith(
-      caches.open(CACHE_NAME).then(async (cache) => {
-        const cachedResponse = await cache.match(request);
-        const networkFetch = fetch(request)
-          .then((networkResponse) => {
-            if (networkResponse && networkResponse.status === 200) {
-              cache.put(request, networkResponse.clone());
-            }
-            return networkResponse;
-          })
-          .catch(() => null);
+      (async () => {
+        const cache = await caches.open(CACHE_NAME);
+        try {
+          const networkResponse = await fetch(request);
 
-        if (cachedResponse) {
-          void networkFetch;
-          return cachedResponse;
+          if (networkResponse && networkResponse.type === 'opaqueredirect') {
+            return networkResponse;
+          }
+
+          if (networkResponse && networkResponse.status === 200) {
+            const cleanResponse = await desinfectarRespuestaNavegacion(networkResponse);
+            if (!networkResponse.redirected) {
+              await cache.put(request, cleanResponse.clone());
+            }
+            return cleanResponse;
+          }
+
+          if (networkResponse) {
+            return await desinfectarRespuestaNavegacion(networkResponse);
+          }
+        } catch {
+          // Sin conexión a red: degradar a caché local o página /~offline
         }
 
-        const liveResponse = await networkFetch;
-        if (liveResponse) return liveResponse;
+        const cachedResponse = await cache.match(request);
+        if (cachedResponse) {
+          return await desinfectarRespuestaNavegacion(cachedResponse);
+        }
 
         const offlineFallback = await cache.match('/~offline');
-        if (offlineFallback) return offlineFallback;
+        if (offlineFallback) {
+          return await desinfectarRespuestaNavegacion(offlineFallback);
+        }
 
-        return (await cache.match('/')) || Response.error();
-      })
+        const loginFallback = await cache.match('/login');
+        if (loginFallback) {
+          return await desinfectarRespuestaNavegacion(loginFallback);
+        }
+
+        return Response.error();
+      })()
     );
     return;
   }
@@ -136,7 +168,7 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(request)
       .then((response) => {
-        if (response && response.status === 200) {
+        if (response && response.status === 200 && !response.redirected) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
         }
@@ -144,8 +176,10 @@ self.addEventListener('fetch', (event) => {
       })
       .catch(async () => {
         const cached = await caches.match(request);
-        if (cached) return cached;
-        return (await caches.match('/~offline')) || Response.error();
+        if (cached) return await desinfectarRespuestaNavegacion(cached);
+        const offline = await caches.match('/~offline');
+        if (offline) return await desinfectarRespuestaNavegacion(offline);
+        return Response.error();
       })
   );
 });

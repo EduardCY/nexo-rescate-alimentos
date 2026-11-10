@@ -60,7 +60,7 @@ export function middleware(request: NextRequest) {
     ? (rawEstado as EstadoCuenta)
     : 'ACTIVO';
 
-  // 1. Zero-Trust Auth Gate: Si no está autenticado, redirigir a /login
+  // 1. Zero-Trust Auth Gate: Si no está autenticado, presentar /login con HTTP 200 (evita respuestas redirected: true en Service Worker)
   if (!rol) {
     const accept = request.headers.get('accept') || '';
     if (accept.includes('application/json')) {
@@ -77,7 +77,7 @@ export function middleware(request: NextRequest) {
     if (pathname !== '/') {
       loginUrl.searchParams.set('from', pathname);
     }
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.rewrite(loginUrl);
   }
 
   // 2. Control de estado de cuenta: Si no está ACTIVO (ej. PENDIENTE_AUTORIZACION o SUSPENDIDO)
@@ -95,7 +95,7 @@ export function middleware(request: NextRequest) {
     }
     const loginUrl = new URL('/login', request.url);
     loginUrl.searchParams.set('estado', estadoCuenta.toLowerCase());
-    return NextResponse.redirect(loginUrl);
+    return NextResponse.rewrite(loginUrl);
   }
 
   // 3. Matriz RBAC: Verificar si el rol tiene autorización para la ruta

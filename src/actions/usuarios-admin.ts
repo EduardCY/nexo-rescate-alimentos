@@ -115,7 +115,7 @@ export interface EventoAuditoriaRBAC {
   adminId: string;
   usuarioAfectadoId: string;
   usuarioAfectadoEmail?: string;
-  accion: 'CREAR' | 'EDITAR_ROL' | 'EDITAR_PERMISOS' | 'SUSPENDER' | 'REACTIVAR' | 'ENROLAR_2FA' | 'RESET_2FA';
+  accion: 'CREAR' | 'EDITAR_ROL' | 'EDITAR_PERMISOS' | 'SUSPENDER' | 'REACTIVAR' | 'ENROLAR_2FA' | 'RESET_2FA' | 'LOGIN_DIRECTO_PASSWORD';
   rolAnterior?: string | null;
   rolNuevo?: string | null;
   estadoAnterior?: string | null;
@@ -512,6 +512,12 @@ export async function autenticarPorCorreoAction(
 export type Paso1LoginResultado =
   | {
       exito: true;
+      bypass2FA: true;
+      sesion: SesionUsuarioActiva;
+    }
+  | {
+      exito: true;
+      bypass2FA: false;
       requiereSetup2FA: true;
       userId: string;
       tempAuthToken: string;
@@ -523,6 +529,7 @@ export type Paso1LoginResultado =
     }
   | {
       exito: true;
+      bypass2FA: false;
       requiereSetup2FA: false;
       userId: string;
       tempAuthToken: string;
@@ -535,6 +542,17 @@ export type Paso1LoginResultado =
       mensaje: string;
       estadoCuenta?: EstadoCuentaUsuario;
     };
+
+/**
+ * Determina si el Segundo Factor de Autenticación (Google Authenticator) está habilitado.
+ * Retorna false si NEXT_PUBLIC_ENABLE_2FA === 'false' o ENABLE_TOTP_2FA === 'false'.
+ */
+function es2FAHabilitado(): boolean {
+  if (process.env.NEXT_PUBLIC_ENABLE_2FA === 'false' || process.env.ENABLE_TOTP_2FA === 'false') {
+    return false;
+  }
+  return true;
+}
 
 export type Paso2LoginResultado =
   | {
@@ -618,6 +636,38 @@ export async function validarCredencialesPaso1Action(
     return { exito: false, mensaje: 'Contraseña incorrecta. Por favor verifica tus credenciales.' };
   }
 
+  // Bypass condicional de 2FA para pruebas
+  if (!es2FAHabilitado()) {
+    const sesion: SesionUsuarioActiva = {
+      id: usuario.id,
+      userId: usuario.id,
+      nombre: usuario.nombre,
+      email: usuario.email,
+      rol: usuario.rol,
+      telefono: usuario.telefono,
+      zona: 'CENTRO',
+      estadoCuenta: usuario.estadoCuenta,
+      vehiculoTipo: usuario.vehiculoTipo,
+      organizacionId: usuario.organizacionId,
+    };
+
+    obtenerBitacoraMemoria().push({
+      id: generarUuid(),
+      adminId: usuario.id,
+      usuarioAfectadoId: usuario.id,
+      usuarioAfectadoEmail: usuario.email,
+      accion: 'LOGIN_DIRECTO_PASSWORD',
+      motivo: 'Inicio de sesión validado por contraseña (2FA desactivado por feature flag NEXT_PUBLIC_ENABLE_2FA)',
+      timestamp: new Date().toISOString(),
+    });
+
+    return {
+      exito: true,
+      bypass2FA: true,
+      sesion,
+    };
+  }
+
   const tempAuthToken = firmarDesafioAuth(usuario.id, usuario.email);
 
   if (!usuario.totpConfigurado || !usuario.totpSecret) {
@@ -625,6 +675,7 @@ export async function validarCredencialesPaso1Action(
     const qrDataUrl = await generarQrDataUrl(uri);
     return {
       exito: true,
+      bypass2FA: false,
       requiereSetup2FA: true,
       userId: usuario.id,
       tempAuthToken,
@@ -638,6 +689,7 @@ export async function validarCredencialesPaso1Action(
 
   return {
     exito: true,
+    bypass2FA: false,
     requiereSetup2FA: false,
     userId: usuario.id,
     tempAuthToken,

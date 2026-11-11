@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, beforeEach } from 'vitest';
 import * as OTPAuth from 'otpauth';
 import {
   hashPassword,
@@ -115,6 +115,11 @@ describe('Módulo Criptográfico: Contraseñas y Google Authenticator TOTP (RFC 
     const emailTest = 'voluntario@mesacomun.org';
     const passwordCorrecta = 'Nexo2026*!';
 
+    beforeEach(() => {
+      // Por defecto en la suite de 2FA aseguramos que el flag esté activo para probar el flujo criptográfico
+      process.env.NEXT_PUBLIC_ENABLE_2FA = 'true';
+    });
+
     it('Paso 1: rechaza contraseña incorrecta y acepta contraseña correcta emitiendo desafío', async () => {
       // Contraseña incorrecta
       const resErr = await validarCredencialesPaso1Action(emailTest, 'PasswordEquivocada');
@@ -123,7 +128,7 @@ describe('Módulo Criptográfico: Contraseñas y Google Authenticator TOTP (RFC 
       // Contraseña correcta
       const resOk = await validarCredencialesPaso1Action(emailTest, passwordCorrecta);
       expect(resOk.exito).toBe(true);
-      if (resOk.exito && resOk.requiereSetup2FA) {
+      if (resOk.exito && 'requiereSetup2FA' in resOk && resOk.requiereSetup2FA) {
         expect(resOk.tempAuthToken).toBeDefined();
         expect(resOk.requiereSetup2FA).toBe(true);
         expect(resOk.qrDataUrl).toMatch(/^data:image\/png;base64,/);
@@ -135,7 +140,7 @@ describe('Módulo Criptográfico: Contraseñas y Google Authenticator TOTP (RFC 
       // 1. Validar paso 1
       const paso1 = await validarCredencialesPaso1Action(emailTest, passwordCorrecta);
       expect(paso1.exito).toBe(true);
-      if (!paso1.exito || !paso1.requiereSetup2FA) throw new Error('Se esperaba enrolamiento');
+      if (!paso1.exito || !('requiereSetup2FA' in paso1) || !paso1.requiereSetup2FA) throw new Error('Se esperaba enrolamiento');
 
       // Generar código con la clave secreta emitida
       const totp = new OTPAuth.TOTP({
@@ -162,7 +167,7 @@ describe('Módulo Criptográfico: Contraseñas y Google Authenticator TOTP (RFC 
       // 3. En el siguiente inicio de sesión, el usuario ya tiene 2FA configurado
       const paso1Siguiente = await validarCredencialesPaso1Action(emailTest, passwordCorrecta);
       expect(paso1Siguiente.exito).toBe(true);
-      if (paso1Siguiente.exito) {
+      if (paso1Siguiente.exito && 'requiereSetup2FA' in paso1Siguiente) {
         expect(paso1Siguiente.requiereSetup2FA).toBe(false);
 
         // 4. Iniciar sesión mediante Paso 2B (usuario recurrente)
@@ -187,9 +192,22 @@ describe('Módulo Criptográfico: Contraseñas y Google Authenticator TOTP (RFC 
       // Ahora el siguiente login debe volver a exigir enrolamiento inicial (Paso 2A con QR)
       const paso1PostReset = await validarCredencialesPaso1Action(emailTest, passwordCorrecta);
       expect(paso1PostReset.exito).toBe(true);
-      if (paso1PostReset.exito && paso1PostReset.requiereSetup2FA) {
+      if (paso1PostReset.exito && 'requiereSetup2FA' in paso1PostReset && paso1PostReset.requiereSetup2FA) {
         expect(paso1PostReset.requiereSetup2FA).toBe(true);
         expect(paso1PostReset.qrDataUrl).toBeDefined();
+      }
+    });
+
+    it('Bypass condicional: cuando NEXT_PUBLIC_ENABLE_2FA es false emite la sesión corporativa directa', async () => {
+      process.env.NEXT_PUBLIC_ENABLE_2FA = 'false';
+      const resBypass = await validarCredencialesPaso1Action(emailTest, passwordCorrecta);
+      expect(resBypass.exito).toBe(true);
+      if (resBypass.exito && resBypass.bypass2FA) {
+        expect(resBypass.bypass2FA).toBe(true);
+        expect(resBypass.sesion.rol).toBe('VOLUNTARIO');
+        expect(resBypass.sesion.email).toBe(emailTest);
+      } else {
+        throw new Error('Se esperaba bypass de 2FA cuando el flag es false');
       }
     });
   });

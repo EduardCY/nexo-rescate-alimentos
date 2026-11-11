@@ -150,6 +150,7 @@ function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { sesion, establecerSesion } = useSession();
+  const enable2FA = process.env.NEXT_PUBLIC_ENABLE_2FA !== 'false';
 
   const [pestana, setPestana] = useState<'sandbox' | 'login' | 'postulacion'>('sandbox');
   const [cargando, setCargando] = useState(false);
@@ -266,6 +267,21 @@ function LoginContent() {
           return;
         }
         setErrorMsg(res.mensaje);
+        return;
+      }
+
+      // Si 2FA está desactivado temporalmente para pruebas (bypass2FA)
+      if (res.bypass2FA) {
+        await establecerSesion(res.sesion);
+        const rutaDestino =
+          res.sesion.rol === 'VOLUNTARIO'
+            ? '/ruta-activa'
+            : res.sesion.rol === 'DONANTE'
+            ? '/donar'
+            : res.sesion.rol === 'RECEPTOR'
+            ? '/donaciones'
+            : '/';
+        router.push(rutaDestino);
         return;
       }
 
@@ -733,7 +749,13 @@ function LoginContent() {
                     className="btn-98 w-full py-2 font-bold text-xs text-[#000080] flex items-center justify-center gap-2 hover:bg-[#000080] hover:text-white"
                   >
                     <LogIn className="w-4 h-4" />
-                    <span>{cargando ? 'Verificando credenciales...' : 'Continuar a Verificación 2FA >'}</span>
+                    <span>
+                      {cargando
+                        ? 'Verificando credenciales...'
+                        : enable2FA
+                        ? 'Continuar a Verificación 2FA >'
+                        : 'Ingresar al Sistema >'}
+                    </span>
                   </button>
                 </form>
               </div>

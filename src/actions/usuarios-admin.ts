@@ -1,10 +1,20 @@
 'use server';
 
+import crypto from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { z } from 'zod';
 import { createClient, esSupabaseConfigurado } from '@/lib/supabase/server';
 import { UUID_REGEX } from '@/lib/utils/uuid-helper';
 import { esRolAutoRegistrablePublico } from '@/lib/rbac/permisos';
+import type { SesionUsuarioActiva } from '@/actions/organizaciones';
+import {
+  hashPassword,
+  verifyPassword,
+  generarSecretoTOTP,
+  generarQrDataUrl,
+  verificarTokenTOTP,
+  PASSWORD_SEED_DEFAULT,
+} from '@/lib/auth/password-totp';
 import type {
   EstadoCuentaUsuario,
   ResultadoAccionAdmin,
@@ -105,7 +115,7 @@ export interface EventoAuditoriaRBAC {
   adminId: string;
   usuarioAfectadoId: string;
   usuarioAfectadoEmail?: string;
-  accion: 'CREAR' | 'EDITAR_ROL' | 'EDITAR_PERMISOS' | 'SUSPENDER' | 'REACTIVAR';
+  accion: 'CREAR' | 'EDITAR_ROL' | 'EDITAR_PERMISOS' | 'SUSPENDER' | 'REACTIVAR' | 'ENROLAR_2FA' | 'RESET_2FA';
   rolAnterior?: string | null;
   rolNuevo?: string | null;
   estadoAnterior?: string | null;
@@ -129,6 +139,9 @@ interface FilaUsuarioDb {
   estado_cuenta: EstadoCuentaUsuario;
   permisos_granulares?: unknown;
   created_at: string;
+  password_hash?: string | null;
+  totp_secret?: string | null;
+  totp_configurado?: boolean | null;
 }
 
 /** Respuesta JSON de las RPC `rbac_*`. */
@@ -149,31 +162,119 @@ declare global {
 const ES_ENTORNO_TEST = process.env.NODE_ENV === 'test' || Boolean(process.env.VITEST);
 const ADMIN_SEED_UUID = '00000000-0000-4000-8000-000000000001';
 const COORDINADOR_SEED_UUID = '00000000-0000-4000-8000-000000000002';
+const DONANTE_SEED_UUID = '00000000-0000-4000-8000-000000000003';
+const VOLUNTARIO_SEED_UUID = '00000000-0000-4000-8000-000000000004';
+const RECEPTOR_SEED_UUID = '00000000-0000-4000-8000-000000000005';
+
+function crearUsuariosSemillaPorDefecto(): Map<string, UsuarioCorporativo> {
+  const hashSeed = hashPassword(PASSWORD_SEED_DEFAULT);
+  const mapa = new Map<string, UsuarioCorporativo>();
+
+  const semillas: UsuarioCorporativo[] = [
+    {
+      id: ADMIN_SEED_UUID,
+      nombre: 'Administrador Corporativo Nexo',
+      email: 'admin@nexorescate.org',
+      rol: 'ADMIN',
+      telefono: '+573001112233',
+      disponible: true,
+      estadoCuenta: 'ACTIVO',
+      permisosGranulares: ['admin:users:read', 'admin:users:write', 'admin:users:approve'],
+      createdAt: '2026-10-01T00:00:00.000Z',
+      passwordHash: hashSeed,
+      totpConfigurado: false,
+    },
+    {
+      id: COORDINADOR_SEED_UUID,
+      nombre: 'Marcela Ocampo (Coordinación Operativa)',
+      email: 'coordinacion@mesacomun.org',
+      rol: 'COORDINADOR',
+      telefono: '+573150001122',
+      disponible: true,
+      estadoCuenta: 'ACTIVO',
+      permisosGranulares: ['admin:users:read', 'admin:users:approve'],
+      createdAt: '2026-10-01T00:00:00.000Z',
+      passwordHash: hashSeed,
+      totpConfigurado: false,
+    },
+    {
+      id: DONANTE_SEED_UUID,
+      nombre: 'Comercio Donante Certificado',
+      email: 'donante@mesacomun.org',
+      rol: 'DONANTE',
+      telefono: '+573162223344',
+      disponible: true,
+      estadoCuenta: 'ACTIVO',
+      permisosGranulares: [],
+      createdAt: '2026-10-01T00:00:00.000Z',
+      passwordHash: hashSeed,
+      totpConfigurado: false,
+    },
+    {
+      id: VOLUNTARIO_SEED_UUID,
+      nombre: 'Voluntario Operativo Cali',
+      email: 'voluntario@mesacomun.org',
+      rol: 'VOLUNTARIO',
+      telefono: '+573173334455',
+      vehiculoTipo: 'CARROMOTO',
+      disponible: true,
+      estadoCuenta: 'ACTIVO',
+      permisosGranulares: [],
+      createdAt: '2026-10-01T00:00:00.000Z',
+      passwordHash: hashSeed,
+      totpConfigurado: false,
+    },
+    {
+      id: RECEPTOR_SEED_UUID,
+      nombre: 'Comedor Comunitario Siloé Esperanza',
+      email: 'comedor@mesacomun.org',
+      rol: 'RECEPTOR',
+      telefono: '+573184445566',
+      disponible: true,
+      estadoCuenta: 'ACTIVO',
+      permisosGranulares: [],
+      createdAt: '2026-10-01T00:00:00.000Z',
+      passwordHash: hashSeed,
+      totpConfigurado: false,
+    },
+  ];
+
+  for (const s of semillas) {
+    mapa.set(s.id, s);
+  }
+  return mapa;
+}
 
 function obtenerAlmacenUsuarios(): Map<string, UsuarioCorporativo> {
   if (!globalThis.__NEXO_USUARIOS_RBAC) {
-    globalThis.__NEXO_USUARIOS_RBAC = new Map<string, UsuarioCorporativo>(
-      ES_ENTORNO_TEST
-        ? [
-            [
-              ADMIN_SEED_UUID,
-              {
-                id: ADMIN_SEED_UUID,
-                nombre: 'Administrador Corporativo Nexo (Test)',
-                email: 'admin@nexorescate.org',
-                rol: 'ADMIN',
-                telefono: '+573001112233',
-                disponible: true,
-                estadoCuenta: 'ACTIVO',
-                permisosGranulares: ['admin:users:read', 'admin:users:write'],
-                createdAt: '2026-10-01T00:00:00.000Z',
-              },
-            ],
-          ]
-        : []
-    );
+    globalThis.__NEXO_USUARIOS_RBAC = crearUsuariosSemillaPorDefecto();
   }
   return globalThis.__NEXO_USUARIOS_RBAC;
+}
+
+function firmarDesafioAuth(userId: string, email: string): string {
+  const ts = Date.now().toString();
+  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY || 'nexo-auth-challenge-secret-2026';
+  const hmac = crypto.createHmac('sha256', secret).update(`${userId}:${email}:${ts}`).digest('hex');
+  return Buffer.from(`${userId}:${email}:${ts}:${hmac}`).toString('base64url');
+}
+
+function verificarDesafioAuth(tempAuthToken: string, userId: string): boolean {
+  try {
+    const raw = Buffer.from(tempAuthToken, 'base64url').toString('utf8');
+    const [tokenUserId, tokenEmail, tsStr, signature] = raw.split(':');
+    if (tokenUserId !== userId) return false;
+    const ts = Number(tsStr);
+    if (Number.isNaN(ts) || Date.now() - ts > 10 * 60 * 1000) return false; // 10 min TTL
+    const secret = process.env.SUPABASE_SERVICE_ROLE_KEY || 'nexo-auth-challenge-secret-2026';
+    const expected = crypto.createHmac('sha256', secret).update(`${tokenUserId}:${tokenEmail}:${tsStr}`).digest('hex');
+    const bufSig = Buffer.from(signature, 'hex');
+    const bufExp = Buffer.from(expected, 'hex');
+    if (bufSig.length !== bufExp.length) return false;
+    return crypto.timingSafeEqual(bufSig, bufExp);
+  } catch {
+    return false;
+  }
 }
 
 function obtenerBitacoraMemoria(): EventoAuditoriaRBAC[] {
@@ -226,6 +327,9 @@ function mapearUsuario(fila: FilaUsuarioDb): UsuarioCorporativo {
     estadoCuenta: fila.estado_cuenta,
     permisosGranulares: permisos,
     createdAt: fila.created_at,
+    passwordHash: fila.password_hash ?? undefined,
+    totpSecret: fila.totp_secret ?? undefined,
+    totpConfigurado: Boolean(fila.totp_configurado),
   };
 }
 
@@ -405,6 +509,354 @@ export async function autenticarPorCorreoAction(
   return { exito: false, mensaje: 'No existe ninguna cuenta registrada con este correo en la plataforma.' };
 }
 
+export type Paso1LoginResultado =
+  | {
+      exito: true;
+      requiereSetup2FA: true;
+      userId: string;
+      tempAuthToken: string;
+      qrDataUrl: string;
+      secret: string;
+      email: string;
+      nombre: string;
+      rol: RolUsuario;
+    }
+  | {
+      exito: true;
+      requiereSetup2FA: false;
+      userId: string;
+      tempAuthToken: string;
+      email: string;
+      nombre: string;
+      rol: RolUsuario;
+    }
+  | {
+      exito: false;
+      mensaje: string;
+      estadoCuenta?: EstadoCuentaUsuario;
+    };
+
+export type Paso2LoginResultado =
+  | {
+      exito: true;
+      sesion: SesionUsuarioActiva;
+    }
+  | {
+      exito: false;
+      mensaje: string;
+    };
+
+/**
+ * Paso 1 de autenticación: Valida Correo y Contraseña segura.
+ * Si las credenciales son válidas y la cuenta está ACTIVA, retorna el desafío para el Paso 2 (TOTP)
+ * junto con el Código QR de Google Authenticator si es el primer inicio de sesión.
+ */
+export async function validarCredencialesPaso1Action(
+  email: string,
+  password: string
+): Promise<Paso1LoginResultado> {
+  const emailNormalizado = email.trim().toLowerCase();
+  if (!emailNormalizado || !emailNormalizado.includes('@')) {
+    return { exito: false, mensaje: 'Ingresa un correo electrónico corporativo válido.' };
+  }
+  if (!password) {
+    return { exito: false, mensaje: 'Ingresa tu contraseña de acceso.' };
+  }
+
+  let usuario: UsuarioCorporativo | null = null;
+
+  if (esSupabaseConfigurado()) {
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('usuarios')
+        .select('*')
+        .ilike('email', emailNormalizado)
+        .maybeSingle();
+
+      if (!error && data && esFilaUsuario(data)) {
+        usuario = mapearUsuario(data);
+        obtenerAlmacenUsuarios().set(usuario.id, usuario);
+      }
+    } catch {
+      // Continuar con memoria
+    }
+  }
+
+  if (!usuario) {
+    for (const u of Array.from(obtenerAlmacenUsuarios().values())) {
+      if (u.email.toLowerCase() === emailNormalizado) {
+        usuario = u;
+        break;
+      }
+    }
+  }
+
+  if (!usuario) {
+    return { exito: false, mensaje: 'No existe ninguna cuenta registrada con este correo en la plataforma.' };
+  }
+
+  if (usuario.estadoCuenta === 'PENDIENTE_AUTORIZACION') {
+    return {
+      exito: false,
+      estadoCuenta: 'PENDIENTE_AUTORIZACION',
+      mensaje:
+        'Tu cuenta se encuentra en revisión conforme a la Ley 1990 de 2019. Coordinación Operativa debe autorizar tu registro antes de ingresar.',
+    };
+  }
+
+  if (usuario.estadoCuenta === 'SUSPENDIDO') {
+    return {
+      exito: false,
+      estadoCuenta: 'SUSPENDIDO',
+      mensaje: 'Esta cuenta ha sido SUSPENDIDA por la administración corporativa (CA-05.2).',
+    };
+  }
+
+  const hashValido = verifyPassword(password, usuario.passwordHash);
+  if (!hashValido) {
+    return { exito: false, mensaje: 'Contraseña incorrecta. Por favor verifica tus credenciales.' };
+  }
+
+  const tempAuthToken = firmarDesafioAuth(usuario.id, usuario.email);
+
+  if (!usuario.totpConfigurado || !usuario.totpSecret) {
+    const { secret, uri } = generarSecretoTOTP(usuario.email, 'Fundación Mesa Común');
+    const qrDataUrl = await generarQrDataUrl(uri);
+    return {
+      exito: true,
+      requiereSetup2FA: true,
+      userId: usuario.id,
+      tempAuthToken,
+      qrDataUrl,
+      secret,
+      email: usuario.email,
+      nombre: usuario.nombre,
+      rol: usuario.rol,
+    };
+  }
+
+  return {
+    exito: true,
+    requiereSetup2FA: false,
+    userId: usuario.id,
+    tempAuthToken,
+    email: usuario.email,
+    nombre: usuario.nombre,
+    rol: usuario.rol,
+  };
+}
+
+/**
+ * Paso 2A: Completa el enrolamiento inicial de Google Authenticator escaneando el QR
+ * e ingresando el primer token de 6 dígitos para validar la sincronización.
+ */
+export async function completarEnrolamiento2FAAction(input: {
+  userId: string;
+  tempAuthToken: string;
+  tokenTotp: string;
+  secret: string;
+}): Promise<Paso2LoginResultado> {
+  const { userId, tempAuthToken, tokenTotp, secret } = input;
+  if (!verificarDesafioAuth(tempAuthToken, userId)) {
+    return {
+      exito: false,
+      mensaje: 'La sesión del desafío de seguridad ha expirado. Por favor inicia sesión nuevamente.',
+    };
+  }
+
+  const tokenValido = verificarTokenTOTP(tokenTotp, secret, 1);
+  if (!tokenValido) {
+    return {
+      exito: false,
+      mensaje:
+        'Código de verificación incorrecto o expirado. Revisa el código actual de 6 dígitos que muestra Google Authenticator y asegúrate de que el reloj de tu teléfono esté sincronizado.',
+    };
+  }
+
+  let usuario = obtenerAlmacenUsuarios().get(userId);
+  if (!usuario && esSupabaseConfigurado()) {
+    try {
+      const supabase = createClient();
+      const { data } = await supabase.from('usuarios').select('*').eq('id', userId).maybeSingle();
+      if (data && esFilaUsuario(data)) {
+        usuario = mapearUsuario(data);
+      }
+    } catch {}
+  }
+
+  if (!usuario) {
+    return { exito: false, mensaje: 'Usuario no encontrado en el sistema.' };
+  }
+
+  const ahoraIso = new Date().toISOString();
+  usuario.totpSecret = secret;
+  usuario.totpConfigurado = true;
+  obtenerAlmacenUsuarios().set(usuario.id, usuario);
+
+  if (esSupabaseConfigurado()) {
+    try {
+      const supabase = createClient();
+      await supabase
+        .from('usuarios')
+        .update({
+          totp_secret: secret,
+          totp_configurado: true,
+          totp_actualizado_at: ahoraIso,
+        })
+        .eq('id', userId);
+    } catch {
+      // Ignorar si las columnas no están aún creadas en Supabase
+    }
+  }
+
+  obtenerBitacoraMemoria().push({
+    id: generarUuid(),
+    adminId: userId,
+    usuarioAfectadoId: userId,
+    usuarioAfectadoEmail: usuario.email,
+    accion: 'ENROLAR_2FA',
+    motivo: 'Enrolamiento y vinculación exitosa de Google Authenticator TOTP (RFC 6238)',
+    timestamp: ahoraIso,
+  });
+
+  const sesion: SesionUsuarioActiva = {
+    id: usuario.id,
+    userId: usuario.id,
+    nombre: usuario.nombre,
+    email: usuario.email,
+    rol: usuario.rol,
+    telefono: usuario.telefono,
+    zona: 'CENTRO',
+    estadoCuenta: usuario.estadoCuenta,
+    vehiculoTipo: usuario.vehiculoTipo,
+    organizacionId: usuario.organizacionId,
+  };
+
+  return { exito: true, sesion };
+}
+
+/**
+ * Paso 2B: Valida el token TOTP de 6 dígitos de Google Authenticator para usuarios con 2FA ya vinculado.
+ */
+export async function verificarPaso2TOTPAction(input: {
+  userId: string;
+  tempAuthToken: string;
+  tokenTotp: string;
+}): Promise<Paso2LoginResultado> {
+  const { userId, tempAuthToken, tokenTotp } = input;
+  if (!verificarDesafioAuth(tempAuthToken, userId)) {
+    return {
+      exito: false,
+      mensaje: 'La sesión del desafío de seguridad ha expirado. Por favor inicia sesión nuevamente.',
+    };
+  }
+
+  let usuario = obtenerAlmacenUsuarios().get(userId);
+  if (!usuario && esSupabaseConfigurado()) {
+    try {
+      const supabase = createClient();
+      const { data } = await supabase.from('usuarios').select('*').eq('id', userId).maybeSingle();
+      if (data && esFilaUsuario(data)) {
+        usuario = mapearUsuario(data);
+      }
+    } catch {}
+  }
+
+  if (!usuario) {
+    return { exito: false, mensaje: 'Usuario no encontrado en el sistema.' };
+  }
+
+  if (!usuario.totpSecret) {
+    return { exito: false, mensaje: 'Este usuario no tiene configurado Google Authenticator.' };
+  }
+
+  const tokenValido = verificarTokenTOTP(tokenTotp, usuario.totpSecret, 1);
+  if (!tokenValido) {
+    return {
+      exito: false,
+      mensaje: 'Código de verificación incorrecto o expirado. Consulta el código actual en Google Authenticator.',
+    };
+  }
+
+  const sesion: SesionUsuarioActiva = {
+    id: usuario.id,
+    userId: usuario.id,
+    nombre: usuario.nombre,
+    email: usuario.email,
+    rol: usuario.rol,
+    telefono: usuario.telefono,
+    zona: 'CENTRO',
+    estadoCuenta: usuario.estadoCuenta,
+    vehiculoTipo: usuario.vehiculoTipo,
+    organizacionId: usuario.organizacionId,
+  };
+
+  return { exito: true, sesion };
+}
+
+/**
+ * Permite a ADMIN y COORDINADOR restablecer el 2FA de un usuario si extravió su celular.
+ */
+export async function restablecer2FAUsuarioAction(
+  adminActorId: string,
+  usuarioAfectadoId: string,
+  motivo = 'Restablecimiento de 2FA solicitado por el usuario'
+): Promise<ResultadoAccionAdmin<{ usuarioId: string }>> {
+  const supabase = esSupabaseConfigurado() ? createClient() : null;
+  const denegado = await verificarActorAprobador(supabase, adminActorId);
+  if (denegado) return denegado;
+
+  let usuario = obtenerAlmacenUsuarios().get(usuarioAfectadoId);
+  if (!usuario && esSupabaseConfigurado()) {
+    try {
+      const { data } = await supabase!.from('usuarios').select('*').eq('id', usuarioAfectadoId).maybeSingle();
+      if (data && esFilaUsuario(data)) {
+        usuario = mapearUsuario(data);
+      }
+    } catch {}
+  }
+
+  if (!usuario) {
+    return fallo(404, 'Usuario no encontrado');
+  }
+
+  usuario.totpSecret = null;
+  usuario.totpConfigurado = false;
+  obtenerAlmacenUsuarios().set(usuario.id, usuario);
+
+  const ahoraIso = new Date().toISOString();
+  if (esSupabaseConfigurado()) {
+    try {
+      await supabase!
+        .from('usuarios')
+        .update({
+          totp_secret: null,
+          totp_configurado: false,
+          totp_actualizado_at: ahoraIso,
+        })
+        .eq('id', usuarioAfectadoId);
+    } catch {}
+  }
+
+  obtenerBitacoraMemoria().push({
+    id: generarUuid(),
+    adminId: adminActorId,
+    usuarioAfectadoId,
+    usuarioAfectadoEmail: usuario.email,
+    accion: 'RESET_2FA',
+    motivo,
+    timestamp: ahoraIso,
+  });
+
+  return {
+    exito: true,
+    codigo: 200,
+    mensaje: '2FA restablecido correctamente. El usuario podrá escanear un nuevo Código QR en su próximo inicio de sesión.',
+    data: { usuarioId: usuarioAfectadoId },
+  };
+}
+
 /**
  * Registra una postulación pública externa (VOLUNTARIO, DONANTE, RECEPTOR).
  *
@@ -424,6 +876,7 @@ export async function registrarPostulacionPublicaAction(input: {
   direccion?: string;
   tieneRefrigeracion?: boolean;
   capacidadRacionesDia?: number;
+  password?: string;
 }): Promise<{ exito: true; usuario: UsuarioCorporativo; mensaje: string } | { exito: false; error: string }> {
   const nombre = input.nombre.trim();
   const email = input.email.trim().toLowerCase();
@@ -438,6 +891,9 @@ export async function registrarPostulacionPublicaAction(input: {
   if (telefono.length < 7) {
     return { exito: false, error: 'El teléfono debe tener al menos 7 dígitos.' };
   }
+  if (input.password && input.password.length < 8) {
+    return { exito: false, error: 'La contraseña de acceso debe tener al menos 8 caracteres.' };
+  }
 
   // Restricción estricta de roles autorregistrados
   if (!esRolAutoRegistrablePublico(input.rol)) {
@@ -449,6 +905,9 @@ export async function registrarPostulacionPublicaAction(input: {
 
   const id = generarUuid();
   const ahoraIso = new Date().toISOString();
+  const passwordHash = input.password
+    ? hashPassword(input.password)
+    : hashPassword(PASSWORD_SEED_DEFAULT);
 
   const nuevoUsuario: UsuarioCorporativo = {
     id,
@@ -462,6 +921,8 @@ export async function registrarPostulacionPublicaAction(input: {
     estadoCuenta: 'PENDIENTE_AUTORIZACION',
     permisosGranulares: [],
     createdAt: ahoraIso,
+    passwordHash,
+    totpConfigurado: false,
   };
 
   if (esSupabaseConfigurado()) {
@@ -481,6 +942,8 @@ export async function registrarPostulacionPublicaAction(input: {
             organizacion_id: input.organizacionId || null,
             estado_cuenta: 'PENDIENTE_AUTORIZACION',
             permisos_granulares: [],
+            password_hash: passwordHash,
+            totp_configurado: false,
           },
         ])
         .select('id')

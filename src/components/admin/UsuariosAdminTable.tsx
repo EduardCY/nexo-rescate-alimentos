@@ -9,6 +9,7 @@ import {
   RefreshCw,
   AlertCircle,
   History,
+  KeyRound,
 } from 'lucide-react';
 import {
   listarUsuariosCorporativos,
@@ -16,6 +17,7 @@ import {
   actualizarRolUsuario,
   cambiarEstadoCuentaUsuario,
   aprobarSolicitudUsuarioAction,
+  restablecer2FAUsuarioAction,
   listarEventosAuditoriaRBAC,
   type ActorRbac,
   type EventoAuditoriaRbac,
@@ -180,6 +182,38 @@ export function UsuariosAdminTable({ actorAdmin }: UsuariosAdminTableProps) {
     }
   };
 
+  const handleReset2FA = async (u: UsuarioCorporativo) => {
+    if (
+      typeof window !== 'undefined' &&
+      !window.confirm(
+        `¿Restablecer Google Authenticator (2FA) para ${u.nombre} (${u.email})?\n\nEl usuario tendrá que escanear un nuevo código QR en su próximo inicio de sesión.`
+      )
+    ) {
+      return;
+    }
+
+    setProcesandoId(u.id);
+    setErrorMsg(null);
+    setExitoMsg(null);
+
+    try {
+      const res = await restablecer2FAUsuarioAction(
+        actorAdmin.id,
+        u.id,
+        `Restablecimiento de 2FA solicitado por ${actorAdmin.rol}`
+      );
+
+      if (res.exito) {
+        setExitoMsg(res.mensaje);
+        await cargarDatos();
+      } else {
+        setErrorMsg(res.error);
+      }
+    } finally {
+      setProcesandoId(null);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-5 text-slate-100">
       {/* Barra superior de acciones */}
@@ -332,6 +366,7 @@ export function UsuariosAdminTable({ actorAdmin }: UsuariosAdminTableProps) {
                 <th className="py-2 px-3">Correo</th>
                 <th className="py-2 px-3">Rol Corporativo</th>
                 <th className="py-2 px-3">Estado de Cuenta</th>
+                <th className="py-2 px-3">2FA (TOTP)</th>
                 <th className="py-2 px-3 text-right">Acciones de Gobernanza</th>
               </tr>
             </thead>
@@ -341,6 +376,7 @@ export function UsuariosAdminTable({ actorAdmin }: UsuariosAdminTableProps) {
                 const esPendiente = u.estadoCuenta === 'PENDIENTE_AUTORIZACION';
                 const esMismoActor = u.id === actorAdmin.id;
                 const puedeEditarRol = actorAdmin.rol === 'ADMIN';
+                const puedeReset2FA = actorAdmin.rol === 'ADMIN' || actorAdmin.rol === 'COORDINADOR';
 
                 return (
                   <tr key={u.id} className="hover:bg-slate-800/40">
@@ -382,43 +418,71 @@ export function UsuariosAdminTable({ actorAdmin }: UsuariosAdminTableProps) {
                         {u.estadoCuenta}
                       </span>
                     </td>
-                    <td className="py-3 px-3 text-right">
-                      {esPendiente ? (
-                        <button
-                          type="button"
-                          disabled={procesandoId === u.id}
-                          onClick={() => handleAprobarUsuario(u)}
-                          className="min-h-[38px] px-3.5 py-1.5 rounded-lg font-bold inline-flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-mono shadow-md disabled:opacity-40"
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span>Aprobar Solicitud</span>
-                        </button>
-                      ) : actorAdmin.rol === 'ADMIN' ? (
-                        <button
-                          type="button"
-                          disabled={procesandoId === u.id || (esMismoActor && !esSuspendido)}
-                          onClick={() => handleToggleEstado(u)}
-                          className={`min-h-[38px] px-3 py-1.5 rounded-lg font-bold inline-flex items-center gap-1.5 disabled:opacity-40 ${
-                            esSuspendido
-                              ? 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40'
-                              : 'bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40'
-                          }`}
-                        >
-                          {esSuspendido ? (
-                            <>
-                              <ShieldCheck className="w-3.5 h-3.5" />
-                              <span>Reactivar</span>
-                            </>
-                          ) : (
-                            <>
-                              <Ban className="w-3.5 h-3.5" />
-                              <span>Suspender</span>
-                            </>
-                          )}
-                        </button>
+                    <td className="py-3 px-3">
+                      {u.totpConfigurado ? (
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-500/20 text-sky-300 border border-sky-500/40 inline-flex items-center gap-1">
+                          <ShieldCheck className="w-3 h-3 text-sky-400" />
+                          <span>2FA Activo</span>
+                        </span>
                       ) : (
-                        <span className="text-[11px] text-slate-500 font-mono">Activo</span>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 inline-flex items-center gap-1">
+                          <KeyRound className="w-3 h-3 text-amber-400" />
+                          <span>2FA Pendiente</span>
+                        </span>
                       )}
+                    </td>
+                    <td className="py-3 px-3 text-right">
+                      <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                        {esPendiente ? (
+                          <button
+                            type="button"
+                            disabled={procesandoId === u.id}
+                            onClick={() => handleAprobarUsuario(u)}
+                            className="min-h-[38px] px-3.5 py-1.5 rounded-lg font-bold inline-flex items-center gap-1.5 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-mono shadow-md disabled:opacity-40"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            <span>Aprobar Solicitud</span>
+                          </button>
+                        ) : actorAdmin.rol === 'ADMIN' ? (
+                          <button
+                            type="button"
+                            disabled={procesandoId === u.id || (esMismoActor && !esSuspendido)}
+                            onClick={() => handleToggleEstado(u)}
+                            className={`min-h-[38px] px-3 py-1.5 rounded-lg font-bold inline-flex items-center gap-1.5 disabled:opacity-40 ${
+                              esSuspendido
+                                ? 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40'
+                                : 'bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40'
+                            }`}
+                          >
+                            {esSuspendido ? (
+                              <>
+                                <ShieldCheck className="w-3.5 h-3.5" />
+                                <span>Reactivar</span>
+                              </>
+                            ) : (
+                              <>
+                                <Ban className="w-3.5 h-3.5" />
+                                <span>Suspender</span>
+                              </>
+                            )}
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-slate-500 font-mono">Activo</span>
+                        )}
+
+                        {u.totpConfigurado && puedeReset2FA && (
+                          <button
+                            type="button"
+                            disabled={procesandoId === u.id}
+                            onClick={() => handleReset2FA(u)}
+                            title="Restablecer 2FA (por extravío de celular)"
+                            className="min-h-[38px] px-2.5 py-1.5 rounded-lg font-bold inline-flex items-center gap-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-mono disabled:opacity-40"
+                          >
+                            <KeyRound className="w-3.5 h-3.5" />
+                            <span>Reset 2FA</span>
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );

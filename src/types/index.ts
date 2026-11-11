@@ -148,6 +148,9 @@ export interface UsuarioCorporativo {
   estadoCuenta: EstadoCuentaUsuario;
   permisosGranulares: string[];
   createdAt: string;
+  passwordHash?: string | null;
+  totpConfigurado?: boolean;
+  totpSecret?: string | null;
 }
 
 /** Retorno uniforme de las Server Actions de administración. Nunca lanzan por reglas de negocio. */

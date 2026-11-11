@@ -7,12 +7,14 @@ import { useSession } from '@/lib/auth/session-context';
 import { puedeAccederRuta } from '@/lib/rbac/permisos';
 import { RoleGuardBanner } from '@/components/nexo/RoleGuardBanner';
 import { MetricasDashboard } from '@/components/admin/MetricasDashboard';
+import WindowFrame from '@/components/nexo/WindowFrame';
 
 /**
  * Página dedicada al Tablero de Impacto Social y Ambiental (`/impacto` — CMP-05 / TASK-25).
  *
  * ¿Por qué?: Aplica guarda RBAC para impedir que el rol VOLUNTARIO acceda a reportes consolidados
  * (CA-05.1), reservando la vista y la exportación CSV a ADMIN y COORDINADOR.
+ * Diseñado con marco WindowFrame y diseño retro Windows 98 / SCADA.
  */
 export default function ImpactoPage() {
   const { sesion } = useSession();
@@ -22,52 +24,57 @@ export default function ImpactoPage() {
   const autorizado = Boolean(rolEval && puedeAccederRuta(rolEval, '/impacto', estadoEval));
 
   return (
-    <main className="min-h-screen bg-[#090d16] text-slate-100 p-3 sm:p-6">
-      <div className="max-w-6xl mx-auto flex flex-col gap-5">
-        <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-4">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/"
-              className="min-h-[48px] min-w-[48px] rounded-xl bg-slate-900 border border-slate-700 hover:bg-slate-800 flex items-center justify-center text-slate-200"
-              aria-label="Volver al portal principal"
-            >
-              <ArrowLeft className="w-5 h-5" aria-hidden="true" />
-            </Link>
-            <div>
-              <h1 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-emerald-400" aria-hidden="true" />
-                <span>Tablero de Impacto Social y Ambiental (CMP-05)</span>
-              </h1>
-              <p className="text-xs font-mono text-slate-400">
-                Auditoría de raciones, kilogramos rescatados y huella de carbono evitada • FAO / Ley 1990
-              </p>
+    <main className="min-h-screen bg-[#008080] p-2 sm:p-4 font-mono text-xs">
+      <div className="max-w-6xl mx-auto">
+        <WindowFrame
+          title="NEXO AUDITORÍA — TABLERO DE IMPACTO SOCIAL Y AMBIENTAL (CMP-05)"
+          icon={<BarChart3 className="w-4 h-4 text-emerald-400 shrink-0" />}
+        >
+          <div className="flex flex-col gap-3">
+            {/* Barra de herramientas retro superior */}
+            <div className="bevel-out bg-[#ece9d8] p-2 flex flex-wrap items-center justify-between gap-2 border-2 border-[#808080]">
+              <div className="flex flex-wrap items-center gap-2">
+                <Link
+                  href="/"
+                  className="btn-98 px-3 py-1.5 text-xs font-bold inline-flex items-center gap-1.5 text-black"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Volver a Mi Portal ({sesion?.rol || 'Invitado'})</span>
+                </Link>
+
+                {(sesion?.rol === 'ADMIN' || sesion?.rol === 'COORDINADOR') && (
+                  <Link
+                    href="/admin/usuarios"
+                    className="btn-98 px-3 py-1.5 text-xs font-bold inline-flex items-center gap-1.5 text-black"
+                  >
+                    <ShieldCheck className="w-3.5 h-3.5 text-red-700" />
+                    <span>Consola de Usuarios RBAC</span>
+                  </Link>
+                )}
+              </div>
+
+              <div className="text-[11px] font-mono text-slate-700 flex items-center gap-2">
+                <span className="inline-block w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
+                <span>MÉTRICAS: CÁLCULO AUDITADO FAO • LEY 1990</span>
+              </div>
             </div>
+
+            {/* Contenido protegido por RoleGuardBanner o Dashboard */}
+            {!autorizado ? (
+              <RoleGuardBanner
+                rolActual={rolEval || 'SIN SESIÓN ACTIVA'}
+                moduloRestringido="Tablero de Impacto y Métricas Ambientales (/impacto)"
+                mensajePersonalizado={
+                  !sesion
+                    ? 'Debes iniciar sesión con una cuenta de rol ADMIN o COORDINADOR en /login para consultar las métricas de impacto.'
+                    : undefined
+                }
+              />
+            ) : (
+              <MetricasDashboard />
+            )}
           </div>
-
-          {(sesion?.rol === 'ADMIN' || sesion?.rol === 'COORDINADOR') && (
-            <Link
-              href="/admin/usuarios"
-              className="min-h-[44px] px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 font-mono text-xs font-bold text-sky-300 flex items-center gap-1.5"
-            >
-              <ShieldCheck className="w-4 h-4" />
-              <span>Consola de Usuarios RBAC</span>
-            </Link>
-          )}
-        </header>
-
-        {!autorizado ? (
-          <RoleGuardBanner
-            rolActual={rolEval || 'SIN SESIÓN ACTIVA'}
-            moduloRestringido="Tablero de Impacto y Métricas Ambientales (/impacto)"
-            mensajePersonalizado={
-              !sesion
-                ? 'Debes iniciar sesión con una cuenta de rol ADMIN o COORDINADOR en /login para consultar las métricas de impacto.'
-                : undefined
-            }
-          />
-        ) : (
-          <MetricasDashboard />
-        )}
+        </WindowFrame>
       </div>
     </main>
   );

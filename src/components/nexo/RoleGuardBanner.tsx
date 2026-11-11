@@ -26,41 +26,41 @@ export function RoleGuardBanner({
     <div
       role="alert"
       aria-live="assertive"
-      className="backdrop-blur-md bg-slate-900/80 border border-red-500/40 rounded-2xl p-6 max-w-xl mx-auto text-slate-100 shadow-2xl"
+      className="bevel-out bg-[#ece9d8] border-2 border-red-700 p-4 sm:p-5 max-w-xl mx-auto text-black font-mono shadow-[6px_6px_0_rgba(0,0,0,0.5)]"
     >
-      <div className="flex items-start gap-3.5">
-        <div className="p-2.5 rounded-xl bg-red-500/20 border border-red-500/40 text-red-300 shrink-0">
-          <ShieldAlert className="w-6 h-6" aria-hidden="true" />
+      <div className="flex items-start gap-3">
+        <div className="w-10 h-10 bg-red-700 text-white flex items-center justify-center shrink-0 border border-black font-bold">
+          <ShieldAlert className="w-6 h-6 text-white" aria-hidden="true" />
         </div>
-        <div className="flex-1">
-          <div className="flex flex-wrap items-center gap-2 mb-1">
-            <span className="font-mono text-[11px] font-extrabold uppercase tracking-wider bg-red-600 text-white px-2 py-0.5 rounded">
-              HTTP 403 FORBIDDEN • RBAC CA-05.1
+        <div className="flex-1 space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[10px] font-extrabold uppercase bg-red-700 text-white px-2 py-0.5 border border-red-900">
+              HTTP 403 ACCESO DENEGADO • RBAC CA-05.1
             </span>
-            <span className="font-mono text-xs text-red-300">
-              Rol activo: <b>{rolActual}</b>
+            <span className="text-xs text-red-900 font-bold">
+              Rol activo: <u>{rolActual}</u>
             </span>
           </div>
-          <h2 className="text-base sm:text-lg font-bold text-white mb-1.5">
-            Acceso Restringido — {moduloRestringido}
+          <h2 className="text-sm sm:text-base font-bold text-black border-b border-[#a0a0a0] pb-1">
+            Restricción Normativa: {moduloRestringido}
           </h2>
-          <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-4">
+          <p className="text-xs text-gray-800 leading-relaxed bg-[#fff5f5] p-2.5 border border-red-300">
             {mensajePersonalizado ||
-              'Tu perfil se encuentra confinado exclusivamente a las operaciones autorizadas de tu rol (RNF-003 / CMP-05). Este módulo requiere credenciales de Administración o Coordinación.'}
+              'Tu cuenta se encuentra confinada exclusivamente a las operaciones de tu rol (RNF-003 / CMP-05). Para acceder a este módulo se requieren credenciales de Administración o Coordinación Operativa.'}
           </p>
-          <div className="flex flex-wrap items-center gap-2.5">
+          <div className="flex flex-wrap items-center gap-2 pt-1">
             <Link
               href="/donaciones"
-              className="min-h-[48px] px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-mono text-xs font-extrabold inline-flex items-center gap-2 transition-colors"
+              className="btn-green text-xs font-bold"
             >
-              <ArrowLeft className="w-4 h-4" aria-hidden="true" />
+              <ArrowLeft className="w-4 h-4 mr-1" aria-hidden="true" />
               <span>Volver al Catálogo Operativo</span>
             </Link>
             <Link
               href="/"
-              className="min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-600 font-mono text-xs font-bold inline-flex items-center gap-2 transition-colors"
+              className="btn-98 text-xs font-bold text-[#000080]"
             >
-              <span>Ir a mi Portal Principal</span>
+              <span>Ir a mi Portal Principal &gt;</span>
             </Link>
           </div>
         </div>

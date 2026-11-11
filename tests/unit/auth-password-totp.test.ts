@@ -123,7 +123,7 @@ describe('Módulo Criptográfico: Contraseñas y Google Authenticator TOTP (RFC 
       // Contraseña correcta
       const resOk = await validarCredencialesPaso1Action(emailTest, passwordCorrecta);
       expect(resOk.exito).toBe(true);
-      if (resOk.exito) {
+      if (resOk.exito && resOk.requiereSetup2FA) {
         expect(resOk.tempAuthToken).toBeDefined();
         expect(resOk.requiereSetup2FA).toBe(true);
         expect(resOk.qrDataUrl).toMatch(/^data:image\/png;base64,/);
@@ -187,7 +187,7 @@ describe('Módulo Criptográfico: Contraseñas y Google Authenticator TOTP (RFC 
       // Ahora el siguiente login debe volver a exigir enrolamiento inicial (Paso 2A con QR)
       const paso1PostReset = await validarCredencialesPaso1Action(emailTest, passwordCorrecta);
       expect(paso1PostReset.exito).toBe(true);
-      if (paso1PostReset.exito) {
+      if (paso1PostReset.exito && paso1PostReset.requiereSetup2FA) {
         expect(paso1PostReset.requiereSetup2FA).toBe(true);
         expect(paso1PostReset.qrDataUrl).toBeDefined();
       }

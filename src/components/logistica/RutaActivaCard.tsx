@@ -63,43 +63,47 @@ export function RutaActivaCard({
 
   return (
     <article
-      className={`rounded-2xl bg-slate-900 border-2 border-slate-700 shadow-xl p-4 sm:p-5 flex flex-col gap-4 text-slate-100 ${className}`}
+      className={`bevel-out bg-[#d4d0c8] p-3 sm:p-4 text-black font-mono text-xs space-y-3 max-w-2xl mx-auto shadow-[6px_6px_0_rgba(0,0,0,0.45)] ${className}`}
       aria-labelledby="titulo-mision-activa"
     >
-      <header className="flex items-start justify-between gap-2 border-b border-slate-800 pb-3">
-        <div>
-          <span className="text-[11px] font-mono font-bold tracking-widest text-emerald-400 uppercase bg-emerald-950/90 border border-emerald-500/40 px-2 py-0.5 rounded">
+      {/* Encabezado de la Misión */}
+      <header className="bevel-in bg-[#f5f5f5] p-3 flex flex-wrap items-center justify-between gap-2 border border-gray-400">
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-extrabold uppercase bg-amber-600 text-white px-2 py-0.5 bevel-in">
             MISIÓN EN CURSO
           </span>
           <h2
             id="titulo-mision-activa"
-            className="text-2xl font-black text-white font-mono mt-1"
+            className="text-lg font-bold text-black"
           >
-            {mision.codigo}
+            LOTE: {mision.codigo}
           </h2>
         </div>
 
-        <div className="flex flex-col items-end gap-1">
-          <span className="text-xs font-mono font-bold text-amber-300 bg-amber-950/80 border border-amber-500/50 px-2.5 py-1 rounded-md flex items-center gap-1.5">
-            <Clock className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>Retirar antes de {horaFormateada}</span>
-          </span>
+        <div className="flex items-center gap-1.5 bg-amber-100 text-amber-950 border border-amber-600 px-2.5 py-1 text-[11px] font-bold">
+          <Clock className="w-3.5 h-3.5 text-amber-700" aria-hidden="true" />
+          <span>Retirar antes de: <u>{horaFormateada}</u></span>
         </div>
       </header>
 
-      <section className="bg-slate-950/90 rounded-xl p-3.5 border border-slate-800 flex flex-col gap-2.5">
-        <div>
-          <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-bold">
-            Alimento a Rescatar
+      {/* Alimento a Rescatar */}
+      <section className="bevel-in bg-white p-3 space-y-2 border border-gray-400">
+        <div className="border-b border-gray-300 pb-1 flex items-center justify-between">
+          <span className="text-[10px] uppercase font-bold text-gray-600">
+            1. Alimento Perecedero a Transportar
           </span>
-          <p className="text-lg font-bold text-white leading-snug">
-            {mision.tipoAlimento}
-          </p>
+          <span className="text-[10px] text-[#000080] font-bold">
+            Normativa Ley 1990
+          </span>
         </div>
 
-        <div className="flex items-center gap-3 flex-wrap">
-          <div className="flex items-center gap-1.5 text-sm font-mono font-bold text-emerald-300 bg-emerald-950/50 px-2.5 py-1 rounded border border-emerald-500/30">
-            <Scale className="w-4 h-4 text-emerald-400" aria-hidden="true" />
+        <p className="text-base font-bold text-black">
+          {mision.tipoAlimento}
+        </p>
+
+        <div className="flex items-center gap-2 flex-wrap pt-1">
+          <div className="inline-flex items-center gap-1.5 bg-emerald-100 text-emerald-950 px-2 py-0.5 border border-emerald-600 font-bold text-xs">
+            <Scale className="w-3.5 h-3.5 text-emerald-700" aria-hidden="true" />
             <span>
               {mision.cantidadEstimada} {mision.unidadMedida}
             </span>
@@ -113,117 +117,92 @@ export function RutaActivaCard({
         </div>
       </section>
 
-      <section className="bg-slate-950/90 rounded-xl p-3.5 border border-slate-800 flex flex-col gap-2.5">
-        <div>
-          <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-bold flex items-center gap-1">
-            <Store className="w-3.5 h-3.5 text-slate-500" aria-hidden="true" />
-            Punto de Recogida y Comerciante Donante
+      {/* Punto de Recogida (Donante) */}
+      <section className="bevel-in bg-white p-3 space-y-2 border border-gray-400">
+        <div className="border-b border-gray-300 pb-1">
+          <span className="text-[10px] uppercase font-bold text-gray-600 flex items-center gap-1">
+            <Store className="w-3.5 h-3.5 text-[#000080]" aria-hidden="true" />
+            <span>2. Punto de Recogida (Comercio Donante)</span>
           </span>
-          <p className="text-base font-bold text-white mt-0.5">
-            {mision.donanteNombre}
-          </p>
         </div>
 
-        <div className="flex items-start gap-2 text-sm text-slate-200">
-          <MapPin
-            className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5"
-            aria-hidden="true"
-          />
-          <span className="font-medium leading-snug">
-            {mision.direccionRecogida}
-          </span>
+        <p className="text-sm font-bold text-black">
+          {mision.donanteNombre}
+        </p>
+
+        <div className="flex items-start gap-1.5 text-xs text-gray-800">
+          <MapPin className="w-4 h-4 text-[#000080] shrink-0 mt-0.5" aria-hidden="true" />
+          <span className="font-semibold">{mision.direccionRecogida}</span>
         </div>
 
         {mision.indicacionesPuesto && (
-          <div className="flex items-start gap-2 text-xs text-amber-200 bg-amber-950/40 border border-amber-500/30 rounded-lg p-2.5">
-            <Compass
-              className="w-4 h-4 text-amber-400 shrink-0 mt-0.5"
-              aria-hidden="true"
-            />
-            <div className="leading-snug">
-              <span className="font-bold block">
-                Ubicación exacta del puesto:
-              </span>
+          <div className="bg-[#fff9e6] p-2 border border-amber-400 text-amber-950 text-[11px] flex items-start gap-1.5">
+            <Compass className="w-3.5 h-3.5 text-amber-700 shrink-0 mt-0.5" aria-hidden="true" />
+            <div>
+              <span className="font-bold">Indicaciones exactas: </span>
               <span>{mision.indicacionesPuesto}</span>
             </div>
           </div>
         )}
       </section>
 
+      {/* Destino (Comedor Receptor) */}
       {mision.comedorNombre && (
-        <section className="bg-slate-950/70 rounded-xl p-3 border border-slate-800/80 text-xs text-slate-300">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-sky-400 font-bold block">
-            Destino: Comedor Comunitario
+        <section className="bevel-in bg-white p-3 space-y-1.5 border border-gray-400">
+          <span className="text-[10px] uppercase font-bold text-[#000080] block border-b border-gray-300 pb-1">
+            3. Destino: Comedor Comunitario / Olla Comunitaria
           </span>
-          <p className="font-bold text-white text-sm mt-0.5">
+          <p className="font-bold text-black text-sm">
             {mision.comedorNombre}
           </p>
           {mision.comedorDireccion && (
-            <p className="text-slate-400 mt-0.5">{mision.comedorDireccion}</p>
+            <p className="text-gray-700 text-xs">{mision.comedorDireccion}</p>
           )}
         </section>
       )}
 
-      <nav
-        aria-label="Acciones ergonómicas de campo"
-        className="flex flex-col gap-2.5 pt-1"
-      >
+      {/* Botonera de Acción Ergonómica */}
+      <nav aria-label="Acciones de campo" className="space-y-2 pt-1">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <a
             href={mapsUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="min-h-[48px] px-4 py-3 rounded-xl bg-sky-600 hover:bg-sky-500 active:bg-sky-700
-              text-white font-bold text-sm flex items-center justify-center gap-2 shadow-md shadow-sky-900/30
-              transition-colors select-none text-center
-              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+            className="btn-blue text-xs font-bold flex items-center justify-center gap-1.5 text-center min-h-[42px]"
           >
-            <Navigation className="w-5 h-5 shrink-0" aria-hidden="true" />
-            <span>Abrir en Google Maps</span>
+            <Navigation className="w-4 h-4 shrink-0" aria-hidden="true" />
+            <span>Navegar con Google Maps</span>
           </a>
 
           {mision.telefonoDonante ? (
             <a
               href={`tel:${mision.telefonoDonante}`}
-              className="min-h-[48px] px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 active:bg-slate-800/80
-                text-emerald-300 border border-emerald-500/40 font-bold text-sm flex items-center justify-center gap-2
-                transition-colors select-none text-center
-                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+              className="btn-98 text-xs font-bold flex items-center justify-center gap-1.5 text-center min-h-[42px] text-[#000080]"
             >
-              <Phone
-                className="w-5 h-5 shrink-0 text-emerald-400"
-                aria-hidden="true"
-              />
+              <Phone className="w-4 h-4 shrink-0 text-emerald-700" aria-hidden="true" />
               <span>Llamar al Comerciante</span>
             </a>
           ) : (
-            <span className="min-h-[48px] px-4 py-3 rounded-xl bg-slate-950 text-slate-400 border border-slate-800 font-mono text-xs flex items-center justify-center gap-2 text-center">
-              <Phone className="w-4 h-4 shrink-0 text-slate-500" aria-hidden="true" />
-              <span>Contacto en puesto de recogida</span>
-            </span>
+            <div className="bevel-in bg-[#f0f0f0] text-gray-500 font-mono text-[11px] flex items-center justify-center gap-1.5 text-center min-h-[42px]">
+              <Phone className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+              <span>Contacto en puesto</span>
+            </div>
           )}
         </div>
 
         <Link
           href={`/entregas/${mision.id}`}
-          className="min-h-[52px] w-full px-4 py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600
-            text-slate-950 font-black text-sm sm:text-base font-mono uppercase tracking-wider
-            flex items-center justify-center gap-2.5 shadow-lg shadow-emerald-500/20
-            transition-all select-none text-center mt-1
-            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-950"
+          className="btn-green w-full py-3 text-xs sm:text-sm font-black flex items-center justify-center gap-2 text-center"
         >
-          <CheckCircle2
-            className="w-5 h-5 text-slate-950 shrink-0"
-            aria-hidden="true"
-          />
-          <span>Confirmar Entrega en Comedor</span>
+          <CheckCircle2 className="w-4 h-4 shrink-0" aria-hidden="true" />
+          <span>CONFIRMAR ENTREGA FÍSICA EN COMEDOR &gt;</span>
         </Link>
 
         {onLiberarMision && (
           <button
             type="button"
             onClick={() => onLiberarMision(mision.id)}
-            className="min-h-[44px] w-full px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-amber-300 border border-amber-500/40 font-mono text-xs font-bold flex items-center justify-center gap-2 transition-colors select-none text-center"
+            className="btn-98 w-full py-2 text-xs font-bold text-red-800 flex items-center justify-center gap-1.5 text-center hover:bg-red-50"
             title="Liberar asignación si tuviste un imprevisto mecánico o fuerza mayor (RF-010)"
           >
             <span>⚠️ Reportar Imprevisto / Liberar Donación (RF-010)</span>

@@ -84,26 +84,24 @@ export function TimelineTracker({ rastreo }: TimelineTrackerProps) {
   return (
     <section
       aria-label={`Línea de tiempo de trazabilidad para ${donacion.codigo}`}
-      className="rounded-2xl backdrop-blur-md bg-slate-900/85 border border-slate-700/80 p-4 sm:p-6 text-slate-100 shadow-xl"
+      className="bevel-out bg-[#d4d0c8] p-3 sm:p-4 text-black font-mono text-xs space-y-3"
     >
       {/* Encabezado del Lote y Badges de Estado / Cadena Térmica */}
-      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-800 pb-4 mb-5">
-        <div>
-          <div className="flex flex-wrap items-center gap-2 mb-1.5">
-            <span className="font-mono text-xs sm:text-sm font-extrabold bg-emerald-500 text-slate-950 px-2.5 py-0.5 rounded">
+      <header className="bevel-in bg-[#f5f5f5] p-3 flex flex-wrap items-start justify-between gap-3 border border-gray-400">
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-mono text-xs font-extrabold bg-[#000080] text-white px-2 py-0.5 bevel-in">
               {donacion.codigo}
             </span>
-            <span
-              className={`font-mono text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${badge.clase}`}
-            >
+            <span className="font-mono text-[11px] font-bold px-2 py-0.5 bg-white border border-gray-500">
               {badge.label}
             </span>
           </div>
-          <h2 className="text-lg sm:text-xl font-bold text-white">
+          <h2 className="text-base sm:text-lg font-bold text-black">
             {donacion.tipoAlimento} ({donacion.cantidadEstimada} {donacion.unidadMedida})
           </h2>
-          <p className="text-xs font-mono text-slate-300 mt-1 flex items-center gap-1.5">
-            <MapPin className="w-3.5 h-3.5 text-emerald-400 shrink-0" aria-hidden="true" />
+          <p className="text-xs text-gray-700 flex items-center gap-1.5">
+            <MapPin className="w-3.5 h-3.5 text-[#000080] shrink-0" aria-hidden="true" />
             <span>
               Origen: <b>{donacion.donanteNombre}</b> — {donacion.direccionRecogida} (Zona{' '}
               {donacion.zona || 'CENTRO'})
@@ -112,153 +110,135 @@ export function TimelineTracker({ rastreo }: TimelineTrackerProps) {
         </div>
 
         {/* Badge de Condición Térmica explícita (CA-01.4) */}
-        <div className="flex flex-col items-end gap-1.5 font-mono text-xs">
+        <div className="flex flex-col items-end gap-1 text-xs">
           {donacion.requiereFrio ? (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-sky-950/90 text-sky-200 border border-sky-400/50 font-bold">
-              <Snowflake className="w-4 h-4 text-sky-300" aria-hidden="true" />
-              <span>Requiere Refrigeración (4°C - 8°C)</span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-sky-100 text-sky-950 border border-sky-600 font-bold">
+              <Snowflake className="w-4 h-4 text-sky-700" aria-hidden="true" />
+              <span>Requiere Cadena de Frío (4°C - 8°C)</span>
             </span>
           ) : (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-800 text-slate-200 border border-slate-600 font-semibold">
-              <Thermometer className="w-4 h-4 text-amber-400" aria-hidden="true" />
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-100 text-amber-950 border border-amber-600 font-bold">
+              <Thermometer className="w-4 h-4 text-amber-700" aria-hidden="true" />
               <span>Temperatura Ambiente</span>
             </span>
           )}
-          <span className="text-[11px] text-slate-400 flex items-center gap-1">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" aria-hidden="true" />
-            <span>Amparado por Ley 1990 de 2019</span>
+          <span className="text-[10px] text-gray-600 flex items-center gap-1">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" aria-hidden="true" />
+            <span>Exención Legal: Ley 1990 de 2019</span>
           </span>
         </div>
       </header>
 
-      {/* Línea de Tiempo Vertical / Horizontal de 3 Hitos de Custodia */}
-      <ol className="relative border-l-2 border-slate-700 ml-3 sm:ml-4 space-y-6">
-        {/* HITO 1: PUBLICACIÓN Y EXENCIÓN SANITARIA */}
-        <li className="ml-6">
-          <span
-            className={`absolute -left-3.5 flex h-7 w-7 items-center justify-center rounded-full ring-4 ring-slate-900 ${
-              hito1Completado ? 'bg-emerald-500 text-slate-950' : 'bg-slate-700 text-slate-300'
-            }`}
-          >
-            <Package className="w-4 h-4" aria-hidden="true" />
-          </span>
-          <div className="rounded-xl bg-slate-800/70 border border-slate-700 p-3.5">
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
-              <h3 className="text-sm font-bold text-emerald-300">
-                1. Oferta Publicada en Red (Exención Ley 1990 Aceptada)
+      {/* Diagrama de Bloques SCADA: 3 Hitos de Custodia */}
+      <div className="space-y-2">
+        <p className="font-bold text-[11px] uppercase tracking-wider text-gray-800">
+          Flujo de Custodia y Trazabilidad Operativa (3 Hitos):
+        </p>
+
+        {/* HITO 1: PUBLICACIÓN */}
+        <div className="bevel-out bg-[#ece9d8] p-3 space-y-1.5">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#a0a0a0] pb-1">
+            <div className="flex items-center gap-2">
+              <span className="text-emerald-700 font-bold text-sm">●</span>
+              <h3 className="font-bold text-xs text-black">
+                1. OFERTA PUBLICADA EN RED (EXENCIÓN LEY 1990 ACEPTADA)
               </h3>
-              <time className="font-mono text-xs text-slate-300 bg-slate-900 px-2 py-0.5 rounded">
-                {formatearFechaColombia(donacion.createdAt)}
-              </time>
             </div>
-            <p className="text-xs text-slate-300">
-              Donante: <b>{donacion.donanteNombre}</b>. Límite de retiro:{' '}
+            <time className="text-[11px] bg-white px-2 py-0.5 bevel-in font-bold text-gray-800">
+              {formatearFechaColombia(donacion.createdAt)}
+            </time>
+          </div>
+          <div className="bevel-in bg-white p-2 text-xs text-gray-800 space-y-0.5">
+            <p>
+              Donante Certificado: <b>{donacion.donanteNombre}</b>. Límite de retiro:{' '}
               <b>{formatearFechaColombia(donacion.horaLimite)}</b>.
             </p>
             {donacion.comedorNombre && (
-              <p className="text-xs text-sky-300 mt-1 font-mono">
+              <p className="text-[#000080]">
                 Comedor comunitario preasignado: <b>{donacion.comedorNombre}</b>
               </p>
             )}
           </div>
-        </li>
+        </div>
 
-        {/* HITO 2: RESERVA Y TRANSPORTE POR VOLUNTARIO */}
-        <li className="ml-6">
-          <span
-            className={`absolute -left-3.5 flex h-7 w-7 items-center justify-center rounded-full ring-4 ring-slate-900 ${
-              hito2Completado ? 'bg-amber-400 text-slate-950' : 'bg-slate-800 text-slate-400'
-            }`}
-          >
-            <Truck className="w-4 h-4" aria-hidden="true" />
-          </span>
-          <div
-            className={`rounded-xl border p-3.5 ${
-              hito2Completado
-                ? 'bg-slate-800/70 border-amber-500/40'
-                : 'bg-slate-900/50 border-slate-800 opacity-75'
-            }`}
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
-              <h3 className="text-sm font-bold text-amber-300">
-                2. Toma de Custodia y Despacho en Campo
+        <div className="text-center font-bold text-gray-500 text-xs">▼</div>
+
+        {/* HITO 2: DESPACHO EN RUTA */}
+        <div className={`bevel-out p-3 space-y-1.5 ${hito2Completado ? 'bg-[#ece9d8]' : 'bg-[#e0ded8] opacity-80'}`}>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#a0a0a0] pb-1">
+            <div className="flex items-center gap-2">
+              <span className={hito2Completado ? 'text-amber-600 font-bold text-sm' : 'text-gray-400 text-sm'}>
+                {hito2Completado ? '●' : '○'}
+              </span>
+              <h3 className="font-bold text-xs text-black">
+                2. TOMA DE CUSTODIA Y TRANSPORTE LOGÍSTICO
               </h3>
-              <time className="font-mono text-xs text-slate-300 bg-slate-900 px-2 py-0.5 rounded">
-                {hito2Completado
-                  ? formatearFechaColombia(donacion.asignadaAt || donacion.createdAt)
-                  : 'En espera de voluntario'}
-              </time>
             </div>
+            <time className="text-[11px] bg-white px-2 py-0.5 bevel-in font-bold text-gray-800">
+              {hito2Completado
+                ? formatearFechaColombia(donacion.asignadaAt || donacion.createdAt)
+                : 'En espera de voluntario'}
+            </time>
+          </div>
+          <div className="bevel-in bg-white p-2 text-xs text-gray-800">
             {hito2Completado ? (
-              <p className="text-xs text-slate-200">
-                Reservada por <b>{donacion.voluntarioNombre || 'Voluntario Verificado'}</b> hacia{' '}
-                <b>{donacion.comedorNombre || 'Comedor Comunitario Receptor'}</b>.
+              <p>
+                Asignado a: <b>{donacion.voluntarioNombre || 'Voluntario en Ruta'}</b> en desplazamiento hacia{' '}
+                <b>{donacion.comedorNombre || 'Comedor Receptor'}</b>.
               </p>
             ) : (
-              <p className="text-xs text-slate-400 flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5" aria-hidden="true" />
-                <span>Disponible en el catálogo para que un voluntario acepte el rescate.</span>
+              <p className="text-gray-500 italic">
+                Oferta disponible en el catálogo de Cali para aceptación y despacho inmediato.
               </p>
             )}
           </div>
-        </li>
+        </div>
 
-        {/* HITO 3: RECEPCIÓN FÍSICA Y ACTA EN COMEDOR */}
-        <li className="ml-6">
-          <span
-            className={`absolute -left-3.5 flex h-7 w-7 items-center justify-center rounded-full ring-4 ring-slate-900 ${
-              hito3Completado ? 'bg-sky-400 text-slate-950' : 'bg-slate-800 text-slate-400'
-            }`}
-          >
-            {hito3Completado ? (
-              <CheckCircle2 className="w-4 h-4" aria-hidden="true" />
-            ) : (
-              <Utensils className="w-4 h-4" aria-hidden="true" />
-            )}
-          </span>
-          <div
-            className={`rounded-xl border p-3.5 ${
-              hito3Completado
-                ? 'bg-sky-950/40 border-sky-500/50'
-                : 'bg-slate-900/50 border-slate-800 opacity-75'
-            }`}
-          >
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
-              <h3 className="text-sm font-bold text-sky-300">
-                3. Entrega Física y Acta Digital en Comedor Receptor
+        <div className="text-center font-bold text-gray-500 text-xs">▼</div>
+
+        {/* HITO 3: RECEPCIÓN Y ACTA */}
+        <div className={`bevel-out p-3 space-y-1.5 ${hito3Completado ? 'bg-[#ece9d8]' : 'bg-[#e0ded8] opacity-80'}`}>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#a0a0a0] pb-1">
+            <div className="flex items-center gap-2">
+              <span className={hito3Completado ? 'text-emerald-700 font-bold text-sm' : 'text-gray-400 text-sm'}>
+                {hito3Completado ? '●' : '○'}
+              </span>
+              <h3 className="font-bold text-xs text-black">
+                3. ENTREGA FÍSICA Y FIRMA DE ACTA DIGITAL EN COMEDOR
               </h3>
-              <time className="font-mono text-xs text-slate-300 bg-slate-900 px-2 py-0.5 rounded">
-                {hito3Completado
-                  ? formatearFechaColombia(donacion.entregadaAt)
-                  : 'Pendiente de recepción'}
-              </time>
             </div>
+            <time className="text-[11px] bg-white px-2 py-0.5 bevel-in font-bold text-gray-800">
+              {hito3Completado
+                ? formatearFechaColombia(donacion.entregadaAt)
+                : 'Pendiente de entrega física'}
+            </time>
+          </div>
+          <div className="bevel-in bg-white p-2 text-xs text-gray-800">
             {hito3Completado ? (
-              <p className="text-xs text-emerald-200">
-                Ciclo de custodia cerrado formalmente en{' '}
-                <b>{donacion.comedorNombre || 'Comedor Comunitario'}</b>. Certificado de impacto
-                habilitado.
+              <p className="text-emerald-950 font-bold">
+                ✓ Ciclo de custodia cerrado formalmente en{' '}
+                <b>{donacion.comedorNombre || 'Comedor Beneficiario'}</b>. Acta digital y certificado tributario disponibles.
               </p>
             ) : (
-              <p className="text-xs text-slate-400">
-                Se completará cuando el voluntario o el comedor firmen el Acta Digital de Entrega.
+              <p className="text-gray-500 italic">
+                El hito se cerrará una vez el comedor o transportista firmen la recepción física conforme.
               </p>
             )}
           </div>
-        </li>
-      </ol>
+        </div>
+      </div>
 
-      {/* Bitácora detallada de eventos inmutables */}
+      {/* Bitácora detallada de eventos inmutables en terminal SCADA */}
       {eventos.length > 0 && (
-        <div className="mt-6 pt-4 border-t border-slate-800">
-          <h4 className="font-mono text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
-            Bitácora de Eventos Auditados ({eventos.length})
-          </h4>
-          <ul className="space-y-1.5 font-mono text-xs">
+        <div className="pt-2">
+          <p className="font-bold text-[11px] uppercase tracking-wider text-gray-800 mb-1 flex items-center gap-1.5">
+            <span>Bitácora Inmutable trazabilidad_eventos ({eventos.length}):</span>
+          </p>
+          <div className="scada-panel bg-[#070c18] border border-slate-700 p-2.5 max-h-48 overflow-y-auto space-y-1">
             {eventos.map((ev) => (
-              <li
+              <div
                 key={ev.id}
-                className="flex flex-wrap items-center justify-between gap-2 bg-slate-950/70 border border-slate-800 px-3 py-2 rounded-lg"
+                className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-1 text-[11px]"
               >
                 <div>
                   <span className="text-emerald-400 font-bold">
@@ -266,12 +246,12 @@ export function TimelineTracker({ rastreo }: TimelineTrackerProps) {
                   </span>
                   <span className="text-slate-300 ml-2">{ev.observaciones}</span>
                 </div>
-                <span className="text-slate-400 text-[11px]">
+                <span className="text-slate-400 text-[10px]">
                   {formatearFechaColombia(ev.timestamp)}
                 </span>
-              </li>
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
       )}
     </section>

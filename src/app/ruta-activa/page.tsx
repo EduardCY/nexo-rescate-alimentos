@@ -12,6 +12,8 @@ import {
 import { liberarDonacionAsignada } from '@/actions/donaciones';
 import { useSession } from '@/lib/auth/session-context';
 
+import WindowFrame from '@/components/nexo/WindowFrame';
+
 function RutaActivaContenido() {
   const { sesion } = useSession();
   const searchParams = useSearchParams();
@@ -60,33 +62,40 @@ function RutaActivaContenido() {
 
   if (cargando) {
     return (
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center font-mono text-xs text-slate-300">
-        Consultando misión activa asignada...
+      <div className="bevel-out bg-[#ece9d8] p-8 text-center font-mono text-xs text-black">
+        Consultando misión activa asignada en despacho...
       </div>
     );
   }
 
   if (!mision) {
     return (
-      <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center flex flex-col items-center justify-center gap-3 text-slate-400 my-auto">
-        <AlertCircle className="w-10 h-10 text-slate-500" aria-hidden="true" />
-        <h2 className="text-base font-bold text-white">No tienes misiones activas en este momento</h2>
-        <p className="text-xs text-slate-400 max-w-xs">
-          Selecciona una oferta disponible en el catálogo de donaciones para iniciar una nueva ruta de rescate en Cali.
+      <div className="bevel-out bg-[#ece9d8] p-6 text-center text-black font-mono text-xs space-y-3 max-w-md mx-auto my-4 border border-[#a0a0a0]">
+        <AlertCircle className="w-10 h-10 text-[#000080] mx-auto" aria-hidden="true" />
+        <h2 className="text-sm font-bold text-black uppercase">
+          No Tienes Misiones Activas Asignadas
+        </h2>
+        <p className="text-gray-700 text-[11px] leading-relaxed">
+          Explora el catálogo de excedentes disponibles en las plazas y comercios de Cali para aceptar
+          y despachar un rescate de alimentos.
         </p>
         <Link
           href="/donaciones"
-          className="mt-2 min-h-[48px] px-4 py-2.5 rounded-lg bg-emerald-500 text-slate-950 font-bold text-xs font-mono uppercase tracking-wider flex items-center gap-2"
+          className="btn-green text-xs font-bold inline-flex items-center gap-2"
         >
           <Compass className="w-4 h-4" aria-hidden="true" />
-          <span>Ir al Catálogo de Ofertas</span>
+          <span>Explorar Catálogo de Alimentos &gt;</span>
         </Link>
       </div>
     );
   }
 
   const handleLiberarMision = async (id: string) => {
-    if (!window.confirm('¿Confirmas que deseas liberar esta misión por fuerza mayor/imprevisto? El lote volverá al catálogo para que otro rescatista o comedor lo recoja.')) {
+    if (
+      !window.confirm(
+        '¿Confirmas que deseas liberar esta misión por fuerza mayor o imprevisto en vía?\n\nEl lote volverá al catálogo para que otro rescatista o comedor lo recoja.'
+      )
+    ) {
       return;
     }
     setCargando(true);
@@ -99,11 +108,11 @@ function RutaActivaContenido() {
   };
 
   return (
-    <section aria-label="Detalle de la misión de rescate asignada">
+    <section aria-label="Detalle de la misión de rescate asignada" className="space-y-3">
       <RutaActivaCard mision={mision} onLiberarMision={handleLiberarMision} />
 
-      <footer className="mt-4 p-3 rounded-xl bg-slate-900/60 border border-slate-800/80 text-[11px] text-slate-400 flex items-center gap-2">
-        <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" aria-hidden="true" />
+      <footer className="bevel-in bg-[#f5f5f5] p-2.5 text-[11px] font-mono text-gray-700 flex items-center gap-2 border border-gray-400 max-w-2xl mx-auto">
+        <ShieldCheck className="w-4 h-4 text-emerald-700 shrink-0" aria-hidden="true" />
         <span>
           Rescate amparado bajo la Ley 1990 de 2019. Transporte seguro y trazabilidad de alimentos.
         </span>
@@ -113,47 +122,68 @@ function RutaActivaContenido() {
 }
 
 /**
- * Vista móvil de ruta activa en campo para el voluntario asignado (CMP-03 / TASK-18).
- * Conecta con `obtenerDonacionParaEntrega` y `obtenerMisionesAsignadasVoluntario` sin depender de mocks estáticos.
+ * Vista de ruta activa en campo para el voluntario o comedor asignado (CMP-03 / TASK-18).
  */
 export default function RutaActivaPage() {
-  return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 p-3 sm:p-6 max-w-xl mx-auto flex flex-col gap-4">
-      <header className="flex items-center justify-between gap-3 border-b border-slate-800 pb-3">
-        <div className="flex items-center gap-3">
+  const { sesion } = useSession();
+  const rol = sesion?.rol;
+
+  const toolbarMenu = (
+    <nav className="flex flex-wrap items-center justify-between gap-1.5 bg-[#ece9d8] px-3 py-1.5 border-b border-[#808080] font-mono text-xs">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <Link
+          href="/"
+          className="btn-98 !py-0.5 !px-2 text-[11px] font-bold flex items-center gap-1 text-[#000080]"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>← Volver a Mi Portal ({rol || 'Inicio'})</span>
+        </Link>
+        <Link
+          href="/donaciones"
+          className="btn-98 !py-0.5 !px-2 text-[11px] font-bold flex items-center gap-1"
+        >
+          <span>📱 Catálogo de Alimentos</span>
+        </Link>
+        <Link
+          href="/rastreo"
+          className="btn-98 !py-0.5 !px-2 text-[11px] font-bold flex items-center gap-1"
+        >
+          <span>🔍 Rastrear Lote</span>
+        </Link>
+        {(rol === 'ADMIN' || rol === 'COORDINADOR') && (
           <Link
-            href="/donaciones"
-            className="min-h-[44px] min-w-[44px] p-2.5 rounded-lg bg-slate-900 border border-slate-800 hover:bg-slate-800 flex items-center justify-center text-slate-300"
-            aria-label="Volver al catálogo de donaciones"
+            href="/impacto"
+            className="btn-98 !py-0.5 !px-2 text-[11px] font-bold flex items-center gap-1"
           >
-            <ArrowLeft className="w-5 h-5" aria-hidden="true" />
+            <span>📊 Impacto</span>
           </Link>
-          <div>
-            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-white flex items-center gap-2">
-              <Truck className="w-5 h-5 text-emerald-400" aria-hidden="true" />
-              Ruta Activa de Campo
-            </h1>
-            <p className="text-xs text-slate-400 font-mono">
-              Información de recogida y entrega de alimentos en tiempo real
-            </p>
-          </div>
-        </div>
+        )}
+      </div>
 
-        <div className="flex items-center gap-1.5 text-xs font-mono text-emerald-300 bg-emerald-950/80 border border-emerald-500/40 px-2.5 py-1 rounded-full">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-          <span>Ruta Activa</span>
-        </div>
-      </header>
+      <div className="flex items-center gap-1 text-[11px] font-mono text-emerald-950 font-bold bg-emerald-100 px-2 py-0.5 border border-emerald-600">
+        <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
+        <span>GPS / Despacho Activo</span>
+      </div>
+    </nav>
+  );
 
+  return (
+    <WindowFrame
+      title="NEXO LOGÍSTICA — HOJA DE RUTA ACTIVA DE TRANSPORTE"
+      icon={<Truck className="w-4 h-4 text-amber-400 shrink-0" aria-hidden />}
+      menu={toolbarMenu}
+      statusLeft="SCADA LOGÍSTICA ACTIVA • NAVEGACIÓN GPS Y DESPACHO • SANTIAGO DE CALI"
+      statusRight={sesion ? `OPERARIO: ${sesion.rol} (${sesion.nombre})` : 'MODO DESPACHO'}
+    >
       <Suspense
         fallback={
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-8 text-center font-mono text-xs text-slate-300">
-            Cargando ruta activa...
+          <div className="bevel-out bg-[#ece9d8] p-8 text-center font-mono text-xs text-black">
+            Cargando hoja de ruta activa...
           </div>
         }
       >
         <RutaActivaContenido />
       </Suspense>
-    </main>
+    </WindowFrame>
   );
 }

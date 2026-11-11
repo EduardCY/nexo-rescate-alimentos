@@ -9,6 +9,7 @@ import {
   RefreshCw,
   CheckCircle2,
   Database,
+  BarChart3,
 } from 'lucide-react';
 import { FACTOR_CO2_FAO } from '@/actions/metricas';
 import { consultarMetricasImpactoReal } from '@/actions/donaciones';
@@ -21,6 +22,7 @@ import { ExportarReporteCSV } from './ExportarReporteCSV';
  * ¿Por qué?: RNF-006 y la Prueba de Gobierno UAO exigen que los indicadores de impacto se calculen
  * exclusivamente sobre donaciones con `estado === 'ENTREGADA'`, mostrando `0` cuando no existen
  * entregas verificadas y prohibiendo cualquier constante simulada.
+ * Diseñado con indicadores digitales tipo consola SCADA y marco retro Windows 98.
  */
 export function MetricasDashboard() {
   const [metricas, setMetricas] = useState<MetricasImpactoDTO | null>(null);
@@ -42,9 +44,9 @@ export function MetricasDashboard() {
 
   if (cargando && !metricas) {
     return (
-      <div className="rounded-2xl bg-slate-900/80 border border-slate-800 p-8 text-center font-mono text-xs text-slate-300">
-        <RefreshCw className="w-6 h-6 mx-auto mb-2 animate-spin text-emerald-400" />
-        <p>Auditando registros reales con estado ENTREGADA...</p>
+      <div className="bevel-out bg-[#ece9d8] border-2 border-[#808080] p-8 text-center font-mono text-xs text-black">
+        <RefreshCw className="w-6 h-6 mx-auto mb-2 animate-spin text-blue-800" />
+        <p className="font-bold">Auditando registros reales con estado ENTREGADA en base de datos...</p>
       </div>
     );
   }
@@ -63,24 +65,25 @@ export function MetricasDashboard() {
   return (
     <section
       aria-label="Tablero auditado de impacto social y ambiental"
-      className="flex flex-col gap-5 text-slate-100"
+      className="flex flex-col gap-4 text-black font-mono text-xs"
     >
       {/* Cabecera de Auditoría y Exportación CSV */}
-      <div className="rounded-2xl backdrop-blur-md bg-slate-900/80 border border-slate-700/80 p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3">
+      <div className="bevel-out bg-[#ece9d8] p-3 flex flex-wrap items-center justify-between gap-3 border-2 border-[#808080]">
         <div>
           <div className="flex flex-wrap items-center gap-2 mb-1">
-            <span className="font-mono text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40">
-              CÁLCULO AUDITADO • CERO MOCKS (CA-05.4)
+            <span className="font-mono text-[10px] font-bold px-2 py-0.5 bg-emerald-100 text-emerald-900 border border-emerald-600">
+              [CÁLCULO AUDITADO • CERO MOCKS (CA-05.4)]
             </span>
-            <span className="font-mono text-xs text-slate-400 flex items-center gap-1">
-              <Database className="w-3.5 h-3.5 text-sky-400" />
+            <span className="font-mono text-[11px] text-slate-700 flex items-center gap-1">
+              <Database className="w-3.5 h-3.5 text-blue-700" />
               <span>Fuente: {m.fuenteDatos}</span>
             </span>
           </div>
-          <h2 className="text-lg sm:text-xl font-bold text-white">
-            Métricas Consolidadas de Rescate Alimentario ({m.donacionesCompletadas} entregas cerradas)
+          <h2 className="text-sm sm:text-base font-bold text-black flex items-center gap-1.5">
+            <BarChart3 className="w-4 h-4 text-emerald-700" aria-hidden="true" />
+            <span>Métricas Consolidadas de Rescate Alimentario ({m.donacionesCompletadas} entregas cerradas)</span>
           </h2>
-          <p className="text-xs text-slate-400 font-mono">
+          <p className="text-[11px] text-slate-700">
             Solo contabiliza lotes con Acta Digital de Entrega firmada (estado = ENTREGADA).
           </p>
         </div>
@@ -90,118 +93,125 @@ export function MetricasDashboard() {
             type="button"
             onClick={cargarMetricas}
             disabled={cargando}
-            className="min-h-[48px] px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 font-mono text-xs font-bold text-slate-100 inline-flex items-center gap-2"
+            className="btn-98 px-3 py-1.5 text-xs font-bold inline-flex items-center gap-1.5"
           >
-            <RefreshCw className={`w-4 h-4 ${cargando ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-3.5 h-3.5 ${cargando ? 'animate-spin' : ''}`} />
             <span>Actualizar</span>
           </button>
           <ExportarReporteCSV entregas={m.entregasDetalle} />
         </div>
       </div>
 
-      {/* 4 Tarjetas KPI */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <article className="rounded-2xl backdrop-blur-md bg-slate-900/85 border border-emerald-500/40 p-4">
-          <div className="flex items-center justify-between text-emerald-400 mb-2">
-            <span className="font-mono text-xs uppercase font-bold">Alimento Rescatado</span>
-            <Scale className="w-5 h-5" />
+      {/* 4 Indicadores SCADA Digitales */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* KPI 1: Kilogramos */}
+        <article className="bevel-in-dark bg-[#05080f] border border-slate-700 p-3 flex flex-col justify-between">
+          <div className="flex items-center justify-between text-emerald-400 mb-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider">Alimento Rescatado</span>
+            <Scale className="w-4 h-4" />
           </div>
-          <p className="font-mono text-3xl font-extrabold text-white">
-            {m.totalKgRescatados} <span className="text-sm text-emerald-400">kg</span>
+          <p className="text-2xl sm:text-3xl font-extrabold text-emerald-300 font-mono tracking-wider my-1">
+            {m.totalKgRescatados} <span className="text-xs text-emerald-400">kg</span>
           </p>
-          <p className="text-[11px] font-mono text-slate-400 mt-1">
-            {m.donacionesCompletadas} donaciones efectivamente entregadas
+          <p className="text-[10px] text-slate-400 border-t border-slate-800 pt-1 mt-1">
+            {m.donacionesCompletadas} donaciones entregadas
           </p>
         </article>
 
-        <article className="rounded-2xl backdrop-blur-md bg-slate-900/85 border border-amber-500/40 p-4">
-          <div className="flex items-center justify-between text-amber-400 mb-2">
-            <span className="font-mono text-xs uppercase font-bold">Raciones Estimadas</span>
-            <Utensils className="w-5 h-5" />
+        {/* KPI 2: Raciones */}
+        <article className="bevel-in-dark bg-[#05080f] border border-slate-700 p-3 flex flex-col justify-between">
+          <div className="flex items-center justify-between text-amber-400 mb-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider">Raciones Estimadas</span>
+            <Utensils className="w-4 h-4" />
           </div>
-          <p className="font-mono text-3xl font-extrabold text-white">
-            {m.totalRacionesServidas} <span className="text-sm text-amber-400">platos</span>
+          <p className="text-2xl sm:text-3xl font-extrabold text-amber-300 font-mono tracking-wider my-1">
+            {m.totalRacionesServidas} <span className="text-xs text-amber-400">platos</span>
           </p>
-          <p className="text-[11px] font-mono text-slate-400 mt-1">
-            Estándar nutricional: 0.4 kg por ración servida
+          <p className="text-[10px] text-slate-400 border-t border-slate-800 pt-1 mt-1">
+            Estándar FAO: 0.4 kg / ración
           </p>
         </article>
 
-        <article className="rounded-2xl backdrop-blur-md bg-slate-900/85 border border-sky-500/40 p-4">
-          <div className="flex items-center justify-between text-sky-400 mb-2">
-            <span className="font-mono text-xs uppercase font-bold">Emisiones CO₂ Evitadas</span>
-            <Leaf className="w-5 h-5" />
+        {/* KPI 3: CO2e */}
+        <article className="bevel-in-dark bg-[#05080f] border border-slate-700 p-3 flex flex-col justify-between">
+          <div className="flex items-center justify-between text-sky-400 mb-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider">CO₂ Evitado</span>
+            <Leaf className="w-4 h-4" />
           </div>
-          <p className="font-mono text-3xl font-extrabold text-white">
-            {m.emisionesCo2EvitadasKg} <span className="text-sm text-sky-400">kg CO₂e</span>
+          <p className="text-2xl sm:text-3xl font-extrabold text-sky-300 font-mono tracking-wider my-1">
+            {m.emisionesCo2EvitadasKg} <span className="text-xs text-sky-400">kg CO₂e</span>
           </p>
-          <p className="text-[11px] font-mono text-slate-400 mt-1">
-            Factor técnico FAO: {FACTOR_CO2_FAO} kg CO₂e / kg rescatado
+          <p className="text-[10px] text-slate-400 border-t border-slate-800 pt-1 mt-1">
+            Factor FAO: {FACTOR_CO2_FAO} kg CO₂e / kg
           </p>
         </article>
 
-        <article className="rounded-2xl backdrop-blur-md bg-slate-900/85 border border-purple-500/40 p-4">
-          <div className="flex items-center justify-between text-purple-400 mb-2">
-            <span className="font-mono text-xs uppercase font-bold">Comedores y Aliados</span>
-            <Building2 className="w-5 h-5" />
+        {/* KPI 4: Comedores */}
+        <article className="bevel-in-dark bg-[#05080f] border border-slate-700 p-3 flex flex-col justify-between">
+          <div className="flex items-center justify-between text-purple-400 mb-1">
+            <span className="text-[10px] font-bold uppercase tracking-wider">Comedores y Red</span>
+            <Building2 className="w-4 h-4" />
           </div>
-          <p className="font-mono text-3xl font-extrabold text-white">
-            {m.comedoresAbastecidos} <span className="text-sm text-purple-400">comedores</span>
+          <p className="text-2xl sm:text-3xl font-extrabold text-purple-300 font-mono tracking-wider my-1">
+            {m.comedoresAbastecidos} <span className="text-xs text-purple-400">comedores</span>
           </p>
-          <p className="text-[11px] font-mono text-slate-400 mt-1">
+          <p className="text-[10px] text-slate-400 border-t border-slate-800 pt-1 mt-1">
             {m.donantesParticipantes !== undefined
-              ? `${m.donantesParticipantes} donantes • ${m.comedoresAbastecidos} comedores activos`
-              : 'Organizaciones receptoras verificadas en Cali'}
+              ? `${m.donantesParticipantes} donantes • ${m.comedoresAbastecidos} comedores`
+              : 'Organizaciones receptoras en Cali'}
           </p>
         </article>
       </div>
 
-      {/* Tabla de Entregas Verificadas o Empty State Transparente */}
-      <div className="rounded-2xl backdrop-blur-md bg-slate-900/85 border border-slate-700/80 p-4 sm:p-5">
-        <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-emerald-400 mb-3">
-          Libro Mayor de Entregas Verificadas (estado = ENTREGADA)
-        </h3>
+      {/* Tabla de Entregas Verificadas en formato Libro Mayor Retro */}
+      <div className="bevel-out bg-[#ece9d8] p-3 border-2 border-[#808080]">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-black">
+            LIBRO MAYOR DE ENTREGAS VERIFICADAS (ESTADO = ENTREGADA)
+          </h3>
+          <span className="text-[10px] text-slate-600">[ACTA DIGITAL REQUERIDA]</span>
+        </div>
 
         {m.entregasDetalle.length === 0 ? (
-          <div className="rounded-xl bg-slate-950/70 border border-slate-800 p-6 text-center font-mono text-xs text-slate-400">
+          <div className="bevel-in bg-white p-6 text-center text-slate-700">
             <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-slate-500" />
-            <p className="text-sm font-bold text-slate-200 mb-1">
-              0 kg rescatados • Aun no hay donaciones con acta de entrega cerrada
+            <p className="text-xs font-bold text-black mb-1">
+              0 kg rescatados • Aún no hay donaciones con acta de entrega cerrada
             </p>
-            <p className="max-w-lg mx-auto">
+            <p className="max-w-lg mx-auto text-[11px] text-slate-600">
               En cumplimiento del criterio CA-05.4 (transparencia de métricas), las donaciones en
               estado DISPONIBLE o ASIGNADA no inflan los indicadores hasta que el voluntario o el
               comedor firmen el Acta Digital de Entrega.
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="bevel-in bg-white overflow-x-auto">
             <table className="w-full text-left font-mono text-xs border-collapse">
               <thead>
-                <tr className="border-b border-slate-700 text-slate-400 uppercase text-[11px]">
-                  <th className="py-2 px-3">Código</th>
-                  <th className="py-2 px-3">Alimento</th>
-                  <th className="py-2 px-3">Donante</th>
-                  <th className="py-2 px-3">Comedor Receptor</th>
-                  <th className="py-2 px-3 text-right">Kilogramos</th>
-                  <th className="py-2 px-3 text-right">Raciones</th>
+                <tr className="bg-[#d4d0c8] text-black uppercase text-[11px] border-b-2 border-[#808080]">
+                  <th className="py-2 px-3 border-r border-[#808080]">Código</th>
+                  <th className="py-2 px-3 border-r border-[#808080]">Alimento</th>
+                  <th className="py-2 px-3 border-r border-[#808080]">Donante</th>
+                  <th className="py-2 px-3 border-r border-[#808080]">Comedor Receptor</th>
+                  <th className="py-2 px-3 text-right border-r border-[#808080]">Kilogramos</th>
+                  <th className="py-2 px-3 text-right border-r border-[#808080]">Raciones</th>
                   <th className="py-2 px-3">Fecha Entrega</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800">
+              <tbody className="divide-y divide-[#d4d0c8]">
                 {m.entregasDetalle.map((item) => (
-                  <tr key={item.id || item.codigo} className="hover:bg-slate-800/50">
-                    <td className="py-2.5 px-3 font-bold text-emerald-300">{item.codigo}</td>
-                    <td className="py-2.5 px-3 text-white">{item.tipoAlimento}</td>
-                    <td className="py-2.5 px-3 text-slate-300">{item.donante}</td>
-                    <td className="py-2.5 px-3 text-sky-300">{item.comedorReceptor}</td>
-                    <td className="py-2.5 px-3 text-right font-bold text-white">
+                  <tr key={item.id || item.codigo} className="hover:bg-[#fff9d9] text-black">
+                    <td className="py-2 px-3 font-bold text-blue-900 border-r border-[#d4d0c8]">{item.codigo}</td>
+                    <td className="py-2 px-3 text-black border-r border-[#d4d0c8]">{item.tipoAlimento}</td>
+                    <td className="py-2 px-3 text-slate-700 border-r border-[#d4d0c8]">{item.donante}</td>
+                    <td className="py-2 px-3 text-slate-700 border-r border-[#d4d0c8]">{item.comedorReceptor}</td>
+                    <td className="py-2 px-3 text-right font-bold text-emerald-900 border-r border-[#d4d0c8]">
                       {item.kilogramos} kg
                     </td>
-                    <td className="py-2.5 px-3 text-right text-amber-300">
+                    <td className="py-2 px-3 text-right text-amber-900 border-r border-[#d4d0c8]">
                       {item.racionesEstimadas}
                     </td>
-                    <td className="py-2.5 px-3 text-slate-400">
+                    <td className="py-2 px-3 text-slate-600">
                       {new Date(item.fechaEntrega).toLocaleString('es-CO', {
                         dateStyle: 'short',
                         timeStyle: 'short',

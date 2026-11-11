@@ -7,13 +7,14 @@ import { useSession } from "@/lib/auth/session-context";
 
 interface Props {
   title: string;
-  menu: React.ReactNode;
+  icon?: React.ReactNode;
+  menu?: React.ReactNode;
   statusLeft?: string;
   statusRight?: string;
   children: React.ReactNode;
 }
 
-export default function WindowFrame({ title, menu, statusLeft, statusRight, children }: Props) {
+export default function WindowFrame({ title, icon, menu, statusLeft, statusRight, children }: Props) {
   const [maximized, setMaximized] = useState(false);
   const { sesion } = useSession();
 
@@ -32,7 +33,7 @@ export default function WindowFrame({ title, menu, statusLeft, statusRight, chil
         aria-label="NEXO Rescate de Alimentos"
       >
         <header className="titlebar flex items-center gap-2 px-2 py-1">
-          <Terminal className="w-4 h-4 text-white shrink-0" aria-hidden />
+          {icon || <Terminal className="w-4 h-4 text-white shrink-0" aria-hidden />}
           <h1 className="flex-1 truncate text-white font-mono font-bold text-[13px] tracking-wide">{title}</h1>
           <div className="flex gap-[3px]">
             <button

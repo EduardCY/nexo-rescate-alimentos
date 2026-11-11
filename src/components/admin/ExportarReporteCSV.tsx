@@ -17,6 +17,7 @@ export interface ExportarReporteCSVProps {
  *
  * ¿Por qué?: Entrega a los roles ADMIN y COORDINADOR una descarga directa compatible con Excel
  * (incluyendo BOM UTF-8) exclusivamente con las donaciones en estado `ENTREGADA`.
+ * Estilizado con `.btn-green` canónico retro.
  */
 export function ExportarReporteCSV({ entregas, disabled = false }: ExportarReporteCSVProps) {
   const handleDescargar = () => {
@@ -42,9 +43,9 @@ export function ExportarReporteCSV({ entregas, disabled = false }: ExportarRepor
       onClick={handleDescargar}
       disabled={disabled || entregas.length === 0}
       aria-label="Exportar reporte consolidado en formato CSV"
-      className="min-h-[48px] px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:bg-slate-800 disabled:text-slate-500 text-slate-950 font-mono text-xs font-extrabold inline-flex items-center gap-2 transition-colors"
+      className="btn-green px-3 py-1.5 text-xs font-bold inline-flex items-center gap-1.5 disabled:opacity-40"
     >
-      <Download className="w-4 h-4" aria-hidden="true" />
+      <Download className="w-3.5 h-3.5" aria-hidden="true" />
       <span>Exportar Reporte CSV ({entregas.length})</span>
     </button>
   );

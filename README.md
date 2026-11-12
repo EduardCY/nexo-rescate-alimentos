@@ -12,6 +12,14 @@ La plataforma **Rescate de Alimentos** es una herramienta web accesible desde cu
 
 ---
 
+## 📖 Guía Integral de Pruebas y Workflows para Colaboradores
+
+Para conocer todas las **credenciales maestras registradas**, los **workflows paso a paso de los 5 roles**, la arquitectura de las **3 pestañas de `/login`** y los protocolos de **pruebas de resiliencia (offline PWA, concurrencia, mermas)**, consulta el manual de referencia:
+
+👉 [**Manual Integral de Operaciones y Workflows (`docs/GUIA_PRUEBAS_Y_WORKFLOWS_COLABORADORES.md`)**](file:///f:/01_Development/UAO/Proyecto_Informatico_2/nexo-rescate-alimentos/docs/GUIA_PRUEBAS_Y_WORKFLOWS_COLABORADORES.md)
+
+---
+
 ## Cómo levantarlo
 
 Sigue estos pasos para ejecutar el proyecto en tu máquina local:

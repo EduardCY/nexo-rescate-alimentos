@@ -6,7 +6,7 @@ import { describe, test, expect } from 'vitest';
 import { tomarDonacion } from '../src/actions/donaciones';
 
 describe("Reglas de Negocio del MVP - Red de Rescate de Alimentos", () => {
-  test("CA-01.2: Debe rechazar el registro de donación si no se acepta la exención legal (Ley 1990/2019)", () => {
+  test("CA-01.3: Debe rechazar el registro de donación si no se acepta la exención legal (Ley 1990/2019)", () => {
     const payload = {
       tipoAlimento: "Frutas y Verduras",
       cantidadEstimada: 45,

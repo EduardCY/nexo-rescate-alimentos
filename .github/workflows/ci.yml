@@ -60,9 +60,12 @@ jobs:
             console.log('Activos PWA verificados correctamente.');
           "
 
-      # Compuerta 1: calidad del código.
+      # Compuerta 1: calidad del código y tipos estrictos.
       - name: Validar lint
         run: npm run lint
+
+      - name: Verificar tipos TypeScript
+        run: npx tsc --noEmit
 
       # Compuerta 2: comportamiento y pruebas automatizadas.
       - name: Ejecutar pruebas automatizadas
@@ -74,3 +77,5 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://dummy.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: dummy-key
+          NEXT_PUBLIC_ENABLE_2FA: "true"
+          NEXT_PUBLIC_ENABLE_DEMO_SANDBOX: "false"

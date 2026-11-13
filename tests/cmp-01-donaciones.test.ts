@@ -233,6 +233,7 @@ describe('CMP-01 · Validación de Negocio y Publicación de Donaciones (RF-001,
       const insertMock = vi.fn().mockReturnValue({ select: selectMock });
       const fromMock = vi.fn().mockReturnValue({ insert: insertMock });
 
+      vi.spyOn(supabaseServer, 'esSupabaseConfigurado').mockReturnValue(true);
       vi.spyOn(supabaseServer, 'createClient').mockReturnValue({
         from: fromMock,
       } as any);
@@ -275,6 +276,7 @@ describe('CMP-01 · Validación de Negocio y Publicación de Donaciones (RF-001,
       const insertMock = vi.fn().mockReturnValue({ select: selectMock });
       const fromMock = vi.fn().mockReturnValue({ insert: insertMock });
 
+      vi.spyOn(supabaseServer, 'esSupabaseConfigurado').mockReturnValue(true);
       vi.spyOn(supabaseServer, 'createClient').mockReturnValue({
         from: fromMock,
       } as any);

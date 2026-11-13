@@ -52,6 +52,7 @@ describe('CA-01.5 – guardado offline y sincronización reactiva', () => {
     const selectMock = vi.fn().mockReturnValue({ single: singleMock });
     const insertMock = vi.fn().mockReturnValue({ select: selectMock });
     const fromMock = vi.fn().mockReturnValue({ insert: insertMock });
+    vi.spyOn(supabaseServer, 'esSupabaseConfigurado').mockReturnValue(true);
     vi.spyOn(supabaseServer, 'createClient').mockReturnValue({
       from: fromMock,
     } as any);

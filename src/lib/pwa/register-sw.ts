@@ -31,7 +31,7 @@ export function registrarServiceWorkerPWA(): () => void {
         .then((cacheNames) =>
           Promise.all(
             cacheNames
-              .filter((name) => name !== 'nexo-pwa-v5')
+              .filter((name) => name !== 'nexo-pwa-v6')
               .map((name) => window.caches.delete(name))
           )
         )
@@ -42,6 +42,18 @@ export function registrarServiceWorkerPWA(): () => void {
       navigator.serviceWorker
         .register('/sw.js', { updateViaCache: 'none' })
         .then((reg) => {
+          reg.addEventListener('updatefound', () => {
+            const nuevoWorker = reg.installing;
+            if (!nuevoWorker) return;
+            nuevoWorker.addEventListener('statechange', () => {
+              if (
+                nuevoWorker.state === 'installed' &&
+                navigator.serviceWorker.controller
+              ) {
+                window.dispatchEvent(new CustomEvent('nexo:sw-update-available'));
+              }
+            });
+          });
           void reg.update();
         })
         .catch(() => {

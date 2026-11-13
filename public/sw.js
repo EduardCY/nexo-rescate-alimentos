@@ -1,17 +1,23 @@
 /**
- * Service Worker PWA - Nexo Rescate de Alimentos Cali (TASK-28 / RNF-002 / CA-PWA.2 / CA-PWA.3)
+ * Service Worker PWA - Nexo Rescate de Alimentos Cali (TASK-28 / RNF-002 / CA-PWA.1..CA-PWA.3)
  *
  * Estrategias diferenciadas de caché:
- * 1. Pre-cache seguro del App Shell en `install` (verificando `!response.redirected` para evitar respuestas redireccionadas en caché).
+ * 1. Pre-cache seguro del App Shell completo en `install` (verificando `!response.redirected`).
  * 2. Cache-First para activos estáticos inmutables (`/_next/static/*`, `/icons/*`, `.png`, `.svg`, `.woff2`, `.css`).
- * 3. Network-First con desinfección de bandera `redirected` para navegaciones HTML (`request.mode === 'navigate'`) y degradación a caché local o `/~offline`.
- * 4. Network-First para consultas dinámicas.
+ * 3. Stale-While-Revalidate para navegaciones HTML del App Shell (`request.mode === 'navigate'`) con timeout 3000 ms y fallback a `/~offline`.
+ * 4. Network-First con timeout de 3000 ms para consultas dinámicas, devolviendo JSON 503 controlado en lugar de HTML cuando no hay red.
  */
 
-const CACHE_NAME = 'nexo-pwa-v5';
+const CACHE_NAME = 'nexo-pwa-v6';
+const NETWORK_TIMEOUT_MS = 3000;
 
 const APP_SHELL_ROUTES = [
+  '/',
   '/login',
+  '/donar',
+  '/donaciones',
+  '/ruta-activa',
+  '/rastreo',
   '/~offline',
   '/manifest.json',
   '/icons/icon-192x192.png',
@@ -19,6 +25,16 @@ const APP_SHELL_ROUTES = [
   '/icons/icon-maskable-512x512.png',
   '/icons/apple-touch-icon.png',
 ];
+
+async function fetchConTimeout(request, timeoutMs = NETWORK_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(request, { signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 /**
  * Reconstruye una respuesta eliminando la bandera `redirected: true` cuando sea necesario.
@@ -122,36 +138,43 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. Estrategia Network-First con protección anti-redirected para navegaciones HTML (CA-PWA.2 / CA-PWA.3)
+  // 2. Estrategia Stale-While-Revalidate para navegaciones HTML del App Shell (CA-PWA.1 / CA-PWA.2 / CA-PWA.3)
   if (request.mode === 'navigate') {
+    const actualizarDesdeRed = async (cache) => {
+      try {
+        const networkResponse = await fetchConTimeout(request);
+        if (networkResponse && networkResponse.type === 'opaqueredirect') {
+          return networkResponse;
+        }
+        if (networkResponse && networkResponse.status === 200) {
+          const cleanResponse = await desinfectarRespuestaNavegacion(networkResponse);
+          if (!networkResponse.redirected) {
+            await cache.put(request, cleanResponse.clone());
+          }
+          return cleanResponse;
+        }
+        if (networkResponse) {
+          return await desinfectarRespuestaNavegacion(networkResponse);
+        }
+      } catch {
+        // Red caída o timeout de 3000 ms
+      }
+      return null;
+    };
+
     event.respondWith(
       (async () => {
         const cache = await caches.open(CACHE_NAME);
-        try {
-          const networkResponse = await fetch(request);
+        const cachedResponse = await cache.match(request);
 
-          if (networkResponse && networkResponse.type === 'opaqueredirect') {
-            return networkResponse;
-          }
-
-          if (networkResponse && networkResponse.status === 200) {
-            const cleanResponse = await desinfectarRespuestaNavegacion(networkResponse);
-            if (!networkResponse.redirected) {
-              await cache.put(request, cleanResponse.clone());
-            }
-            return cleanResponse;
-          }
-
-          if (networkResponse) {
-            return await desinfectarRespuestaNavegacion(networkResponse);
-          }
-        } catch {
-          // Sin conexión a red: degradar a caché local o página /~offline
+        if (cachedResponse) {
+          event.waitUntil(actualizarDesdeRed(cache));
+          return await desinfectarRespuestaNavegacion(cachedResponse);
         }
 
-        const cachedResponse = await cache.match(request);
-        if (cachedResponse) {
-          return await desinfectarRespuestaNavegacion(cachedResponse);
+        const networkResult = await actualizarDesdeRed(cache);
+        if (networkResult) {
+          return networkResult;
         }
 
         const offlineFallback = await cache.match('/~offline');
@@ -170,9 +193,9 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 3. Estrategia Network-First para datos y rutas restantes
+  // 3. Estrategia Network-First (timeout 3000 ms) para datos y rutas RSC; nunca devolver HTML /~offline a fetch no-navegación
   event.respondWith(
-    fetch(request)
+    fetchConTimeout(request)
       .then((response) => {
         if (response && response.status === 200 && !response.redirected) {
           const clone = response.clone();
@@ -183,9 +206,14 @@ self.addEventListener('fetch', (event) => {
       .catch(async () => {
         const cached = await caches.match(request);
         if (cached) return await desinfectarRespuestaNavegacion(cached);
-        const offline = await caches.match('/~offline');
-        if (offline) return await desinfectarRespuestaNavegacion(offline);
-        return Response.error();
+        return new Response(
+          JSON.stringify({ offline: true, mensaje: 'Sin conexión a Internet' }),
+          {
+            status: 503,
+            statusText: 'Service Unavailable',
+            headers: { 'Content-Type': 'application/json' },
+          }
+        );
       })
   );
 });

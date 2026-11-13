@@ -189,6 +189,12 @@ export default function CatalogoDonacionesPage() {
   // Acción de reserva con captura de colisión concurrente HTTP 409 (TASK-09)
   const handleTomarDonacion = async (id: string) => {
     if (tomandoId) return;
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setErrorAccion(
+        'Se requiere conexión a Internet para tomar una donación y garantizar reserva única en el servidor.'
+      );
+      return;
+    }
     setTomandoId(id);
     setMensajeExito(null);
     setErrorAccion(null);

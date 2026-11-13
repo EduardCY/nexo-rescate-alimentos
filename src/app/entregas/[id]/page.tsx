@@ -18,6 +18,7 @@ import {
 import type { Donacion } from '@/types';
 import { obtenerDonacionParaEntrega, confirmarEntrega } from '@/actions/entregas';
 import type { EstadoFisicoAlimento } from '@/lib/validations/entrega';
+import { encolarMutacionOutbox } from '@/lib/db';
 
 /**
  * Vista móvil de confirmación de entrega física en comedor comunitario (TASK-11 / CMP-04).
@@ -84,17 +85,51 @@ export default function ConfirmarEntregaPage() {
     setProcesando(true);
     setErrorEnvio(null);
 
+    const parsedMerma = mermaKg ? parseFloat(mermaKg) : undefined;
+    const mermaValida = parsedMerma !== undefined && !isNaN(parsedMerma) ? parsedMerma : undefined;
+
+    if (mermaValida !== undefined && (mermaValida < 0 || mermaValida > donacion.cantidadEstimada)) {
+      setErrorEnvio(`La merma debe estar entre 0 y ${donacion.cantidadEstimada} ${donacion.unidadMedida}.`);
+      setProcesando(false);
+      return;
+    }
+
+    const payloadEntrega = {
+      donacionId: donacion.id,
+      nombreReceptor: nombreReceptor.trim(),
+      estadoFisico,
+      mermaKg: mermaValida,
+      observaciones: observaciones.trim(),
+      voluntarioId: donacion.voluntarioId || 'vol-001',
+      voluntarioNombre: donacion.voluntarioNombre || 'Voluntario',
+    };
+
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      try {
+        await encolarMutacionOutbox({
+          tipoOperacion: 'CONFIRM_ENTREGA',
+          entidadId: donacion.id,
+          payload: payloadEntrega as unknown as Record<string, unknown>,
+        });
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('nexo:offline-queue-changed'));
+        }
+        const fechaLocal = new Date().toISOString();
+        setEntregaCompletada({
+          entregadaAt: fechaLocal,
+          receptorNombre: `${payloadEntrega.nombreReceptor} (Pendiente de sincronización)`,
+        });
+        setDonacion((prev) => (prev ? { ...prev, estado: 'ENTREGADA', entregadaAt: fechaLocal } : null));
+      } catch {
+        setErrorEnvio('No se pudo guardar el acta localmente sin conexión.');
+      } finally {
+        setProcesando(false);
+      }
+      return;
+    }
+
     try {
-      const parsedMerma = mermaKg ? parseFloat(mermaKg) : undefined;
-      const res = await confirmarEntrega({
-        donacionId: donacion.id,
-        nombreReceptor: nombreReceptor.trim(),
-        estadoFisico,
-        mermaKg: parsedMerma !== undefined && !isNaN(parsedMerma) ? parsedMerma : undefined,
-        observaciones: observaciones.trim(),
-        voluntarioId: donacion.voluntarioId || 'vol-001',
-        voluntarioNombre: donacion.voluntarioNombre || 'Voluntario',
-      });
+      const res = await confirmarEntrega(payloadEntrega);
 
       if (res.exito) {
         setEntregaCompletada({

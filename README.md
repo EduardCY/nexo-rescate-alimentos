@@ -153,7 +153,6 @@ La especificación completa del sistema, su gobernanza ágil y las decisiones de
 
 En cumplimiento con la política del Módulo 3, el equipo declara formalmente las herramientas de inteligencia artificial utilizadas y su ámbito de aplicación:
 
-| Herramienta               | Modelo                          | Ámbito de Uso                                                                                                              | Convención Operativa                                                                                     |
-| :------------------------ | :------------------------------ | :-------------------------------------------------------------------------------------------------------------------------- | :-------------------------------------------------------------------------------------------------------- |
-| **Antigravity IDE** | Gemini 3.8 Flash/Gemini Argon 4 | Análisis de contexto profundo, generación de esqueletos, automatización de pruebas y documentación de especificaciones. | Todo código generado es auditado manualmente por un par antes de su integración a la rama principal.    |
-| **Antigravity IDE** | Claude Sonnet/Opus 5.5          | Razonamiento arquitectónico, revisión de casos de borde de concurrencia y refactorización técnica de alta complejidad.  | Ningún miembro presenta en Sprint Review código que no comprenda y sea capaz de defender técnicamente. |
+| Herramienta | Modelos de Asistencia | Ámbito de Uso | Convención Operativa |
+| :--- | :--- | :--- | :--- |
+| **Google Antigravity IDE** | Gemini (exploración, scaffolding y pruebas) y Claude (arquitectura, concurrencia y refactorización) | Análisis de contexto, generación de esqueletos de pruebas, refinamiento de validaciones y redacción técnica estructurada. | Todo cambio es auditado por pares en Pull Requests, validado con pruebas automáticas en CI y defendido individualmente en Demo Day sin delegar autoría. |

@@ -107,9 +107,9 @@ La plataforma aplica confinamiento estricto en tres capas: **Middleware de Borde
      * **Cantidad:** Ej. `45` kg.
      * **Categoría:** Selecciona *"Frutas y Verduras"* o *"Panadería / Repostería"*.
      * **Requiere Refrigeración:** Marca la casilla si el alimento exige cadena de frío.
-     * **Fecha y Hora Límite de Consumo:** Selecciona una fecha/hora válida.
+     * **Fecha y Hora Límite de Consumo:** Selecciona una fecha/hora futura válida.
        > [!WARNING]
-       > **Control Normativo Ley 1990:** Si seleccionas una fecha con menos de 48 horas de vida útil o una fecha en el pasado, el sistema **bloqueará el registro** con una advertencia legal impidiendo la publicación de alimentos en riesgo sanitario.
+       > **Control Normativo (`CA-01.2`):** Si seleccionas una fecha y hora anterior o igual a la hora actual, el sistema **bloqueará el registro** impidiendo publicar ofertas vencidas o sin margen de recogida.
      * **Ubicación:** Haz clic sobre el mapa de Cali para fijar el marcador en la Galería Alameda, Santa Elena o Cavasa.
   5. Presiona **"PUBLICAR OFERTA DE DONACIÓN"**.
   6. El lote quedará en estado `DISPONIBLE` y se reflejará inmediatamente en el catálogo de rescates de la red.
@@ -281,14 +281,15 @@ Todas las pantallas operativas han sido homologadas al sistema visual **Windows 
 
 ---
 
-### 🧪 Prueba de Resiliencia 3: Rechazo Normativo por Vencimiento (Ley 1990)
-* **Objetivo:** Verificar que el sistema prohíba donar alimentos vencidos o con margen de caducidad inferior a 48 horas.
+### 🧪 Prueba de Resiliencia 3: Rechazo Normativo por Hora Límite Inválida (`CA-01.2`)
+* **Objetivo:** Verificar que el sistema prohíba publicar donaciones con fecha/hora límite anterior o igual al momento actual.
 * **Procedimiento:**
   1. Con el rol `DONANTE`, abre [`/donar`](file:///f:/01_Development/UAO/Proyecto_Informatico_2/nexo-rescate-alimentos/src/app/donar/page.tsx).
-  2. En el campo de fecha límite de consumo, selecciona la fecha de mañana a las 8:00 AM (menos de 24 horas a partir de ahora).
+  2. En el campo de hora límite de recogida, ingresa una hora anterior a la actual.
   3. Intenta pulsar **"PUBLICAR OFERTA DE DONACIÓN"**.
-  4. **Resultado Esperado:** El formulario bloquea el envío y muestra en rojo la alerta legal:
-     > *"La fecha límite de consumo debe ser al menos 48 horas posterior al registro según la normativa colombiana de inocuidad alimentaria (Ley 1990 de 2019)."*
+  4. **Resultado Esperado:** El formulario bloquea el envío y muestra la alerta de validación:
+     > *"La hora límite de recogida debe ser una fecha y hora futura válida (posterior a la actual)."*
+* **Nota de entorno local:** La pestaña de acceso rápido Sandbox en `/login` permanece oculta en producción y se habilita únicamente en entorno local con `NEXT_PUBLIC_ENABLE_DEMO_SANDBOX=true`.
 
 ---
 

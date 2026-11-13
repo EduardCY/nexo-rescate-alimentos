@@ -331,10 +331,11 @@ Escenario: CA-PWA.3 Navegación Client-Side (SPA Routing) sin fugas de red en mo
   Y ninguna transición de ruta provoca excepciones no controladas ni pantallas en blanco.
 
 Escenario: CA-PWA.4 Modificación local y Cola de Sincronización Auditable (Outbox Pattern)
-  Dado que un usuario autenticado realiza una creación o mutación de datos sin conexión (publicar donación, tomar donación o registrar acta de entrega),
-  Cuando confirma la operación en modo offline,
-  Entonces el sistema persiste el cambio en la tabla "outbox_mutations" de IndexedDB (Dexie v2) con metadatos de auditoría (idempotencyKey, tipoOperacion, payload, syncStatus, retryCount),
-  Y expone un Inspector Visual de Cola Offline donde el usuario puede auditar los ítems pendientes, ver su estado y disparar reintentos al recuperar red.
+  Dado que un usuario autenticado opera sin conexión a Internet (navigator.onLine = false),
+  Cuando confirma una creación de donación (CREATE en "/donar") o un cierre de entrega física (CONFIRM en "/entregas/[id]"),
+  Entonces el sistema persiste el cambio en la tabla "outbox_mutations" / "donaciones_offline" de IndexedDB (Dexie v2) con metadatos de auditoría (idempotencyKey, tipoOperacion, payload, syncStatus, retryCount),
+  Y expone un Inspector Visual de Cola Sin Conexión donde el usuario puede auditar los ítems pendientes, ver su estado y disparar reintentos al recuperar red,
+  Y cuando un voluntario o comedor intenta tomar una donación (TAKE en "/donaciones") sin red, el sistema bloquea la reserva mostrando un aviso claro de conexión requerida para preservar la exclusión mutua atómica en servidor (CMP-03 / ADR-001).
 
 Escenario: CA-PWA.5 Catálogo de productos y donaciones offline con sincronización delta
   Dado que el dispositivo descargó el catálogo de productos estandarizados ("catalogo_productos") y las donaciones activas ("donaciones_cache") en IndexedDB,

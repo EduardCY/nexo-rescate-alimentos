@@ -433,6 +433,15 @@ export async function publicarDonacion(
     }
   };
 
+  if (!esSupabaseConfigurado()) {
+    const codigoLocal = `DON-${Date.now().toString().slice(-4)}`;
+    registrarEnMemoria(construirDonacion(codigoLocal, codigoLocal));
+    return {
+      exito: true,
+      codigo: codigoLocal,
+    };
+  }
+
   try {
     const payloadConIdempotencia = idempotencyKey
       ? {
@@ -464,14 +473,6 @@ export async function publicarDonacion(
     }
 
     if (error) {
-      if ((error as { code?: string }).code) {
-        const codigoFallback = `DON-${Date.now().toString().slice(-4)}`;
-        registrarEnMemoria(construirDonacion(codigoFallback, codigoFallback));
-        return {
-          exito: true,
-          codigo: codigoFallback,
-        };
-      }
       return {
         exito: false,
         error: error.message || 'Error al registrar la donación en la base de datos',
@@ -486,13 +487,13 @@ export async function publicarDonacion(
       exito: true,
       codigo: codigoFinal,
     };
-  } catch {
-    const codigoFinal = `DON-${Date.now().toString().slice(-4)}`;
-    registrarEnMemoria(construirDonacion(codigoFinal, codigoFinal));
-
+  } catch (err: unknown) {
     return {
-      exito: true,
-      codigo: codigoFinal,
+      exito: false,
+      error:
+        err instanceof Error
+          ? err.message
+          : 'No fue posible persistir la donación en el servidor.',
     };
   }
 }
@@ -977,6 +978,24 @@ async function tomarDonacionInterno(
       }
 
       if (uuidDonacion) {
+        if (comedorDestino?.comedorTieneFrio === false) {
+          const { data: metaFrio } = await supabase
+            .from('donaciones')
+            .select('requiere_frio')
+            .eq('id', uuidDonacion)
+            .maybeSingle();
+
+          if (metaFrio?.requiere_frio) {
+            return {
+              exito: false,
+              codigo: 403,
+              mensaje:
+                'Este alimento requiere refrigeración y el comedor seleccionado no dispone de equipo de frío operativo.',
+              donacionId,
+            };
+          }
+        }
+
         const { data: rpcData, error: rpcError } = await supabase.rpc('tomar_donacion', {
           p_donacion_id: uuidDonacion,
           p_voluntario_id: uuidVoluntario,
@@ -1422,42 +1441,85 @@ export async function tomarDonacion(
  */
 export async function liberarDonacionAsignada(
   donacionId: string,
-  motivo = 'Imprevisto en vía / Falla mecánica reportada'
-): Promise<{ exito: true; codigo: 200; mensaje: string } | { exito: false; codigo: 400 | 404 | 409 | 500; mensaje: string }> {
+  motivo = 'Imprevisto en vía / Falla mecánica reportada',
+  actor?: { id?: string; rol?: RolUsuario }
+): Promise<{ exito: true; codigo: 200; mensaje: string } | { exito: false; codigo: 400 | 403 | 404 | 409 | 500; mensaje: string }> {
   if (!donacionId) {
     return { exito: false, codigo: 400, mensaje: 'Identificador de donación requerido' };
   }
 
-  const uuidDonacion = resolverUuidDonacion(donacionId);
+  const actual = await leerDonacionActual(donacionId);
+  if (!actual) {
+    return { exito: false, codigo: 404, mensaje: 'La donación especificada no existe.' };
+  }
+
+  if (actual.estado !== 'ASIGNADA') {
+    return {
+      exito: false,
+      codigo: 409,
+      mensaje: `Solo es posible liberar donaciones en estado ASIGNADA (estado actual: ${actual.estado}).`,
+    };
+  }
+
+  if (actor) {
+    const esGestor = actor.rol === 'ADMIN' || actor.rol === 'COORDINADOR';
+    const esMismoVoluntario = Boolean(actor.id && actual.voluntarioId && actor.id === actual.voluntarioId);
+    if (!esGestor && !esMismoVoluntario) {
+      return {
+        exito: false,
+        codigo: 403,
+        mensaje: 'No tienes autorización para liberar una misión asignada a otro usuario.',
+      };
+    }
+  }
+
+  const uuidDonacion = resolverUuidDonacion(actual.id) || resolverUuidDonacion(donacionId);
+  const ahoraIso = new Date().toISOString();
 
   if (esSupabaseConfigurado()) {
     try {
       const supabase = createClient();
-      let q = supabase.from('donaciones').update({
-        estado: 'DISPONIBLE',
-        voluntario_id: null,
-        voluntario_nombre: null,
-        asignada_at: null,
-      });
+      let q = supabase
+        .from('donaciones')
+        .update({
+          estado: 'DISPONIBLE',
+          voluntario_id: null,
+          voluntario_nombre: null,
+          asignada_at: null,
+        })
+        .eq('estado', 'ASIGNADA');
       if (uuidDonacion) q = q.eq('id', uuidDonacion);
       else if (donacionId.startsWith('DON-')) q = q.eq('codigo', donacionId);
       else q = q.eq('id', donacionId);
 
-      await q;
+      const { error } = await q;
+      if (!error && uuidDonacion) {
+        const actorUuid = resolverUuidVoluntario(actor?.id || actual.voluntarioId || 'vol-001');
+        await supabase.from('trazabilidad_eventos').insert([
+          {
+            donacion_id: uuidDonacion,
+            estado_anterior: 'ASIGNADA',
+            estado_nuevo: 'DISPONIBLE',
+            usuario_id: actorUuid,
+            usuario_nombre: actual.voluntarioNombre || 'Voluntario',
+            timestamp: ahoraIso,
+            observaciones: `Misión liberada (${motivo})`,
+          },
+        ]);
+      }
     } catch {
-      // Fallback
+      // Fallback en memoria si la BD remota no responde en entorno local
     }
   }
 
-  const enMemoria = await leerDonacionActual(donacionId);
-  if (enMemoria) {
-    enMemoria.estado = 'DISPONIBLE';
-    enMemoria.voluntarioId = undefined;
-    enMemoria.voluntarioNombre = undefined;
-    enMemoria.asignadaAt = undefined;
-    DONACIONES_ESTADO_VOLATIL.set(enMemoria.id, enMemoria);
-    globalThis.__NEXO_DONACIONES_VOLATILES?.set(enMemoria.id, { ...enMemoria });
-  }
+  actual.estado = 'DISPONIBLE';
+  actual.voluntarioId = undefined;
+  actual.voluntarioNombre = undefined;
+  actual.asignadaAt = undefined;
+  DONACIONES_ESTADO_VOLATIL.set(actual.id, actual);
+  DONACIONES_ESTADO_VOLATIL.set(actual.codigo, actual);
+  globalThis.__NEXO_DONACIONES_VOLATILES?.set(actual.id, { ...actual });
+  globalThis.__NEXO_DONACIONES_VOLATILES?.set(actual.codigo, { ...actual });
 
   return {
     exito: true,
@@ -1675,7 +1737,7 @@ export async function eliminarDonacion(
   donacionId: string,
   actorRol?: RolUsuario
 ): Promise<{ exito: true; mensaje: string } | { exito: false; error: string }> {
-  if (actorRol && actorRol !== 'ADMIN' && actorRol !== 'COORDINADOR') {
+  if (actorRol !== 'ADMIN' && actorRol !== 'COORDINADOR') {
     return {
       exito: false,
       error: 'Acceso denegado: Solo Coordinadores o Administradores pueden eliminar lotes de donación.',

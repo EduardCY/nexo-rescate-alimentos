@@ -487,6 +487,17 @@ export async function confirmarEntrega(rawInput: EntregaInput): Promise<Confirma
     };
   }
 
+  if (
+    input.mermaKg !== undefined &&
+    (Number.isNaN(input.mermaKg) || input.mermaKg < 0 || input.mermaKg > donacion.cantidadEstimada)
+  ) {
+    return {
+      exito: false,
+      codigo: 400,
+      mensaje: `La merma reportada no puede ser negativa ni superar la cantidad del lote (${donacion.cantidadEstimada} ${donacion.unidadMedida}).`,
+    };
+  }
+
   // 6. DoD: Solo el voluntario asignado puede registrar la entrega del lote
   const esVoluntarioEquivalente = (asignado?: string, entrante?: string): boolean => {
     if (!asignado || !entrante) return true;

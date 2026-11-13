@@ -41,9 +41,7 @@ Contenido/
 Contenido/**
 /Contenido/
 
-# Entregables y archivos de sustentacion interna
-*.docx
-Entrega*.docx
+# Archivos de sustentacion interna
 docs/sustentacion/
 /docs/sustentacion/
 *sustentacion*

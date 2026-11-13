@@ -33,8 +33,8 @@ Sigue estos pasos para ejecutar el proyecto en tu máquina local:
 ### 2. Clonar el repositorio
 
 ```bash
-git clone https://github.com/EduardCY/Nexo-RescateAlimentos.git
-cd Nexo-RescateAlimentos
+git clone https://github.com/EduardCY/nexo-rescate-alimentos.git
+cd nexo-rescate-alimentos
 ```
 
 ### 3. Instalar dependencias
@@ -86,7 +86,7 @@ La plataforma opera con **Cero Datos Inventados (`0` semillas mock en ejecución
 | **`DONANTE`** | Publicación express de alimentos (`CMP-01`), historial propio de ofertas y trazabilidad de recogida. | `/`, `/donar`, `/rastreo`, `/login` |
 | **`VOLUNTARIO`** | Catálogo de ofertas disponibles, radar cartográfico de misiones, hoja de ruta GPS y firma de actas (`CA-05.1`). | `/`, `/donaciones`, `/ruta-activa`, `/entregas/[id]`, `/rastreo`, `/login` |
 | **`RECEPTOR`** | Ficha técnica del comedor comunitario (capacidad, refrigeración funcional) y confirmación de recepción (`CMP-04`). | `/`, `/entregas/[id]`, `/rastreo`, `/login` |
-| **`COORDINADOR`** | Consola logística (Donantes, Comedores, Asignación compatible con frío, Expiradas) y Panel de Impacto CSV. | `/`, `/donaciones`, `/impacto`, `/rastreo`, `/login` |
+| **`COORDINADOR`** | Consola logística (Donantes, Comedores, Asignación compatible con frío, Expiradas), aprobación de cuentas pendientes y Panel de Impacto CSV. | `/`, `/donaciones`, `/admin/usuarios`, `/impacto`, `/rastreo`, `/login` |
 | **`ADMIN`** | Gobernanza integral RBAC (`/admin/usuarios`), auditoría inmutable `audit_rbac_eventos`, impacto y operación completa. | Todas las rutas (`/admin/usuarios`, `/impacto`, `/donaciones`, `/donar`, `/ruta-activa`, `/rastreo`) |
 
 ---
@@ -140,7 +140,11 @@ La especificación completa del sistema, su gobernanza ágil y las decisiones de
 - **Especificación de Comportamientos (MVP):** [`docs/spec/comportamientos.md`](docs/spec/comportamientos.md) — *Especificación formal BDD/Gherkin de los 5 comportamientos clave del núcleo (CMP-01 a CMP-05) y comportamiento transversal PWA.*
 - **Tablero y Catálogo de Issues (GitHub Projects):** [`docs/spec/tablero-github-projects.md`](docs/spec/tablero-github-projects.md) — *Configuración de estados, jerarquía nativa de Issues Principales y 33 Sub-issues, trazabilidad 1:1 con GitHub Projects #6.*
 - **Plan Técnico:** [`docs/spec/plan-tecnico.md`](docs/spec/plan-tecnico.md) — *Arquitectura PWA Serverless, modelo relacional en PostgreSQL/Supabase, políticas RLS, Dexie v2 (Patrón Outbox y sincronización delta) y Service Worker.*
-- **Registro de Decisiones de Arquitectura (ADRs):** [`docs/decisiones/ADR-001-bloqueo-atomico-segunda-toma.md`](docs/decisiones/ADR-001-bloqueo-atomico-segunda-toma.md) — *Decisión técnica de concurrencia y bloqueo atómico con SELECT FOR UPDATE contra segunda toma simultánea.*
+- **Registro de Decisiones de Arquitectura (ADRs):**
+  - [`ADR-001`](docs/decisiones/ADR-001-bloqueo-atomico-segunda-toma.md) — *Bloqueo atómico `SELECT FOR UPDATE` contra segunda toma simultánea.*
+  - [`ADR-002`](docs/decisiones/ADR-002-pwa-offline-first-outbox.md) — *Arquitectura PWA Offline-First, Service Worker SWR y patrón Outbox (`CREATE`/`CONFIRM` offline, bloqueo `TAKE`).*
+  - [`ADR-003`](docs/decisiones/ADR-003-arquitectura-serverless-costo-cero.md) — *Arquitectura Serverless de costo `$0 USD/mes` (Vercel + Supabase Free Tier + OpenStreetMap).*
+  - [`ADR-004`](docs/decisiones/ADR-004-rbac-portales-y-2fa-configurable.md) — *Confinamiento RBAC por portales, sesión offline HMAC-SHA256 y política 2FA TOTP.*
 - **Guía de Ejecución por Olas y Prompts:** [`planeacion_sprints/prompts/README.md`](planeacion_sprints/prompts/README.md) — *Manual operativo del Product Owner y cuadernos de prompts de ejecución técnica para las Olas de desarrollo.*
 
 ---

@@ -9,8 +9,8 @@ La Fundación Mesa Común no cuenta con presupuesto recurrente para servidores d
 
 ## Decisión
 
-1. **Cómputo y Hosting:** Next.js App Router desplegado en Vercel Free Tier (Server Actions y SSR sin servidores persistentes que mantener).
-2. **Base de Datos:** PostgreSQL 15 en Supabase Free Tier con políticas RLS y funciones `SECURITY DEFINER`, documentando en `README.md` el procedimiento de reactivación ante la política de pausa automática a los 7 días de inactividad.
+1. **Cómputo y Hosting:** Next.js App Router desplegado en Vercel Free Tier (Hobby; confirmar aplicabilidad no comercial para la fundación conforme a términos vigentes a noviembre de 2026) usando Server Actions y SSR sin servidores persistentes.
+2. **Base de Datos:** PostgreSQL 15 en Supabase Free Tier (condiciones vigentes a noviembre de 2026) con políticas RLS y funciones `SECURITY DEFINER`, documentando en `README.md` la reactivación manual/consulta periódica ante la pausa automática a los 7 días de inactividad y el respaldo previo (`pg_dump` / CSV) antes de *Pause/Delete*.
 3. **Cartografía:** OpenStreetMap nativo vía Leaflet sin API Key ni marcas de agua comerciales (reemplazando proveedores con cuotas o claves pagas como Google Maps o CartoDB).
 4. **Almacenamiento Multimedia (`RF-018`):** Cero carga obligatoria de fotografías pesadas en Storage para proteger las cuotas gratuitas y evitar exposición de beneficiarios (`Ley 1581`).
 

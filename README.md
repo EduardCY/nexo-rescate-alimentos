@@ -26,7 +26,7 @@ Sigue estos pasos para ejecutar el proyecto en tu máquina local:
 
 ### 1. Prerrequisitos
 
-- **Node.js**: versión 18.17.0 o superior (recomendado Node.js 20 LTS).
+- **Node.js**: versión 18.17.0 o superior (CI ejecuta Node.js 20 LTS; verificado localmente en Node.js 24 LTS).
 - **npm** (versión 9+) o **pnpm**.
 - **Git** instalado y configurado.
 
@@ -43,13 +43,18 @@ cd nexo-rescate-alimentos
 npm install
 ```
 
-### 4. Configurar variables de entorno
+### 4. Configurar variables de entorno y migraciones SQL
 
-Copia la plantilla de variables de entorno y ajusta los valores necesarios:
+Copia la plantilla de variables de entorno y ajusta los valores de tu proyecto Supabase (`NEXT_PUBLIC_*` se incrusta en tiempo de build; cambiarlas en producción exige redeploy). Ten en cuenta que `NEXT_PUBLIC_ENABLE_2FA` controla tanto el flujo en cliente (`/login`) como el servidor, mientras `ENABLE_TOTP_2FA` actúa solo en el backend:
 
 ```bash
 cp .env.example .env.local
+npx supabase link --project-ref <TU_PROJECT_REF>
+npx supabase db push
 ```
+
+> [!NOTE]
+> **Primer administrador en base limpia:** La migración `20261111000000_autenticacion_password_mfa.sql` crea de forma idempotente las 5 cuentas corporativas iniciales (`estado_cuenta = 'ACTIVO'`, contraseñas con **PBKDF2-HMAC-SHA512**), incluyendo el primer `ADMIN`: `admin@nexorescate.org` (contraseña inicial `Nexo2026*!`). En el primer ingreso debe enrolar Google Authenticator (si 2FA está activo) y rotar la contraseña.
 
 ### 5. Iniciar el servidor de desarrollo
 
@@ -65,8 +70,14 @@ Abre tu navegador en [http://localhost:3000](http://localhost:3000) para ver la 
 # Ejecutar linter de código
 npm run lint
 
-# Ejecutar suite de pruebas unitarias y de integración
+# Verificar tipos TypeScript
+npx tsc --noEmit
+
+# Ejecutar suite de pruebas unitarias y de integración (en memoria)
 npm run test
+
+# Ejecutar las 12 pruebas SQL contra PostgreSQL real (requiere psql en PATH y migraciones aplicadas)
+TEST_DATABASE_URL=postgresql://postgres:<PASSWORD>@localhost:5432/postgres npm run test
 
 # Verificar compuerta estática de rutas y permisos RBAC
 node scripts/verify-rbac-routes.mjs
@@ -102,15 +113,15 @@ La plataforma está configurada y desplegada bajo una arquitectura **Serverless 
 
 | Servicio | Permanencia y Disponibilidad | Política de Inactividad | Cómo reactivarlo si se apaga |
 | :--- | :--- | :--- | :--- |
-| **Vercel (Frontend & Serverless)** | **Siempre activo (24/7/365)** | Ninguna. Escala a cero computacionalmente cuando no hay peticiones, pero la URL nunca se desactiva. | No aplica; siempre está disponible. |
-| **Supabase (Base de Datos PostgreSQL)** | **Activo con uso regular** | **Pausa automática tras 7 días sin peticiones** (política del Free Tier de Supabase para ahorro de recursos). | Entrar a [supabase.com/dashboard](https://supabase.com/dashboard) y presionar **"Restore project"** (restaura datos y esquemas en 1 minuto). |
+| **Vercel (Frontend & Serverless)** | **Siempre activo (24/7/365)** | Ninguna en Hobby (validar términos de uso no comercial aplicables a la fundación, condiciones vigentes a noviembre de 2026). | No aplica; siempre está disponible. |
+| **Supabase (PostgreSQL Free Tier)** | **Activo con uso regular** | **Pausa automática tras 7 días sin peticiones** (condiciones vigentes a noviembre de 2026). | Entrar a [supabase.com/dashboard](https://supabase.com/dashboard) y presionar **"Restore project"** (~1 minuto) o ejecutar una consulta programada / pasar a plan pago. |
 
 > [!TIP]
-> **Para mantener Supabase activo durante el semestre:** Basta con ingresar a la aplicación web o consultar el catálogo de donaciones una vez por semana. Para las fechas de entrega y sustanciación, verificar 24 horas antes que el proyecto no esté en estado *Paused*.
+> **Para mantener Supabase activo y respaldado:** Consultar el catálogo semanalmente evita la pausa automática. Antes de ejecutar **Pause/Delete Project**, exportar un respaldo completo de PostgreSQL (`pg_dump` o CSV de impacto/donaciones).
 
 ### Cómo desplegar nuevas versiones
 
-1. **Despliegue automático (CI/CD):** Cada `git push origin main` compila y despliega automáticamente la nueva versión una vez vinculado el repositorio en Vercel.
+1. **Despliegue automático (CI/CD):** Cada `git push origin main` compila y despliega automáticamente la nueva versión una vez vinculado el repositorio en Vercel (para pruebas sin 2FA usar un entorno *Preview* independiente en Vercel, nunca alterar producción).
 2. **Despliegue manual por Terminal (CLI):**
    ```bash
    npx vercel --prod
@@ -118,7 +129,7 @@ La plataforma está configurada y desplegada bajo una arquitectura **Serverless 
 
 ### Cómo pausar o detener el proyecto (Apagado / Desactivación)
 
-Si una vez evaluado el proyecto el equipo desea apagar o desmantelar los servicios:
+Si una vez evaluado el proyecto el equipo desea apagar o desmantelar los servicios (exportando antes respaldo SQL/CSV):
 
 1. **Detener o pausar Vercel:**
    - **Pausa temporal:** Ir a [Vercel Dashboard](https://vercel.com) → Seleccionar proyecto `nexo-rescate-alimentos` → **Settings** → **Advanced** → **Pause Project**.
@@ -155,4 +166,4 @@ En cumplimiento con la política del Módulo 3, el equipo declara formalmente la
 
 | Herramienta | Modelos de Asistencia | Ámbito de Uso | Convención Operativa |
 | :--- | :--- | :--- | :--- |
-| **Google Antigravity IDE** | Gemini (exploración, scaffolding y pruebas) y Claude (arquitectura, concurrencia y refactorización) | Análisis de contexto, generación de esqueletos de pruebas, refinamiento de validaciones y redacción técnica estructurada. | Todo cambio es auditado por pares en Pull Requests, validado con pruebas automáticas en CI y defendido individualmente en Demo Day sin delegar autoría. |
+| **Google Antigravity IDE** | Gemini (exploración, scaffolding y pruebas) y Claude (arquitectura, concurrencia y refactorización) | Análisis de contexto, generación de esqueletos de pruebas (`rejection-gaps-and-pwa.test.ts`), auditoría de brechas, refinamiento de validaciones y estructuración documental. | Todo cambio fue revisado por pares en Pull Requests, validado con pruebas automáticas en CI y puede ser defendido técnicamente por cada integrante en el Demo Day. |

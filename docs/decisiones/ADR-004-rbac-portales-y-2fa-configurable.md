@@ -9,9 +9,9 @@ El sistema atiende 5 actores distintos (`ADMIN`, `COORDINADOR`, `VOLUNTARIO`, `D
 
 ## Decisión
 
-1. **Defensa en Profundidad RBAC:** Validación en `src/middleware.ts`, en motor puro `src/lib/rbac/permisos.ts`, en Server Actions administrativas (`usuarios-admin.ts`, `eliminarDonacion`, `liberarDonacionAsignada`) y mediante `RoleGuardBanner` en cliente.
-2. **Sesión Offline Firmada:** Almacén aislado `NexoSesionRBAC` en IndexedDB firmado con **HMAC-SHA256** mediante clave no extraíble de `Web Crypto` (`TTL 24h`) para mantener el confinamiento de rutas sin red ni secretos embebidos en el bundle.
-3. **2FA TOTP y Sandbox Controlado por Entorno:** `NEXT_PUBLIC_ENABLE_2FA=true` como estándar de seguridad en código/configuración (configurable a `false` temporalmente por variable de entorno si una demostración lo requiere), y pestaña Sandbox oculta por defecto salvo `NEXT_PUBLIC_ENABLE_DEMO_SANDBOX=true` en local.
+1. **Defensa en Profundidad RBAC y Frontera Edge:** Validación de rutas en `src/middleware.ts` leyendo las cookies del navegador (`nexo_rol`, `nexo_user_id`, `nexo_estado_cuenta`, TTL 24 h, `SameSite=Lax` sincronizadas por `SessionProvider`, ya que el Edge Middleware no lee IndexedDB), en el motor puro `src/lib/rbac/permisos.ts`, en Server Actions administrativas (`usuarios-admin.ts`, `eliminarDonacion`, `liberarDonacionAsignada`) y mediante `RoleGuardBanner` en cliente.
+2. **Sesión Offline Firmada y Custodia de Claves:** Almacén aislado `NexoSesionRBAC` en IndexedDB firmado con **HMAC-SHA256** (`TTL 24 h`) usando una `CryptoKey` simétrica generada por dispositivo vía Web Crypto API como **no extraíble (`extractable: false`)** en la tabla `claves_rbac` (sin secretos embebidos en el bundle). En servidor, el desafío temporal de login (`tempAuthToken`, TTL 10 min) se firma con HMAC-SHA256 usando `SUPABASE_SERVICE_ROLE_KEY`. Los secretos TOTP Base32 (`usuarios.totp_secret`) se almacenan actualmente en texto plano en PostgreSQL bajo protección RLS/Server Actions (mejora futura recomendada: cifrado AES-GCM en servidor).
+3. **2FA TOTP y Sandbox Controlado por Entorno:** `NEXT_PUBLIC_ENABLE_2FA=true` (cliente `/login` + servidor; al ser `NEXT_PUBLIC_*`, se incrusta en build y cambiarla exige redeploy) y `ENABLE_TOTP_2FA=true` (control exclusivo de servidor) como estándar en producción (para pruebas sin TOTP usar un despliegue *Preview* separado con `false`), y pestaña Sandbox oculta por defecto salvo `NEXT_PUBLIC_ENABLE_DEMO_SANDBOX=true` en local.
 
 ## Alternativas Descartadas
 

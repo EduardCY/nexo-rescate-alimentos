@@ -167,14 +167,14 @@ export default function MenuBar({ items, activeId, onSelect }: Props) {
           <button
             type="button"
             onClick={() => setInspectorAbierto(true)}
-            title="Abrir Inspector Visual de Cola Offline (Outbox)"
+            title="Abrir Inspector Visual de Cola Sin Conexión"
             className={`bevel-out px-1.5 py-0.5 font-bold cursor-pointer text-[10px] ${
               pendientes > 0
                 ? "bg-[#ffdddd] hover:bg-[#ffcccc] text-red-900"
                 : "bg-[#ece9d8] text-[#000080]"
             }`}
           >
-            [Outbox: {pendientes}]
+            [Por sincronizar: {pendientes}]
           </button>
         </div>
       </nav>

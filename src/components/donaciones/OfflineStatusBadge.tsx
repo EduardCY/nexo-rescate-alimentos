@@ -133,10 +133,10 @@ export function OfflineStatusBadge() {
           type="button"
           onClick={() => setInspectorAbierto(true)}
           className="btn-98 !py-1 !px-2 text-[11px] font-bold flex items-center gap-1 text-[#000080]"
-          title="Abrir Inspector Visual de Cola Offline (Outbox)"
+          title="Abrir Inspector Visual de Cola Sin Conexión"
         >
           <Database className="w-3.5 h-3.5" />
-          <span>Cola Offline ({cantidadPendiente})</span>
+          <span>Cola Sin Conexión ({cantidadPendiente})</span>
         </button>
 
         {cantidadPendiente > 0 && (

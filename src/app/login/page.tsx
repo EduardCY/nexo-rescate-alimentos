@@ -151,8 +151,11 @@ function LoginContent() {
   const searchParams = useSearchParams();
   const { sesion, establecerSesion } = useSession();
   const enable2FA = process.env.NEXT_PUBLIC_ENABLE_2FA !== 'false';
+  const sandboxHabilitado = process.env.NEXT_PUBLIC_ENABLE_DEMO_SANDBOX === 'true';
 
-  const [pestana, setPestana] = useState<'sandbox' | 'login' | 'postulacion'>('sandbox');
+  const [pestana, setPestana] = useState<'sandbox' | 'login' | 'postulacion'>(
+    sandboxHabilitado ? 'sandbox' : 'login'
+  );
   const [cargando, setCargando] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
@@ -459,20 +462,22 @@ function LoginContent() {
         {/* Pestañas de Navegación del Portal */}
         <nav className="flex flex-wrap items-center justify-between gap-2 bg-[#ece9d8] px-3 py-2 border-b border-[#808080] font-mono text-xs">
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setPestana('sandbox');
-                setErrorMsg(null);
-                setEstadoPendienteVisible(false);
-              }}
-              className={`min-h-[40px] px-3 py-1 font-bold flex items-center gap-1.5 ${
-                pestana === 'sandbox' ? 'bg-[#000080] text-white bevel-in' : 'btn-98 text-black'
-              }`}
-            >
-              <Sparkles className="w-4 h-4 text-amber-300" />
-              <span>1. Explorar los 5 Roles (Auditoría en 1 Clic)</span>
-            </button>
+            {sandboxHabilitado && (
+              <button
+                type="button"
+                onClick={() => {
+                  setPestana('sandbox');
+                  setErrorMsg(null);
+                  setEstadoPendienteVisible(false);
+                }}
+                className={`min-h-[40px] px-3 py-1 font-bold flex items-center gap-1.5 ${
+                  pestana === 'sandbox' ? 'bg-[#000080] text-white bevel-in' : 'btn-98 text-black'
+                }`}
+              >
+                <Sparkles className="w-4 h-4 text-amber-300" />
+                <span>Explorar los 5 Roles (Entorno Local)</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={() => {
@@ -484,7 +489,7 @@ function LoginContent() {
               }`}
             >
               <LogIn className="w-4 h-4" />
-              <span>2. Iniciar Sesión Registrada</span>
+              <span>Iniciar Sesión Registrada</span>
             </button>
             <button
               type="button"
@@ -498,11 +503,11 @@ function LoginContent() {
               }`}
             >
               <UserPlus className="w-4 h-4" />
-              <span>3. Postulación Pública de Miembros</span>
+              <span>Postulación Pública de Miembros</span>
             </button>
           </div>
           <span className="text-[11px] text-gray-600 hidden sm:inline">
-            Normativa Ley 1990 de 2019 · EatCloud Architecture
+            Normativa Ley 1990 de 2019 · Fundación Mesa Común
           </span>
         </nav>
 
@@ -521,8 +526,8 @@ function LoginContent() {
           </div>
         )}
 
-        {/* PESTAÑA 1: SANDBOX DE EVALUACIÓN DE LOS 5 ROLES */}
-        {pestana === 'sandbox' && (
+        {/* PESTAÑA 1: SANDBOX DE EVALUACIÓN DE LOS 5 ROLES (SOLO SI ESTÁ HABILITADO EN LOCAL) */}
+        {sandboxHabilitado && pestana === 'sandbox' && (
           <div className="p-3 sm:p-4 space-y-4 font-mono text-xs">
             <div className="bg-[#ffffd8] border border-[#d0c060] p-3 text-[11px] leading-relaxed">
               <p className="font-bold text-[#604000] mb-1">
@@ -610,92 +615,95 @@ function LoginContent() {
                     👉 Un Coordinador u Administrador puede activar tu cuenta desde su mesa de despacho.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEstadoPendienteVisible(false);
-                    setPestana('sandbox');
-                  }}
-                  className="btn-98 w-full py-1.5 font-bold text-xs text-[#000080]"
-                >
-                  Entrar mediante Sandbox de Evaluación
-                </button>
+                {sandboxHabilitado && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEstadoPendienteVisible(false);
+                      setPestana('sandbox');
+                    }}
+                    className="btn-98 w-full py-1.5 font-bold text-xs text-[#000080]"
+                  >
+                    Volver a exploración de roles
+                  </button>
+                )}
               </div>
             ) : pasoLogin === 1 ? (
               <div className="space-y-4">
-                {/* Banner de Ayuda con Cuentas Seed y Contraseña de Evaluación */}
-                <div className="bg-[#f0f4f8] border border-[#7090b0] p-3 text-[11px] leading-relaxed">
-                  <p className="font-bold text-[#002060] mb-1 flex items-center gap-1.5">
-                    <KeyRound className="w-3.5 h-3.5 text-[#000080]" />
-                    <span>Cuentas Corporativas Pre-configuradas (Evaluación UAO):</span>
-                  </p>
-                  <p className="text-gray-700 mb-2">
-                    Contraseña por defecto para todas las cuentas seed:{' '}
-                    <code className="bg-white px-1.5 py-0.5 border border-gray-400 font-bold font-mono text-[#000080]">
-                      Nexo2026*!
-                    </code>{' '}
-                    <span className="text-gray-500 text-[10px]">
-                      (En tu primer inicio escanearás el QR en Google Authenticator)
-                    </span>
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[10px]">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEmailLogin('coordinacion@mesacomun.org');
-                        setPasswordLogin('Nexo2026*!');
-                      }}
-                      className="text-left bg-white border border-gray-300 p-1 hover:bg-gray-100 flex items-center justify-between"
-                    >
-                      <span><strong>Coord:</strong> coordinacion@mesacomun.org</span>
-                      <span className="text-[#000080] font-bold">Auto &gt;</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEmailLogin('admin@nexorescate.org');
-                        setPasswordLogin('Nexo2026*!');
-                      }}
-                      className="text-left bg-white border border-gray-300 p-1 hover:bg-gray-100 flex items-center justify-between"
-                    >
-                      <span><strong>Admin:</strong> admin@nexorescate.org</span>
-                      <span className="text-[#000080] font-bold">Auto &gt;</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEmailLogin('donante@mesacomun.org');
-                        setPasswordLogin('Nexo2026*!');
-                      }}
-                      className="text-left bg-white border border-gray-300 p-1 hover:bg-gray-100 flex items-center justify-between"
-                    >
-                      <span><strong>Donante:</strong> donante@mesacomun.org</span>
-                      <span className="text-[#000080] font-bold">Auto &gt;</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEmailLogin('voluntario@mesacomun.org');
-                        setPasswordLogin('Nexo2026*!');
-                      }}
-                      className="text-left bg-white border border-gray-300 p-1 hover:bg-gray-100 flex items-center justify-between"
-                    >
-                      <span><strong>Voluntario:</strong> voluntario@mesacomun.org</span>
-                      <span className="text-[#000080] font-bold">Auto &gt;</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEmailLogin('comedor@mesacomun.org');
-                        setPasswordLogin('Nexo2026*!');
-                      }}
-                      className="text-left bg-white border border-gray-300 p-1 hover:bg-gray-100 flex items-center justify-between sm:col-span-2"
-                    >
-                      <span><strong>Comedor:</strong> comedor@mesacomun.org</span>
-                      <span className="text-[#000080] font-bold">Auto &gt;</span>
-                    </button>
+                {sandboxHabilitado && (
+                  <div className="bg-[#f0f4f8] border border-[#7090b0] p-3 text-[11px] leading-relaxed">
+                    <p className="font-bold text-[#002060] mb-1 flex items-center gap-1.5">
+                      <KeyRound className="w-3.5 h-3.5 text-[#000080]" />
+                      <span>Cuentas Corporativas de Entorno Local:</span>
+                    </p>
+                    <p className="text-gray-700 mb-2">
+                      Contraseña de entorno local:{' '}
+                      <code className="bg-white px-1.5 py-0.5 border border-gray-400 font-bold font-mono text-[#000080]">
+                        Nexo2026*!
+                      </code>{' '}
+                      <span className="text-gray-500 text-[10px]">
+                        (En tu primer inicio escanearás el QR en Google Authenticator)
+                      </span>
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[10px]">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEmailLogin('coordinacion@mesacomun.org');
+                          setPasswordLogin('Nexo2026*!');
+                        }}
+                        className="text-left bg-white border border-gray-300 p-1 hover:bg-gray-100 flex items-center justify-between"
+                      >
+                        <span><strong>Coord:</strong> coordinacion@mesacomun.org</span>
+                        <span className="text-[#000080] font-bold">Llenar &gt;</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEmailLogin('admin@nexorescate.org');
+                          setPasswordLogin('Nexo2026*!');
+                        }}
+                        className="text-left bg-white border border-gray-300 p-1 hover:bg-gray-100 flex items-center justify-between"
+                      >
+                        <span><strong>Admin:</strong> admin@nexorescate.org</span>
+                        <span className="text-[#000080] font-bold">Llenar &gt;</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEmailLogin('donante@mesacomun.org');
+                          setPasswordLogin('Nexo2026*!');
+                        }}
+                        className="text-left bg-white border border-gray-300 p-1 hover:bg-gray-100 flex items-center justify-between"
+                      >
+                        <span><strong>Donante:</strong> donante@mesacomun.org</span>
+                        <span className="text-[#000080] font-bold">Llenar &gt;</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEmailLogin('voluntario@mesacomun.org');
+                          setPasswordLogin('Nexo2026*!');
+                        }}
+                        className="text-left bg-white border border-gray-300 p-1 hover:bg-gray-100 flex items-center justify-between"
+                      >
+                        <span><strong>Voluntario:</strong> voluntario@mesacomun.org</span>
+                        <span className="text-[#000080] font-bold">Llenar &gt;</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEmailLogin('comedor@mesacomun.org');
+                          setPasswordLogin('Nexo2026*!');
+                        }}
+                        className="text-left bg-white border border-gray-300 p-1 hover:bg-gray-100 flex items-center justify-between sm:col-span-2"
+                      >
+                        <span><strong>Comedor:</strong> comedor@mesacomun.org</span>
+                        <span className="text-[#000080] font-bold">Llenar &gt;</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Formulario Paso 1: Correo + Contraseña */}
                 <form onSubmit={handleLoginPaso1Submit} className="bevel-out bg-[#ece9d8] p-4 space-y-4">

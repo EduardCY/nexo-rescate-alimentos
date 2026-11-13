@@ -222,7 +222,7 @@ export function UsuariosAdminTable({ actorAdmin }: UsuariosAdminTableProps) {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="font-mono text-[10px] font-bold px-2 py-0.5 bg-red-100 text-red-800 border border-red-500">
-              [EXCLUSIVO ROL ADMIN • CA-05.2]
+              [EXCLUSIVO ADMINISTRACIÓN]
             </span>
             <span className="font-mono text-[11px] font-bold text-slate-700">
               AUDITORÍA ACTIVA
@@ -510,7 +510,7 @@ export function UsuariosAdminTable({ actorAdmin }: UsuariosAdminTableProps) {
                               className="btn-98 text-xs font-bold px-2 py-1 inline-flex items-center gap-1 text-amber-900 hover:text-amber-950 disabled:opacity-40"
                             >
                               <KeyRound className="w-3.5 h-3.5" />
-                              <span>Reset 2FA</span>
+                              <span>Restablecer 2FA</span>
                             </button>
                           )}
                         </div>

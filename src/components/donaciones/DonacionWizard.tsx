@@ -793,7 +793,7 @@ export function DonacionWizard({
                   <div className="mt-2 bevel-in bg-red-100 border border-red-700 p-2.5 text-red-950 font-mono text-xs flex items-start gap-2">
                     <AlertTriangle className="w-4 h-4 text-red-800 shrink-0 mt-0.5" />
                     <div>
-                      <p className="font-bold text-red-900">Hora límite inválida (CA-01.2):</p>
+                      <p className="font-bold text-red-900">Hora límite inválida:</p>
                       <p>La hora límite de recogida debe ser posterior a la hora actual.</p>
                     </div>
                   </div>

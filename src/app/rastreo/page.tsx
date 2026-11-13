@@ -204,7 +204,7 @@ export default function RastreoPage() {
       </div>
 
       <span className="text-[11px] text-gray-600 hidden sm:inline">
-        Trazabilidad Digital Ley 1990 · EatCloud Architecture
+        Trazabilidad Digital Ley 1990 · Fundación Mesa Común
       </span>
     </nav>
   );

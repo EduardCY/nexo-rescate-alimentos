@@ -108,13 +108,13 @@ export function OutboxInspectorModal({ abierto, onCerrar }: OutboxInspectorModal
           <div className="flex items-center gap-2">
             <Database className="w-4 h-4 text-emerald-300 shrink-0" aria-hidden="true" />
             <h2 id="titulo-outbox-inspector" className="text-xs sm:text-sm font-bold">
-              INSPECTOR DE COLA OFFLINE (PATRÓN OUTBOX — INDEXEDDB / DEXIE)
+              INSPECTOR DE COLA SIN CONEXIÓN (ALMACÉN LOCAL)
             </h2>
           </div>
           <button
             type="button"
             onClick={onCerrar}
-            aria-label="Cerrar inspector de cola offline"
+            aria-label="Cerrar inspector de cola sin conexión"
             className="btn-98 !px-2 !py-0.5 text-xs font-extrabold text-black"
           >
             <X className="w-3.5 h-3.5" />
@@ -126,7 +126,7 @@ export function OutboxInspectorModal({ abierto, onCerrar }: OutboxInspectorModal
           <div className="bevel-in bg-[#ece9d8] p-2.5 flex flex-wrap items-center justify-between gap-2">
             <div>
               <p className="font-bold text-[#000080]">
-                Donaciones Offline: {donacionesLocales.length} • Mutaciones Outbox: {mutaciones.length}
+                Donaciones locales: {donacionesLocales.length} • Envíos pendientes: {mutaciones.length}
               </p>
               <p className="text-[11px] text-slate-700">
                 Formato determinista: <code>OFFLINE-DON-&lt;YYMMDD&gt;-&lt;DEV4&gt;-&lt;SEQ3&gt;-&lt;ENT4&gt;</code>
@@ -153,7 +153,7 @@ export function OutboxInspectorModal({ abierto, onCerrar }: OutboxInspectorModal
           {/* Sección 1: Donaciones Offline */}
           <section aria-label="Donaciones almacenadas localmente">
             <h3 className="font-bold text-[#000080] mb-1.5 uppercase">
-              1. Store donaciones_offline ({donacionesLocales.length})
+              1. Almacén de donaciones locales ({donacionesLocales.length})
             </h3>
             {donacionesLocales.length === 0 ? (
               <div className="bevel-in bg-white p-3 text-slate-600">
@@ -202,7 +202,7 @@ export function OutboxInspectorModal({ abierto, onCerrar }: OutboxInspectorModal
                         )}
                       </div>
                       <div className="text-right text-[10px] text-slate-500">
-                        <div>IDempotency: {item.idempotencyKey?.slice(0, 8) || 'v1'}...</div>
+                        <div>Clave de registro: {item.idempotencyKey?.slice(0, 8) || 'v1'}...</div>
                         <div>Reintentos: {item.retryCount ?? 0}</div>
                       </div>
                     </div>
@@ -213,13 +213,13 @@ export function OutboxInspectorModal({ abierto, onCerrar }: OutboxInspectorModal
           </section>
 
           {/* Sección 2: Mutaciones del Patrón Outbox */}
-          <section aria-label="Mutaciones del patrón Outbox">
+          <section aria-label="Envíos pendientes de sincronización">
             <h3 className="font-bold text-[#000080] mb-1.5 uppercase">
-              2. Store outbox_mutations ({mutaciones.length})
+              2. Almacén de envíos pendientes ({mutaciones.length})
             </h3>
             {mutaciones.length === 0 ? (
               <div className="bevel-in bg-white p-3 text-slate-600">
-                No hay mutaciones encoladas en outbox_mutations.
+                No hay envíos pendientes en la cola de sincronización.
               </div>
             ) : (
               <div className="space-y-2">
@@ -255,7 +255,7 @@ export function OutboxInspectorModal({ abierto, onCerrar }: OutboxInspectorModal
                         </p>
                       )}
                       <p className="text-[10px] text-slate-500 mt-0.5">
-                        Key: {m.idempotencyKey} • Intentos: {m.retryCount}
+                        Clave de registro: {m.idempotencyKey} • Intentos: {m.retryCount}
                       </p>
                     </div>
                     {m.syncStatus === 'ERROR' && (

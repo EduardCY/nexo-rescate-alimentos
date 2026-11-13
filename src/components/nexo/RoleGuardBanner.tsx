@@ -35,7 +35,7 @@ export function RoleGuardBanner({
         <div className="flex-1 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-[10px] font-extrabold uppercase bg-red-700 text-white px-2 py-0.5 border border-red-900">
-              HTTP 403 ACCESO DENEGADO • RBAC CA-05.1
+              ACCESO DENEGADO • RESTRICCIÓN DE ROL
             </span>
             <span className="text-xs text-red-900 font-bold">
               Rol activo: <u>{rolActual}</u>
@@ -46,7 +46,7 @@ export function RoleGuardBanner({
           </h2>
           <p className="text-xs text-gray-800 leading-relaxed bg-[#fff5f5] p-2.5 border border-red-300">
             {mensajePersonalizado ||
-              'Tu cuenta se encuentra confinada exclusivamente a las operaciones de tu rol (RNF-003 / CMP-05). Para acceder a este módulo se requieren credenciales de Administración o Coordinación Operativa.'}
+              'Tu cuenta está habilitada exclusivamente para las operaciones de tu rol. Para acceder a este módulo se requieren credenciales de Administración o Coordinación Operativa.'}
           </p>
           <div className="flex flex-wrap items-center gap-2 pt-1">
             <Link

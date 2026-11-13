@@ -27,7 +27,7 @@ export default function ImpactoPage() {
     <main className="min-h-screen bg-[#008080] p-2 sm:p-4 font-mono text-xs">
       <div className="max-w-6xl mx-auto">
         <WindowFrame
-          title="NEXO AUDITORÍA — TABLERO DE IMPACTO SOCIAL Y AMBIENTAL (CMP-05)"
+          title="NEXO AUDITORÍA — TABLERO DE IMPACTO SOCIAL Y AMBIENTAL"
           icon={<BarChart3 className="w-4 h-4 text-emerald-400 shrink-0" />}
         >
           <div className="flex flex-col gap-3">

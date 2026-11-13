@@ -29,7 +29,7 @@ export default function OfflineFallbackPage() {
         </div>
 
         <span className="font-mono text-[11px] font-extrabold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40">
-          MODO OFFLINE-FIRST ACTIVO • RNF-002 / CA-PWA.3
+          MODO SIN CONEXIÓN ACTIVO
         </span>
 
         <h1 id="offline-title" className="text-xl sm:text-2xl font-bold text-white mt-3 mb-2">

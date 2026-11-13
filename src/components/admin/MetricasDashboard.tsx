@@ -72,7 +72,7 @@ export function MetricasDashboard() {
         <div>
           <div className="flex flex-wrap items-center gap-2 mb-1">
             <span className="font-mono text-[10px] font-bold px-2 py-0.5 bg-emerald-100 text-emerald-900 border border-emerald-600">
-              [CÁLCULO AUDITADO • CERO MOCKS (CA-05.4)]
+              [CÁLCULO AUDITADO • REGISTROS REALES]
             </span>
             <span className="font-mono text-[11px] text-slate-700 flex items-center gap-1">
               <Database className="w-3.5 h-3.5 text-blue-700" />
@@ -179,9 +179,9 @@ export function MetricasDashboard() {
               0 kg rescatados • Aún no hay donaciones con acta de entrega cerrada
             </p>
             <p className="max-w-lg mx-auto text-[11px] text-slate-600">
-              En cumplimiento del criterio CA-05.4 (transparencia de métricas), las donaciones en
-              estado DISPONIBLE o ASIGNADA no inflan los indicadores hasta que el voluntario o el
-              comedor firmen el Acta Digital de Entrega.
+              Para garantizar transparencia en las métricas de impacto, las donaciones en estado
+              DISPONIBLE o ASIGNADA no suman indicadores hasta que el voluntario o el comedor firmen
+              el Acta Digital de Entrega.
             </p>
           </div>
         ) : (

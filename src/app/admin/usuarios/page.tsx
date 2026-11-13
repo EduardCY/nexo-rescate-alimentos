@@ -28,7 +28,7 @@ export default function AdminUsuariosPage() {
     <main className="min-h-screen bg-[#008080] p-2 sm:p-4 font-mono text-xs">
       <div className="max-w-6xl mx-auto">
         <WindowFrame
-          title="NEXO ADMINISTRACIÓN — CONSOLA DE GOBERNANZA RBAC (CMP-05)"
+          title="NEXO ADMINISTRACIÓN — CONSOLA DE GESTIÓN DE USUARIOS"
           icon={<ShieldCheck className="w-4 h-4 text-red-400 shrink-0" />}
         >
           <div className="flex flex-col gap-3">
@@ -54,7 +54,7 @@ export default function AdminUsuariosPage() {
 
               <div className="text-[11px] font-mono text-slate-700 flex items-center gap-2">
                 <span className="inline-block w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
-                <span>SYS: RBAC-ONLINE • PRIVILEGIO: {rolActual}</span>
+                <span>CONTROL DE ACCESO ACTIVO • ROL: {rolActual}</span>
               </div>
             </div>
 
